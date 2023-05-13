@@ -1,5 +1,6 @@
 import argparse
 import collections
+import wandb
 import functools
 import os
 import pathlib
@@ -32,6 +33,7 @@ class Dreamer(nn.Module):
         self._config = config
         self._logger = logger
         self._should_log = tools.Every(config.log_every)
+        self._should_emit = tools.Every(config.emit_every)
         batch_steps = config.batch_size * config.batch_length
         self._should_train = tools.Every(batch_steps / config.train_ratio)
         self._should_pretrain = tools.Once()
@@ -86,6 +88,12 @@ class Dreamer(nn.Module):
                 self._train(next(self._dataset))
                 self._update_count += 1
                 self._metrics["update_count"] = self._update_count
+
+            if self._should_emit(step):
+                averaged = {}
+                for name, values in self._metrics.items():
+                    averaged[name] = float(np.mean(values))
+                wandb.log(averaged, step=step)
             if self._should_log(step):
                 for name, values in self._metrics.items():
                     self._logger.scalar(name, float(np.mean(values)))
@@ -209,6 +217,12 @@ def make_env(config, logger, mode, train_eps, eval_eps):
             task, mode if "train" in mode else "test", config.action_repeat
         )
         env = wrappers.OneHotAction(env)
+    elif suite == "crafter":
+        import envs.crafter as crafter
+        env = crafter.Crafter(
+            task, outdir="./stats"
+        )
+        env = wrappers.OneHotAction(env)
     else:
         raise NotImplementedError(suite)
     env = wrappers.TimeLimit(env, config.time_limit)
@@ -288,7 +302,7 @@ class ProcessEpisodeWrap:
         logger.write(step=log_step)
 
 
-def main(config):
+def main(config, defaults):
     logdir = pathlib.Path(config.logdir).expanduser()
     config.traindir = config.traindir or logdir / "train_eps"
     config.evaldir = config.evaldir or logdir / "eval_eps"
@@ -357,16 +371,17 @@ def main(config):
         agent._should_pretrain._once = False
 
     state = None
-    while agent._step < config.steps:
-        logger.write()
-        print("Start evaluation.")
-        eval_policy = functools.partial(agent, training=False)
-        tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num)
-        video_pred = agent._wm.video_pred(next(eval_dataset))
-        logger.video("eval_openl", to_np(video_pred))
-        print("Start training.")
-        state = tools.simulate(agent, train_envs, config.eval_every, state=state)
-        torch.save(agent.state_dict(), logdir / "latest_model.pt")
+    with wandb.init(project='mastering crafter with world models', config=defaults):
+        while agent._step < config.steps:
+            logger.write()
+            print("Start evaluation.")
+            eval_policy = functools.partial(agent, training=False)
+            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num)
+            video_pred = agent._wm.video_pred(next(eval_dataset))
+            logger.video("eval_openl", to_np(video_pred))
+            print("Start training.")
+            state = tools.simulate(agent, train_envs, config.eval_every, state=state)
+            torch.save(agent.state_dict(), logdir / "latest_model.pt")
     for env in train_envs + eval_envs:
         try:
             env.close()
@@ -382,10 +397,11 @@ if __name__ == "__main__":
         (pathlib.Path(sys.argv[0]).parent / "configs.yaml").read_text()
     )
     defaults = {}
+    wandb.login()
     for name in args.configs:
         defaults.update(configs[name])
     parser = argparse.ArgumentParser()
     for key, value in sorted(defaults.items(), key=lambda x: x[0]):
         arg_type = tools.args_type(value)
         parser.add_argument(f"--{key}", type=arg_type, default=arg_type(value))
-    main(parser.parse_args(remaining))
+    main(parser.parse_args(remaining), defaults)

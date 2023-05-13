@@ -11,6 +11,7 @@ defaults:
   eval_every: 1e4
   eval_episode_num: 10
   log_every: 1e4
+  emit_every: 50
   reset_every: 0
   device: 'cuda:0'
   compile: True
@@ -133,6 +134,16 @@ atari100k:
   imag_gradient: 'reinforce'
   time_limit: 108000
   precision: 32
+
+crafter:
+  dyn_deter: 4096
+  dyn_hidden: 1024
+  cnn_depth: 64
+  units: 1024
+  reward_layers: 5
+  cont_layers: 5
+  value_layers: 5
+  actor_layers: 5
 
 debug:
   debug: True

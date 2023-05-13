@@ -241,6 +241,7 @@ class RSSM(nn.Module):
         prev_action *= (1.0 / torch.clip(torch.abs(prev_action), min=1.0)).detach()
         prev_stoch = prev_state["stoch"]
         if self._discrete:
+            # Flatten onehot variables
             shape = list(prev_stoch.shape[:-2]) + [self._stoch * self._discrete]
             # (batch, stoch, discrete_num) -> (batch, stoch * discrete_num)
             prev_stoch = prev_stoch.reshape(shape)
@@ -251,6 +252,7 @@ class RSSM(nn.Module):
             # (batch, stoch * discrete_num) -> (batch, stoch * discrete_num + action, embed)
             x = torch.cat([prev_stoch, prev_action, embed], -1)
         else:
+            # Concat flattened onehot variables and action
             x = torch.cat([prev_stoch, prev_action], -1)
         # (batch, stoch * discrete_num + action, embed) -> (batch, hidden)
         x = self._inp_layers(x)
