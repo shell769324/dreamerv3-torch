@@ -136,6 +136,7 @@ atari100k:
   precision: 32
 
 crafter:
+  steps: 3e7
   dyn_deter: 4096
   dyn_hidden: 1024
   cnn_depth: 96
