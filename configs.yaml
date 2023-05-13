@@ -139,6 +139,7 @@ crafter:
   dyn_deter: 4096
   dyn_hidden: 1024
   cnn_depth: 64
+  actor_dist: 'onehot'
   units: 1024
   reward_layers: 5
   cont_layers: 5
