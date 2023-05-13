@@ -138,13 +138,18 @@ atari100k:
 crafter:
   dyn_deter: 4096
   dyn_hidden: 1024
-  cnn_depth: 64
+  cnn_depth: 96
   actor_dist: 'onehot'
   units: 1024
   reward_layers: 5
   cont_layers: 5
   value_layers: 5
   actor_layers: 5
+  imag_gradient: 'reinforce'
+  disag_units: 1024
+  disag_layers: 5
+  disag_models: 8
+
 
 debug:
   debug: True
