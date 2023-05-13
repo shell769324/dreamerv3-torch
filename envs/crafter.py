@@ -31,7 +31,7 @@ class Crafter():
 
   @property
   def action_space(self):
-      return gym.spaces.Discrete(len(self._env.action_space))
+    return self._env.action_space
 
   def reset(self):
     self._done = False
