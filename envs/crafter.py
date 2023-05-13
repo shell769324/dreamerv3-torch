@@ -46,7 +46,7 @@ class Crafter():
     return self._obs(
         image, reward, info,
         is_last=self._done,
-        is_terminal=info['discount'] == 0)
+        is_terminal=info['discount'] == 0), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
