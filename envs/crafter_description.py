@@ -54,6 +54,7 @@ def describe_loc(ref, P):
 
 
 def describe_env(info):
+    print("printing info from the descriptor: " + str(info) + "\n")
     assert(info['semantic'][info['player_pos'][0],info['player_pos'][1]] == player_idx)
     semantic = info['semantic'][info['player_pos'][0]-info['view'][0]//2:info['player_pos'][0]+info['view'][0]//2+1, info['player_pos'][1]-info['view'][1]//2+1:info['player_pos'][1]+info['view'][1]//2]
     center = np.array([info['view'][0]//2,info['view'][1]//2-1])
@@ -64,9 +65,11 @@ def describe_env(info):
     loc = np.stack((y1, x1),axis=-1)
     dist = np.absolute(center-loc).sum(axis=-1)
     obj_info_list = []
-    
+    print("id to item: " + str(id_to_item) + "\n")
     facing = info['player_facing']
     target = (center[0] + facing[0], center[1] + facing[1])
+    print("target:" + str(target) + "\n");
+    print("semantic:" + str(semantic) + "\n");
     target = id_to_item[semantic[target]]
     obs = "You face {} at your front.".format(target, describe_loc(np.array([0,0]),facing))
     
