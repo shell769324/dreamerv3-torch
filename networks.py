@@ -66,11 +66,11 @@ class RSSM(nn.Module):
             inp_layers.append(self._act())
             if i == 0:
                 inp_dim = self._hidden
-        self._inp_layers = nn.Sequential(*inp_layers)
+        self._inp_layers = nn.Sequential(*inp_layers) # inp_layers: MLP
         self._inp_layers.apply(tools.weight_init)
 
         if cell == "gru":
-            self._cell = GRUCell(self._hidden, self._deter)
+            self._cell = GRUCell(self._hidden, self._deter) #Self._cell: GRU
             self._cell.apply(tools.weight_init)
         elif cell == "gru_layer_norm":
             self._cell = GRUCell(self._hidden, self._deter, norm=True)
@@ -168,7 +168,7 @@ class RSSM(nn.Module):
         prior = {k: swap(v) for k, v in prior.items()}
         return post, prior
 
-    def imagine(self, action, state=None):
+    def imagine(self, action, state=None): # this fn is never used!
         swap = lambda x: x.permute([1, 0] + list(range(2, len(x.shape))))
         if state is None:
             state = self.initial(action.shape[0])
@@ -266,9 +266,9 @@ class RSSM(nn.Module):
         # (batch, hidden) -> (batch_size, stoch, discrete_num)
         stats = self._suff_stats_layer("ims", x)
         if sample:
-            stoch = self.get_dist(stats).sample()
+            stoch = self.get_dist(stats).sample() # sample from distr
         else:
-            stoch = self.get_dist(stats).mode()
+            stoch = self.get_dist(stats).mode() # Greedy: taking max (evaluation)
         prior = {"stoch": stoch, "deter": deter, **stats}
         return prior
 

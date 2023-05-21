@@ -1,7 +1,7 @@
 import numpy as np
 import gym
 import crafter
-
+import envs.crafter_description as descriptor
 
 class Crafter():
 
@@ -18,6 +18,7 @@ class Crafter():
       )
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
+    self.__step = 0
 
   @property
   def observation_space(self):
@@ -41,7 +42,13 @@ class Crafter():
   def step(self, action):
     if len(action.shape) >= 1:
         action = np.argmax(action)
+    self.__step += 1
     image, reward, self._done, info = self._env.step(action)
+    desc = str(self.__step) + ":\n"
+    desc += descriptor.describe_frame(info) + "\n"
+    with open("./descriptions.txt", "a+") as myfile:
+        myfile.write(desc)
+
     reward = np.float32(reward)
     return self._obs(
         image, reward, info,

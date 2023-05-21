@@ -187,7 +187,7 @@ class WorldModel(nn.Module):
                 postent=self.dynamics.get_dist(post).entropy(),
             )
         post = {k: v.detach() for k, v in post.items()}
-        return post, context, metrics
+        return post, context, metrics # metrics: have losses
 
     def preprocess(self, obs):
         obs = obs.copy()
@@ -304,7 +304,7 @@ class ImagBehavior(nn.Module):
 
     def _train(
         self,
-        start,
+        start,# entire batch's posterior
         objective=None,
         action=None,
         reward=None,
@@ -321,8 +321,9 @@ class ImagBehavior(nn.Module):
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, repeats
                 )
+
                 reward = objective(imag_feat, imag_state, imag_action)
-                actor_ent = self.actor(imag_feat).entropy()
+                actor_ent = self.actor(imag_feat).entropy() #actor() fn returned horizon, [ batch size * sequence len ], action space distribution
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
@@ -380,19 +381,31 @@ class ImagBehavior(nn.Module):
         if repeats:
             raise NotImplemented("repeats is not implemented in this version")
         flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
+        # "stoch" -> (16, 64, 1024)
+        # "deter" -> (16, 64, 4096)
+        # start: now "stoch" and "deter" each of size (16*64, 1024/4096)
+        # first two dims are flattened -> effectively in parallel rolling out 16*64 many episode slices.
         start = {k: flatten(v) for k, v in start.items()}
 
         def step(prev, _):
             state, _, _ = prev
-            feat = dynamics.get_feat(state)
+            feat = dynamics.get_feat(state) # feat: concat[posterior, deter]
             inp = feat.detach() if self._stop_grad_actor else feat
             action = policy(inp).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
-            return succ, feat, action
+            return succ, feat, action #Succ: the {deter; prior} dict returned by img_step
 
+        # [torch.arange(horizon)], is only a range from 0 to horizon -1 => this line simply does a for-loop
+        # succ: dict of stoch & deter, an array of size 16(horizon), each elem has size 16*64(#ofslices), 1024/4096
         succ, feats, actions = tools.static_scan(
             step, [torch.arange(horizon)], (start, None, None)
-        )
+        ) # TODO: feats seem to be just a concat of succ, might be able to reduce returned stuff to save memory
+
+        # next line adds 1 dimension to start[k] so that it can be appened at the fornt of v
+        # and last stoch/deter in v is discarded
+        # Note: the "feats" returned above are features from the initial state to the second to the last rolled-out state
+        # "actions" returned above are actions taken from the initial state to the second to the last rolled-out state
+
         states = {k: torch.cat([start[k][None], v[:-1]], 0) for k, v in succ.items()}
         if repeats:
             raise NotImplemented("repeats is not implemented in this version")
@@ -403,26 +416,37 @@ class ImagBehavior(nn.Module):
         self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent
     ):
         if "cont" in self._world_model.heads:
-            inp = self._world_model.dynamics.get_feat(imag_state)
+            inp = self._world_model.dynamics.get_feat(imag_state) #todo: redundant concat, imag feat already exists
             discount = self._config.discount * self._world_model.heads["cont"](inp).mean
         else:
             discount = self._config.discount * torch.ones_like(reward)
+        # self._config.future_entropy = false
         if self._config.future_entropy and self._config.actor_entropy() > 0:
             reward += self._config.actor_entropy() * actor_ent
         if self._config.future_entropy and self._config.actor_state_entropy() > 0:
             reward += self._config.actor_state_entropy() * state_ent
+        # self.value is the our critic estimates v; mode() below is same as getting the means
         value = self.value(imag_feat).mode()
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
+        # target dimension starts with [horizon - 1]
         target = tools.lambda_return(
             reward[:-1],
             value[:-1],
             discount[:-1],
-            bootstrap=value[-1],
+            bootstrap=value[-1], # This is the base case for computing lambda target
             lambda_=self._config.discount_lambda,
             axis=0,
         )
+
+        #discount is size [horizon, batch size * seq len]
+        #torch.ones_like(discount[:1]) has dim [1, batch size * seq len], but filled with all ones, since the first state has discount 1 for sure
+        # but actually not sure why they predicted the first discount and then override it.
+        # Cumprod is similar to scalar, with ith elem being all the prefix items cum product =>
+        # => Weights should still be [horizon, batch size * seq len], each elem is either 1 or 0, representing whether there
+        # exists a previous time step where the predicted cont flag = 0, in which case no future rewards should be
+        # accumualted.
         weights = torch.cumprod(
             torch.cat([torch.ones_like(discount[:1]), discount[:-1]], 0), 0
         ).detach()
@@ -442,7 +466,7 @@ class ImagBehavior(nn.Module):
         metrics = {}
         inp = imag_feat.detach() if self._stop_grad_actor else imag_feat
         policy = self.actor(inp)
-        actor_ent = policy.entropy()
+        actor_ent = policy.entropy() #TODO can be removed, since this is same as the actor_ent arg.
         # Q-val for actor is not transformed using symlog
         target = torch.stack(target, dim=1)
         if self._config.reward_EMA:
@@ -457,7 +481,8 @@ class ImagBehavior(nn.Module):
 
         if self._config.imag_gradient == "dynamics":
             actor_target = adv
-        elif self._config.imag_gradient == "reinforce":
+        elif self._config.imag_gradient == "reinforce": # in our case, the reinforce actor target is not normalized in any way
+            #actor_target dim starts with [horizon-1], the last advantage should be zero so discarded
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
                 * (target - self.value(imag_feat[:-1]).mode()).detach()
