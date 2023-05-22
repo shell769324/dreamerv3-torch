@@ -44,11 +44,11 @@ class Crafter():
         action = np.argmax(action)
     self.__step += 1
     image, reward, self._done, info = self._env.step(action)
-    curPos = "=="*15 + "Step: {}, Reward: {}".format(self.__step, reward) + "=="*15
+    curPos = "\n" + "=="*15 + "Step: {}, Reward: {}".format(self.__step, reward) + "=="*15 + "\n"
     desc0, desc1 = descriptor.describe_frame(info)
     with open("./descriptions.txt", "a+") as myfile:
         myfile.write(curPos)
-        myfile.write(desc0)
+        myfile.write(desc0 + "\n")
         myfile.write(desc1)
 
     reward = np.float32(reward)

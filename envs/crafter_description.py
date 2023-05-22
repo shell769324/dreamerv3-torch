@@ -107,7 +107,7 @@ def describe_env(info):
 def describe_act(info):
     result = ""
     
-    action_str = info['action'].replace('do_', 'interact_')
+    action_str = info['action'].replace('do', 'interact')
     action_str = action_str.replace('move_up', 'move_north')
     action_str = action_str.replace('move_down', 'move_south')
     action_str = action_str.replace('move_left', 'move_west')
