@@ -56,12 +56,22 @@ def describe_loc(ref, P):
 def describe_env(info):
     print("printing info from the descriptor: " + str(info) + "\n")
     assert(info['semantic'][info['player_pos'][0],info['player_pos'][1]] == player_idx)
-    semantic = info['semantic'][info['player_pos'][0]-info['view'][0]//2:info['player_pos'][0]+info['view'][0]//2+1, info['player_pos'][1]-info['view'][1]//2+1:info['player_pos'][1]+info['view'][1]//2]
+    # pad semantic so that when agent is at a wall, we can still segment semantic with a 9 by 7 view centered at agent.
+    padded_semantic = np.pad(info['semantic'], ((4,4),(3,3)), 'constant') #pad 4 on first axis and 3 on 2nd axis
+    padded_player_pos = [info['play_pos'][0]+4, info['player_pos'][1]+3]
+    # semantic dim is 9 by 7
+    semantic = padded_semantic[
+               padded_player_pos[0]-padded_player_pos[0]//2 :
+               padded_player_pos[0]+padded_player_pos[0]//2+1,
+               padded_player_pos[1]-padded_player_pos[1]//2+1:
+               padded_player_pos[1]+padded_player_pos[1]//2]
     center = np.array([info['view'][0]//2,info['view'][1]//2-1])
+    # center = [4,3]
     result = ""
     x = np.arange(semantic.shape[1])
     y = np.arange(semantic.shape[0])
     x1, y1 = np.meshgrid(x,y)
+    # x1, y1 are all relative coordinates within the 9 by 7 view
     loc = np.stack((y1, x1),axis=-1)
     dist = np.absolute(center-loc).sum(axis=-1)
     obj_info_list = []
@@ -70,18 +80,19 @@ def describe_env(info):
     target = (center[0] + facing[0], center[1] + facing[1])
     print("target:" + str(target) + "\n");
     print("semantic:" + str(semantic) + "\n");
-    target = id_to_item[semantic[target]]
+    target = "wall" if semantic[target] == 0 else id_to_item[semantic[target]]
     obs = "You face {} at your front.".format(target, describe_loc(np.array([0,0]),facing))
     
     # R = rotation_matrix(info['player_facing'], REF)
     for idx in np.unique(semantic):
-        if idx==player_idx:
+        item = "wall" if idx == 0 else id_to_item[idx]
+        if idx == player_idx:
             continue
         # if id_to_item[idx] == target:
         #     continue
         # print(id_to_item[idx])
         smallest = np.unravel_index(np.argmin(np.where(semantic==idx, dist, np.inf)), semantic.shape)
-        obj_info_list.append((id_to_item[idx], dist[smallest], describe_loc(np.array([0,0]), smallest-center)))
+        obj_info_list.append((item, dist[smallest], describe_loc(np.array([0,0]), smallest-center)))
         # obj_info_list.append((id_to_item[idx], dist[smallest], describe_loc(np.array([0,0]), R @ (smallest-center))))
 
     if len(obj_info_list)>0:
