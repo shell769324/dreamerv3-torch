@@ -58,7 +58,7 @@ def describe_env(info):
     assert(info['semantic'][info['player_pos'][0],info['player_pos'][1]] == player_idx)
     # pad semantic so that when agent is at a wall, we can still segment semantic with a 9 by 7 view centered at agent.
     padded_semantic = np.pad(info['semantic'], ((4,4),(3,3)), 'constant') #pad 4 on first axis and 3 on 2nd axis
-    padded_player_pos = [info['play_pos'][0]+4, info['player_pos'][1]+3]
+    padded_player_pos = [info['player_pos'][0]+4, info['player_pos'][1]+3]
     # semantic dim is 9 by 7
     semantic = padded_semantic[
                padded_player_pos[0]-padded_player_pos[0]//2 :
