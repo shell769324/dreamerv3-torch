@@ -61,10 +61,10 @@ def describe_env(info):
     padded_player_pos = [info['player_pos'][0]+4, info['player_pos'][1]+3]
     # semantic dim is 9 by 7
     semantic = padded_semantic[
-               padded_player_pos[0]-padded_player_pos[0]//2 :
-               padded_player_pos[0]+padded_player_pos[0]//2+1,
-               padded_player_pos[1]-padded_player_pos[1]//2+1:
-               padded_player_pos[1]+padded_player_pos[1]//2]
+               padded_player_pos[0]-info['view'][0]//2 :
+               padded_player_pos[0]+info['view'][0]//2+1,
+               padded_player_pos[1]-info['view'][1]//2+1:
+               padded_player_pos[1]+info['view'][1]//2]
     center = np.array([info['view'][0]//2,info['view'][1]//2-1])
     # center = [4,3]
     result = ""
