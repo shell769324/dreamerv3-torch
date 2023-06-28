@@ -583,7 +583,6 @@ class ActionHead(nn.Module):
 
     def __call__(self, features, dtype=None):
         x = features
-        print(x.shape, "xx", x)
         x = self._pre_layers(x)
         if self._dist == "tanh_normal":
             x = self._dist_layer(x)
