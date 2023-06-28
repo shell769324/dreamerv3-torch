@@ -46,7 +46,7 @@ class Crafter():
     spaces["is_last"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
-    spaces["target"] = gym.spaces.Box(0, 1, (len(targets),), dtype=np.uint8)
+    spaces["target"] = gym.spaces.Box(0, 1, (len(targets),), dtype=np.float32)
     spaces.update({
         f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
         for k in self._achievements})
@@ -62,7 +62,7 @@ class Crafter():
     self._prev_info = []
     self._target = np.zeros(len(targets))
     self._target_index = np.random.randint(0, len(targets))
-    self._target[self._target_index] = 1
+    self._target[self._target_index] = 1.0
     return self._obs(image, 0.0, {}, is_first=True)
 
   def step(self, action):
@@ -78,7 +78,7 @@ class Crafter():
         reward += 0.5
         self._target = np.zeros(len(targets))
         self._target_index = np.random.randint(0, len(targets))
-        self._target[self._target_index] = 1
+        self._target[self._target_index] = 1.0
     else:
         min_dist = None
         for i in range(-self._row_side, self._row_side + 1):

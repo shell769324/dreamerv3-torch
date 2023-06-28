@@ -389,7 +389,7 @@ class ImagBehavior(nn.Module):
 
         target_onehot = np.zeros((start['deter'].shape[0], len(targets)))
         rands = np.random.randint(0, len(targets), size=target_onehot.shape[0])
-        target_onehot[np.arange(rands.size), rands] = 1
+        target_onehot[np.arange(rands.size), rands] = 1.0
         target_onehot = torch.from_numpy(target_onehot).to(self._config.device)
 
         def step(prev, _):
