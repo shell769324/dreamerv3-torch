@@ -3,6 +3,7 @@ import torch
 from torch import nn
 import numpy as np
 from PIL import ImageColor, Image, ImageDraw, ImageFont
+from envs.crafter import targets
 
 import networks
 import tools
@@ -88,7 +89,7 @@ class WorldModel(nn.Module):
         )
         if config.reward_head == "twohot_symlog":
             self.heads["reward"] = networks.DenseHead(
-                feat_size,  # pytorch version
+                feat_size + len(targets),  # pytorch version
                 (255,),
                 config.reward_layers,
                 config.units,
@@ -100,7 +101,7 @@ class WorldModel(nn.Module):
             )
         else:
             self.heads["reward"] = networks.DenseHead(
-                feat_size,  # pytorch version
+                feat_size + len(targets),  # pytorch version
                 [],
                 config.reward_layers,
                 config.units,
@@ -159,7 +160,10 @@ class WorldModel(nn.Module):
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    pred = head(feat)
+                    if name == "reward":
+                        pred = head(torch.cat([feat, data["target"]], -1))
+                    else:
+                        pred = head(feat)
                     like = pred.log_prob(data[name])
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
@@ -214,11 +218,11 @@ class WorldModel(nn.Module):
             embed[:6, :5], data["action"][:6, :5], data["is_first"][:6, :5]
         )
         recon = self.heads["image"](self.dynamics.get_feat(states)).mode()[:6]
-        reward_post = self.heads["reward"](self.dynamics.get_feat(states)).mode()[:6]
+        # reward_post = self.heads["reward"](self.dynamics.get_feat(states)).mode()[:6]
         init = {k: v[:, -1] for k, v in states.items()}
         prior = self.dynamics.imagine(data["action"][:6, 5:], init)
         openl = self.heads["image"](self.dynamics.get_feat(prior)).mode()
-        reward_prior = self.heads["reward"](self.dynamics.get_feat(prior)).mode()
+        # reward_prior = self.heads["reward"](self.dynamics.get_feat(prior)).mode()
         # observed image is given until 5 steps
         model = torch.cat([recon[:, :5], openl], 1)
         truth = data["image"][:6] + 0.5
@@ -237,7 +241,7 @@ class ImagBehavior(nn.Module):
         self._stop_grad_actor = stop_grad_actor
         self._reward = reward
         if config.dyn_discrete:
-            feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter
+            feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter + len(targets)
         else:
             feat_size = config.dyn_stoch + config.dyn_deter
         self.actor = networks.ActionHead(
@@ -377,14 +381,20 @@ class ImagBehavior(nn.Module):
 
     def _imagine(self, start, policy, horizon, repeats=None):
         dynamics = self._world_model.dynamics
+        # start['deter'] (16, 64, 512)
         if repeats:
             raise NotImplemented("repeats is not implemented in this version")
         flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
         start = {k: flatten(v) for k, v in start.items()}
 
+        target_onehot = torch.zeros(start['deter'].shape[0], len(targets)).to(self._config.device)
+        rands = np.random.randint(0, len(targets), size=target_onehot.shape[0])
+        target_onehot[np.arange(rands.size(), rands)] = 1
+
         def step(prev, _):
             state, _, _ = prev
             feat = dynamics.get_feat(state)
+            feat = torch.cat([feat, target_onehot], -1)
             inp = feat.detach() if self._stop_grad_actor else feat
             action = policy(inp).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)

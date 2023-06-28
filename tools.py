@@ -132,19 +132,21 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         obs = [None] * len(envs)
         agent_state = None
         reward = [0] * len(envs)
+        info = [{}] * len(envs)
     else:
-        step, episode, done, length, obs, agent_state, reward = state
+        step, episode, done, length, obs, agent_state, reward, info = state
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
         if done.any():
-            indices = [index for index, d in enumerate(done) if d]
+            # the indices of the environment that is done (done = 1)
+            indices = [index for (index, d) in enumerate(done) if d]
             results = [envs[i].reset() for i in indices]
             for index, result in zip(indices, results):
                 obs[index] = result
             reward = [reward[i] * (1 - done[i]) for i in range(len(envs))]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        action, agent_state = agent(obs, done, agent_state, reward)
+        action, agent_state = agent(obs, done, agent_state, reward, info=info)
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][i].detach().cpu()) for k in action}
@@ -155,16 +157,17 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         assert len(action) == len(envs)
         # Step envs.
         results = [e.step(a) for e, a in zip(envs, action)]
-        obs, reward, done = zip(*[p[:3] for p in results])
+        obs, reward, done, info = zip(*[p[:] for p in results])
         obs = list(obs)
         reward = list(reward)
+        info = list(info)
         done = np.stack(done)
         episode += int(done.sum())
         length += 1
         step += (done * length).sum()
         length *= 1 - done
 
-    return (step - steps, episode - episodes, done, length, obs, agent_state, reward)
+    return (step - steps, episode - episodes, done, length, obs, agent_state, reward, info)
 
 
 def save_episodes(directory, episodes):

@@ -6,6 +6,7 @@ import os
 import pathlib
 import sys
 import warnings
+from envs.crafter import targets
 
 os.environ["MUJOCO_GL"] = "egl"
 
@@ -67,7 +68,7 @@ class Dreamer(nn.Module):
             plan2explore=lambda: expl.Plan2Explore(config, self._wm, reward),
         )[config.expl_behavior]().to(self._config.device)
 
-    def __call__(self, obs, reset, state=None, reward=None, training=True):
+    def __call__(self, obs, reset, state=None, reward=None, training=True, info=None):
         step = self._step
         if self._should_reset(step):
             state = None
@@ -102,20 +103,23 @@ class Dreamer(nn.Module):
                 self._logger.video("train_openl", to_np(openl))
                 self._logger.write(fps=True)
 
-        policy_output, state = self._policy(obs, state, training)
+        policy_output, state = self._policy(obs, state, training, info)
 
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
         return policy_output, state
 
-    def _policy(self, obs, state, training):
+    def _policy(self, obs, state, training, info):
         if state is None:
             batch_size = len(obs["image"])
             latent = self._wm.dynamics.initial(len(obs["image"]))
             action = torch.zeros((batch_size, self._config.num_actions)).to(
                 self._config.device
             )
+            target_ran = torch.zeros(len(targets))
+            target_ran[np.random.randint(0, len(targets))] = 1
+            info = [{"target": target_ran} for _ in range(batch_size)]
         else:
             latent, action = state
         obs = self._wm.preprocess(obs)
@@ -125,7 +129,11 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
+        target_onehot = torch.zeros((len(obs("image"))), len(targets)).to(self._config.device)
+        for i, inf in enumerate(info):
+            target_onehot[i] = inf['target'].to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
+        feat = torch.cat([feat, target_onehot], -1)
         if not training:
             actor = self._task_behavior.actor(feat)
             action = actor.mode()
@@ -164,9 +172,7 @@ class Dreamer(nn.Module):
         metrics.update(mets)
         start = post
         # start['deter'] (16, 64, 512)
-        reward = lambda f, s, a: self._wm.heads["reward"](
-            self._wm.dynamics.get_feat(s)
-        ).mode()
+        reward = lambda f, s, a: self._wm.heads["reward"](f).mode()
         metrics.update(self._task_behavior._train(start, reward)[-1])
         if self._config.expl_behavior != "greedy":
             mets = self._expl_behavior.train(start, context, data)[-1]
@@ -189,6 +195,8 @@ def make_dataset(episodes, config):
 
 
 def make_env(config, logger, mode, train_eps, eval_eps):
+    # crafter_reward
+    # [crafter, reward]
     suite, task = config.task.split("_", 1)
     if suite == "dmc":
         import envs.dmc as dmc
