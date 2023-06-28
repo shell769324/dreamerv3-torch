@@ -390,7 +390,7 @@ class ImagBehavior(nn.Module):
         target_onehot = torch.zeros(start['deter'].shape[0], len(targets)).to(self._config.device)
         rands = np.random.randint(0, len(targets), size=target_onehot.shape[0])
         target_onehot[np.arange(rands.size), rands] = 1.0
-        target_onehot = target_onehot.type(torch.DoubleTensor)
+        target_onehot = target_onehot.type(torch.cuda.HalfTensor)
         target_onehot = target_onehot.to(self._config.device)
 
         def step(prev, _):
@@ -399,7 +399,7 @@ class ImagBehavior(nn.Module):
             feat = torch.cat([feat, target_onehot], -1)
             inp = feat.detach() if self._stop_grad_actor else feat
             print(inp.shape, inp)
-            action = policy(inp.double()).sample()
+            action = policy(inp).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, feat, action
 
