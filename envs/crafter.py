@@ -17,7 +17,7 @@ class Crafter():
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
     self._target = np.zeros(len(targets))
-    self._target[0] = 1
+    self._target[0] = 1.0
     self._target_index = 0
     self._step_for_target = 0
     self._prev_info = []
