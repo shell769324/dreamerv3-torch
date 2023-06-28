@@ -387,10 +387,10 @@ class ImagBehavior(nn.Module):
         flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
         start = {k: flatten(v) for k, v in start.items()}
 
-        target_onehot = np.zeros((start['deter'].shape[0], len(targets)))
+        target_onehot = torch.zeros(start['deter'].shape[0], len(targets)).to(self._config.device)
         rands = np.random.randint(0, len(targets), size=target_onehot.shape[0])
         target_onehot[np.arange(rands.size), rands] = 1.0
-        target_onehot = torch.from_numpy(target_onehot).to(self._config.device)
+        target_onehot = target_onehot.type(torch.DoubleTensor)
 
         def step(prev, _):
             state, _, _ = prev
