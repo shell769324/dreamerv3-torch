@@ -132,6 +132,7 @@ class Dreamer(nn.Module):
         target_onehot = torch.zeros((len(obs["image"])), len(targets)).to(self._config.device)
         print(info)
         for i, inf in enumerate(info):
+            print(inf)
             target_onehot[i] = inf["target"].to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
         feat = torch.cat([feat, target_onehot], -1)
