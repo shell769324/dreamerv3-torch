@@ -131,7 +131,7 @@ class Dreamer(nn.Module):
             latent["stoch"] = latent["mean"]
         target_onehot = torch.zeros((len(obs["image"])), len(targets)).to(self._config.device)
         for i, inf in enumerate(info):
-            target_onehot[i] = inf['target'].to(self._config.device)
+            target_onehot[i] = inf["target"].to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
         feat = torch.cat([feat, target_onehot], -1)
         if not training:
