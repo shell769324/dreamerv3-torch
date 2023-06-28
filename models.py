@@ -391,6 +391,7 @@ class ImagBehavior(nn.Module):
         rands = np.random.randint(0, len(targets), size=target_onehot.shape[0])
         target_onehot[np.arange(rands.size), rands] = 1.0
         target_onehot = target_onehot.type(torch.DoubleTensor)
+        target_onehot = target_onehot.to(self._config.device)
 
         def step(prev, _):
             state, _, _ = prev
