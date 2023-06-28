@@ -129,7 +129,7 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
-        target_onehot = torch.zeros((len(obs("image"))), len(targets)).to(self._config.device)
+        target_onehot = torch.zeros((len(obs["image"])), len(targets)).to(self._config.device)
         for i, inf in enumerate(info):
             target_onehot[i] = inf['target'].to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
