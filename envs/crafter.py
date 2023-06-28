@@ -28,8 +28,8 @@ class Crafter():
             name)
         self._id_to_item[ind] = name
     print(self._env._local_view._grid.shape)
-    self._row_side = self._env._local_view._grid.shape[0] // 2
-    self._col_side = self._env._local_view._grid.shape[1] // 2
+    self._row_side = self._env._local_view._grid[0] // 2
+    self._col_side = self._env._local_view._grid[1] // 2
     if outdir:
       self._env = crafter.Recorder(
           self._env, outdir,
