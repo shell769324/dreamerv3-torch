@@ -14,13 +14,6 @@ class Crafter():
     assert task in ('reward', 'noreward')
     self._env = crafter.Env(size=size, reward=(task == 'reward'), seed=seed)
     self._size = size
-    if outdir:
-      self._env = crafter.Recorder(
-          self._env, outdir,
-          save_stats=True,
-          save_video=False,
-          save_episode=False,
-      )
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
     self._target = np.zeros(len(targets))
@@ -36,6 +29,13 @@ class Crafter():
         self._id_to_item[ind] = name
     self._row_side = self._env._local_view._grid.shape[0] // 2
     self._col_side = self._env._local_view._grid.shape[1] // 2
+    if outdir:
+      self._env = crafter.Recorder(
+          self._env, outdir,
+          save_stats=True,
+          save_video=False,
+          save_episode=False,
+      )
 
   @property
   def observation_space(self):
