@@ -74,8 +74,7 @@ class Crafter():
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
-    faced = self._id_to_item[info['semantic'][faced_pos]]
-    if faced == targets[self._target_index]:
+    if 0 <= faced_pos[0] < 64 and 0 <= faced_pos[1] < 64 and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target_index]:
         reward += 0.5
         self._target = np.zeros(len(targets))
         self._target_index = np.random.randint(0, len(targets))
