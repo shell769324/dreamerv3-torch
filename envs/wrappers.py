@@ -29,9 +29,6 @@ class CollectDataset:
             transition["action"] = action
         transition["reward"] = reward
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
-        target_ran = np.zeros(len(targets))
-        target_ran[np.random.randint(0, len(targets))] = 1
-        transition["target"] = info.get("target", target_ran)
         self._episode.append(transition)
         self.add_to_cache(transition)
         if done:

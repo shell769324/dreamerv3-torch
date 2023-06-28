@@ -132,9 +132,8 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         obs = [None] * len(envs)
         agent_state = None
         reward = [0] * len(envs)
-        info = [{}] * len(envs)
     else:
-        step, episode, done, length, obs, agent_state, reward, info = state
+        step, episode, done, length, obs, agent_state, reward = state
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
         if done.any():
@@ -146,7 +145,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
             reward = [reward[i] * (1 - done[i]) for i in range(len(envs))]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        action, agent_state = agent(obs, done, agent_state, reward, info=info)
+        action, agent_state = agent(obs, done, agent_state, reward)
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][i].detach().cpu()) for k in action}
@@ -160,14 +159,13 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         obs, reward, done, info = zip(*[p[:] for p in results])
         obs = list(obs)
         reward = list(reward)
-        info = list(info)
         done = np.stack(done)
         episode += int(done.sum())
         length += 1
         step += (done * length).sum()
         length *= 1 - done
 
-    return (step - steps, episode - episodes, done, length, obs, agent_state, reward, info)
+    return (step - steps, episode - episodes, done, length, obs, agent_state, reward)
 
 
 def save_episodes(directory, episodes):
