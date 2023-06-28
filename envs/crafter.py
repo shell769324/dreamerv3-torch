@@ -84,7 +84,8 @@ class Crafter():
         min_dist = None
         for i in range(-self._row_side, self._row_side + 1):
             for j in range(-self._col_side, self._col_side + 1):
-                if self._id_to_item[info['semantic'][i][j]] == targets[self._target_index]:
+                x, y = player_pos[0] + i, player_pos[1] + j
+                if 0 <= x < 64 and 0 <= y < 64 and self._id_to_item[info['semantic'][x][y]] == targets[self._target_index]:
                     dist = abs(i) + abs(j)
                     min_dist = dist if min_dist is None else min(dist, min_dist)
         if self._last_min_dist is None:
