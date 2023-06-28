@@ -398,6 +398,7 @@ class ImagBehavior(nn.Module):
             feat = dynamics.get_feat(state)
             feat = torch.cat([feat, target_onehot], -1)
             inp = feat.detach() if self._stop_grad_actor else feat
+            print(inp)
             action = policy(inp).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, feat, action
