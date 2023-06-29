@@ -73,8 +73,8 @@ class Crafter():
         action = np.argmax(action)
     image, reward, self._done, info = self._env.step(action)
     augmented = self._env.render_target(targets[self._target_index])
-    #reward = np.float32(reward)
-    reward = np.float32(0)
+    reward = np.float32(reward)
+    #reward = np.float32(0)
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
