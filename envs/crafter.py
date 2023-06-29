@@ -6,13 +6,14 @@ import random
 import crafter
 import itertools
 
-targets = ["water", "stone", "tree", "coal", "iron", "cow", "skeleton", "zombie"]
+targets = ["water", "stone", "tree", "coal", "iron", "cow", "skeleton"]
 
 class Crafter():
 
   def __init__(self, task, size=(64, 64), outdir=None, seed=None):
     assert task in ('reward', 'noreward')
     self._env = crafter.Env(size=size, reward=(task == 'reward'), seed=seed)
+    self._crafter_env = self._env
     self._size = size
     self._achievements = crafter.constants.achievements.copy()
     self._done = True
@@ -41,6 +42,7 @@ class Crafter():
   def observation_space(self):
     spaces = {}
     spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.uint8)
+    spaces["augmented"] = gym.spaces.Box(0, 255, self._crafter_env.aug_size + (3,), dtype=np.uint8)
     spaces["log_reward"] = gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
     spaces["is_first"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["is_last"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -63,12 +65,14 @@ class Crafter():
     self._target = np.zeros(len(targets))
     self._target_index = np.random.randint(0, len(targets))
     self._target[self._target_index] = 1.0
-    return self._obs(image, 0.0, {}, is_first=True)
+    augmented = self._env.render_target(targets[self._target_index])
+    return self._obs(image, 0.0, {}, is_first=True, augmented=augmented)
 
   def step(self, action):
     if len(action.shape) >= 1:
         action = np.argmax(action)
     image, reward, self._done, info = self._env.step(action)
+    augmented = self._env.render_target(targets[self._target_index])
     #reward = np.float32(reward)
     reward = np.float32(0)
     player_pos = info['player_pos']
@@ -99,18 +103,19 @@ class Crafter():
         self._last_min_dist = min_dist
 
     return self._obs(
-        image, reward, info,
+        image, reward, info, augmented=augmented,
         is_last=self._done,
         is_terminal=info['discount'] == 0), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
-      is_first=False, is_last=False, is_terminal=False):
+      is_first=False, is_last=False, is_terminal=False, augmented=None):
     log_achievements = {
         f'log_achievement_{k}': info['achievements'][k] if info else 0
         for k in self._achievements}
     return dict(
         image=image,
+        augmented=augmented,
         reward=reward,
         is_first=is_first,
         is_last=is_last,

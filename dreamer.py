@@ -262,7 +262,7 @@ class ProcessEpisodeWrap:
         filename = tools.save_episodes(directory, [episode])[0]
         length = len(episode["reward"]) - 1
         score = float(episode["reward"].astype(np.float64).sum())
-        video = episode["image"]
+        video = episode["augmented"]
         cache[str(filename)] = episode
         if mode == "train":
             total = 0
