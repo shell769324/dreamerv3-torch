@@ -96,23 +96,12 @@ class Dreamer(nn.Module):
                 averaged = {}
                 for name, values in self._short_metrics.items():
                     averaged[name] = float(np.mean(values))
-                    self._short_metrics[name] = []
-                    try:
-                        iterator = iter(self._short_metrics[name])
-                    except TypeError:
-                        self._short_metrics[name] = 0
-                    else:
-                        self._short_metrics[name] = []
+                    self._short_metrics = {}
                 wandb.log(averaged, step=step)
             if self._should_log(step):
                 for name, values in self._metrics.items():
                     self._logger.scalar(name, float(np.mean(values)))
-                    try:
-                        iterator = iter(self._metrics[name])
-                    except TypeError:
-                        self._metrics[name] = 0
-                    else:
-                        self._metrics[name] = []
+                    self._metrics = {}
                 openl = self._wm.video_pred(next(self._dataset))
                 self._logger.video("train_openl", to_np(openl))
                 self._logger.write(fps=True)
