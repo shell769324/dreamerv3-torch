@@ -108,9 +108,6 @@ class Dreamer(nn.Module):
                 target_name = targets[obs["prev_target_index"][i]]
                 self._metrics[mode + "_" + target_name + "_step"] = obs["target_steps"][i]
                 self._metrics[mode + "_" + target_name + "_success"] = 1
-            if obs["is_last"][i]:
-                target_name = targets[obs["prev_target_index"][i]]
-                self._metrics[mode + "_" + target_name + "_failure"] = 1
 
         policy_output, state = self._policy(obs, state, training)
 
@@ -390,7 +387,7 @@ def main(config, defaults):
             logger.write()
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
-            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num)
+            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             logger.video("eval_openl", to_np(video_pred))
             print("Start training.")

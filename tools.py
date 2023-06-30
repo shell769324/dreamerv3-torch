@@ -7,6 +7,7 @@ import pickle
 import re
 import time
 import uuid
+from envs.crafter import targets
 
 import numpy as np
 
@@ -123,7 +124,7 @@ class Logger:
         self._writer.add_video(name, value, step, 16)
 
 
-def simulate(agent, envs, steps=0, episodes=0, state=None):
+def simulate(agent, envs, steps=0, episodes=0, state=None, training=True):
     # Initialize or unpack simulation state.
     if state is None:
         step, episode = 0, 0
@@ -136,6 +137,11 @@ def simulate(agent, envs, steps=0, episodes=0, state=None):
         step, episode, done, length, obs, agent_state, reward = state
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
+        for i, d in enumerate(done):
+            if d:
+                mode = "train" if training else "eval"
+                target_name = targets[obs[i]["prev_target_index"]]
+                agent._metrics[mode + "_" + target_name + "_failure"] = 1
         if done.any():
             # the indices of the environment that is done (done = 1)
             indices = [index for (index, d) in enumerate(done) if d]
