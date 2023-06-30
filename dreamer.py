@@ -123,6 +123,7 @@ class Dreamer(nn.Module):
                     self._short_metrics[success_name] = 1
                 else:
                     self._short_metrics[step_name].append(obs["target_steps"][i])
+                    print(self._short_metrics)
                     self._short_metrics[success_name] += 1
 
 
