@@ -41,6 +41,7 @@ class Dreamer(nn.Module):
         self._should_reset = tools.Every(config.reset_every)
         self._should_expl = tools.Until(int(config.expl_until / config.action_repeat))
         self._metrics = {}
+        self._short_metrics = {}
         self._step = count_steps(config.traindir)
         self._update_count = 0
         # Schedules.
@@ -89,11 +90,13 @@ class Dreamer(nn.Module):
                 self._train(next(self._dataset))
                 self._update_count += 1
                 self._metrics["update_count"] = self._update_count
+                self._short_metrics["update_count"] = self._update_count
 
             if self._should_emit(step):
                 averaged = {}
-                for name, values in self._metrics.items():
+                for name, values in self._short_metrics.items():
                     averaged[name] = float(np.mean(values))
+                    self._short_metrics[name] = []
                 wandb.log(averaged, step=step)
             if self._should_log(step):
                 for name, values in self._metrics.items():
@@ -106,8 +109,22 @@ class Dreamer(nn.Module):
             mode = "train" if training else "eval"
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target_index"][i]]
-                self._metrics[mode + "_" + target_name + "_step"] = obs["target_steps"][i]
-                self._metrics[mode + "_" + target_name + "_success"] = 1
+                step_name = mode + "_" + target_name + "_step"
+                success_name = mode + "_" + target_name + "_success"
+                if step_name not in self._metrics.keys():
+                    self._metrics[step_name] = [obs["target_steps"][i]]
+                    self._metrics[success_name] = 1
+                else:
+                    self._metrics[step_name].append(obs["target_steps"][i])
+                    self._metrics[success_name] += 1
+
+                if step_name not in self._short_metrics.keys():
+                    self._short_metrics[step_name] = [obs["target_steps"][i]]
+                    self._short_metrics[success_name] = 1
+                else:
+                    self._short_metrics[step_name].append(obs["target_steps"][i])
+                    self._short_metrics[success_name] += 1
+
 
         policy_output, state = self._policy(obs, state, training)
 
@@ -183,8 +200,10 @@ class Dreamer(nn.Module):
         for name, value in metrics.items():
             if not name in self._metrics.keys():
                 self._metrics[name] = [value]
+                self._short_metrics[name] = [value]
             else:
                 self._metrics[name].append(value)
+                self._short_metrics[name].append(value)
 
 
 def count_steps(folder):
