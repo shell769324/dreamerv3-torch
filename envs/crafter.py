@@ -21,7 +21,6 @@ class Crafter():
     self._target[0] = 1.0
     self._target_index = 0
     self._step_for_target = 0
-    self._prev_info = []
     self._id_to_item = [0] * 19
     self._last_min_dist = None
     for name, ind in itertools.chain(self._env._world._mat_ids.items(), self._env._sem_view._obj_ids.items()):
@@ -58,13 +57,26 @@ class Crafter():
   def action_space(self):
     return self._env.action_space
 
+  def _get_dist(self, player_pos, info):
+    min_dist = None
+    for i in range(-self._row_side, self._row_side + 1):
+        for j in range(-self._col_side, self._col_side + 1):
+            x, y = player_pos[0] + i, player_pos[1] + j
+            if 0 <= x < self._size[0] and 0 <= y < self._size[1] and self._id_to_item[info['semantic'][x][y]] == targets[self._target_index]:
+                dist = abs(i) + abs(j)
+                min_dist = dist if min_dist is None else min(dist, min_dist)
+    return min_dist
+
   def reset(self):
     self._done = False
     image = self._env.reset()
-    self._prev_info = []
     self._target = np.zeros(len(targets))
     self._target_index = np.random.randint(0, len(targets))
     self._target[self._target_index] = 1.0
+    info = {
+        'semantic': self._crafter_env._sem_view()
+    }
+    self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
     augmented = self._env.render_target(targets[self._target_index])
     return self._obs(image, 0.0, {}, is_first=True, augmented=augmented)
 
@@ -73,24 +85,19 @@ class Crafter():
         action = np.argmax(action)
     image, reward, self._done, info = self._env.step(action)
     augmented = self._env.render_target(targets[self._target_index])
-    reward = np.float32(reward)
-    #reward = np.float32(0)
+    #reward = np.float32(reward)
+    reward = np.float32(0)
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
-    if 0 <= faced_pos[0] < 64 and 0 <= faced_pos[1] < 64 and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target_index]:
+    if 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1] and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target_index]:
         reward += 0.5
         self._target = np.zeros(len(targets))
         self._target_index = np.random.randint(0, len(targets))
         self._target[self._target_index] = 1.0
+        self._last_min_dist = self._get_dist(player_pos, info)
     else:
-        min_dist = None
-        for i in range(-self._row_side, self._row_side + 1):
-            for j in range(-self._col_side, self._col_side + 1):
-                x, y = player_pos[0] + i, player_pos[1] + j
-                if 0 <= x < 64 and 0 <= y < 64 and self._id_to_item[info['semantic'][x][y]] == targets[self._target_index]:
-                    dist = abs(i) + abs(j)
-                    min_dist = dist if min_dist is None else min(dist, min_dist)
+        min_dist = self._get_dist(player_pos, info)
         if self._last_min_dist is None:
             if min_dist is not None:
                 reward += 0.1
