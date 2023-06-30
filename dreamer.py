@@ -200,9 +200,11 @@ class Dreamer(nn.Module):
         for name, value in metrics.items():
             if not name in self._metrics.keys():
                 self._metrics[name] = [value]
-                self._short_metrics[name] = [value]
             else:
                 self._metrics[name].append(value)
+            if name not in self._short_metrics.keys():
+                self._short_metrics[name] = [value]
+            else:
                 self._short_metrics[name].append(value)
 
 
