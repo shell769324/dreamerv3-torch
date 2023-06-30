@@ -102,7 +102,7 @@ class Dreamer(nn.Module):
                 openl = self._wm.video_pred(next(self._dataset))
                 self._logger.video("train_openl", to_np(openl))
                 self._logger.write(fps=True)
-        for i in range(obs["target_steps"]):
+        for i in range(len(obs["target_steps"])):
             mode = "train" if training else "eval"
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target_index"][i]]
