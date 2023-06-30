@@ -108,7 +108,7 @@ class Dreamer(nn.Module):
                 target_name = targets[obs["prev_target_index"][i]]
                 self._metrics[mode + "_" + target_name + "_step"] = obs["target_steps"][i]
                 self._metrics[mode + "_" + target_name + "_success"] = 1
-            if obs["target_failed"][i]:
+            if obs["is_last"][i]:
                 target_name = targets[obs["prev_target_index"][i]]
                 self._metrics[mode + "_" + target_name + "_failure"] = 1
 

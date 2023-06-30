@@ -51,7 +51,6 @@ class Crafter():
     spaces["target"] = gym.spaces.Box(0, 1, (len(targets),), dtype=np.float32)
     spaces["target_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
     spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
-    spaces["target_failed"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["prev_target_index"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces.update({
         f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
@@ -97,7 +96,6 @@ class Crafter():
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
-    target_failed = False
     target_reached = False
     target_steps = self._target_steps
     prev_target_index = self._target_index
@@ -110,8 +108,6 @@ class Crafter():
         target_reached = True
         self._target_steps = 0
     else:
-        if self._done:
-            target_failed = True
         min_dist = self._get_dist(player_pos, info)
         if self._last_min_dist is None:
             if min_dist is not None:
@@ -127,12 +123,12 @@ class Crafter():
     return self._obs(
         image, reward, info, augmented=augmented,
         is_last=self._done,
-        is_terminal=info['discount'] == 0, target_failed=target_failed, target_reached=target_reached, target_steps=target_steps,
+        is_terminal=info['discount'] == 0, target_reached=target_reached, target_steps=target_steps,
         prev_target_index=prev_target_index), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
-      is_first=False, is_last=False, is_terminal=False, augmented=None, target_reached=False, target_failed=False,
+      is_first=False, is_last=False, is_terminal=False, augmented=None, target_reached=False,
         target_steps=0, prev_target_index=None):
     if prev_target_index is None:
         prev_target_index = self._target_index
@@ -150,7 +146,6 @@ class Crafter():
         log_reward=np.float32(info['reward'] if info else 0.0),
         target_steps=target_steps,
         target_reached=target_reached,
-        target_failed=target_failed,
         prev_target_index=prev_target_index,
         **log_achievements,
     )
