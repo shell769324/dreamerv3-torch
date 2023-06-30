@@ -23,6 +23,7 @@ class Crafter():
     self._step_for_target = 0
     self._id_to_item = [0] * 19
     self._last_min_dist = None
+    self._target_steps = 0
     for name, ind in itertools.chain(self._env._world._mat_ids.items(), self._env._sem_view._obj_ids.items()):
         name = str(name)[str(name).find('objects.') + len('objects.'):-2].lower() if 'objects.' in str(name) else str(
             name)
@@ -48,6 +49,10 @@ class Crafter():
     spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
     spaces["target"] = gym.spaces.Box(0, 1, (len(targets),), dtype=np.float32)
+    spaces["target_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
+    spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+    spaces["target_failed"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+    spaces["prev_target_index"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces.update({
         f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
         for k in self._achievements})
@@ -73,6 +78,7 @@ class Crafter():
     self._target = np.zeros(len(targets))
     self._target_index = np.random.randint(0, len(targets))
     self._target[self._target_index] = 1.0
+    self._target_steps = 0
     info = {
         'semantic': self._crafter_env._sem_view()
     }
@@ -84,19 +90,28 @@ class Crafter():
     if len(action.shape) >= 1:
         action = np.argmax(action)
     image, reward, self._done, info = self._env.step(action)
+    self._target_steps += 1
     augmented = self._env.render_target(targets[self._target_index])
     #reward = np.float32(reward)
     reward = np.float32(0)
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
+    target_failed = False
+    target_reached = False
+    target_steps = self._target_steps
+    prev_target_index = self._target_index
     if 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1] and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target_index]:
         reward += 0.5
         self._target = np.zeros(len(targets))
         self._target_index = np.random.randint(0, len(targets))
         self._target[self._target_index] = 1.0
         self._last_min_dist = self._get_dist(player_pos, info)
+        target_reached = True
+        self._target_steps = 0
     else:
+        if self._done:
+            target_failed = True
         min_dist = self._get_dist(player_pos, info)
         if self._last_min_dist is None:
             if min_dist is not None:
@@ -112,11 +127,15 @@ class Crafter():
     return self._obs(
         image, reward, info, augmented=augmented,
         is_last=self._done,
-        is_terminal=info['discount'] == 0), reward, self._done, info
+        is_terminal=info['discount'] == 0, target_failed=target_failed, target_reached=target_reached, target_steps=target_steps,
+        prev_target_index=prev_target_index), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
-      is_first=False, is_last=False, is_terminal=False, augmented=None):
+      is_first=False, is_last=False, is_terminal=False, augmented=None, target_reached=False, target_failed=False,
+        target_steps=0, prev_target_index=None):
+    if prev_target_index is None:
+        prev_target_index = self._target_index
     log_achievements = {
         f'log_achievement_{k}': info['achievements'][k] if info else 0
         for k in self._achievements}
@@ -129,6 +148,10 @@ class Crafter():
         is_terminal=is_terminal,
         target=self._target,
         log_reward=np.float32(info['reward'] if info else 0.0),
+        target_steps=target_steps,
+        target_reached=target_reached,
+        target_failed=target_failed,
+        prev_target_index=prev_target_index,
         **log_achievements,
     )
 

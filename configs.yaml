@@ -10,7 +10,7 @@ defaults:
   steps: 1e6
   eval_every: 1e4
   eval_episode_num: 10
-  log_every: 1e4
+  log_every: 5e3
   emit_every: 50
   reset_every: 0
   device: 'cuda:0'
