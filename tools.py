@@ -137,11 +137,12 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True):
         step, episode, done, length, obs, agent_state, reward = state
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
-        for i, d in enumerate(done):
-            if d:
-                mode = "train" if training else "eval"
-                target_name = targets[obs[i]["prev_target_index"]]
-                agent._metrics[mode + "_" + target_name + "_failure"] = 1
+        if state is not None:
+            for i, d in enumerate(done):
+                if d:
+                    mode = "train" if training else "eval"
+                    target_name = targets[obs[i]["prev_target_index"]]
+                    agent._metrics[mode + "_" + target_name + "_failure"] = 1
         if done.any():
             # the indices of the environment that is done (done = 1)
             indices = [index for (index, d) in enumerate(done) if d]
