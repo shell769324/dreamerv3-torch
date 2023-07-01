@@ -82,7 +82,7 @@ class Crafter():
         'semantic': self._crafter_env._sem_view()
     }
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-    augmented = self._env.render_target(targets[self._target_index])
+    augmented = self._env.render_target(targets[self._target_index], self._last_min_dist, 0)
     return self._obs(image, 0.0, {}, is_first=True, augmented=augmented)
 
   def step(self, action):
@@ -90,7 +90,6 @@ class Crafter():
         action = np.argmax(action)
     image, reward, self._done, info = self._env.step(action)
     self._target_steps += 1
-    augmented = self._env.render_target(targets[self._target_index])
     #reward = np.float32(reward)
     reward = np.float32(0)
     player_pos = info['player_pos']
@@ -119,6 +118,8 @@ class Crafter():
         else:
             reward -= 0.1
         self._last_min_dist = min_dist
+
+    augmented = self._env.render_target(targets[self._target_index], self._last_min_dist, reward)
 
     return self._obs(
         image, reward, info, augmented=augmented,
