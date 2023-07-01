@@ -115,7 +115,7 @@ class Crafter():
             reward -= 0.1
         elif self._last_min_dist > min_dist:
             reward += 0.1
-        else:
+        elif self._last_min_dist < min_dist:
             reward -= 0.1
         self._last_min_dist = min_dist
 
