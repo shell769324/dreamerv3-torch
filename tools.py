@@ -232,7 +232,7 @@ def sample_episodes(episodes, length, seed=0):
             if not ret:
                 index = int(random.randint(0, total - 1))
                 ret = {
-                    k: v[index : min(index + length, total)] for k, v in episode.items()
+                    k: v[index : min(index + length, total)] for k, v in episode.items() if k != "augmented"
                 }
             else:
                 # 'is_first' comes after 'is_last'
@@ -242,7 +242,7 @@ def sample_episodes(episodes, length, seed=0):
                     k: np.append(
                         ret[k], v[index : min(index + possible, total)], axis=0
                     )
-                    for k, v in episode.items()
+                    for k, v in episode.items() if k != "augmented"
                 }
             size = len(next(iter(ret.values())))
         yield ret
