@@ -5,6 +5,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import distributions as torchd
+from envs.crafter import targets
 
 import tools
 
@@ -532,11 +533,91 @@ class DenseHead(nn.Module):
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
 
+class ValueHead(nn.Module):
+    def __init__(
+        self,
+        inp_dim,
+        target_units,
+        shape,
+        layers,
+        units,
+        act=nn.ELU,
+        norm=nn.LayerNorm,
+        dist="normal",
+        std=1.0,
+        outscale=1.0,
+        device="cuda",
+    ):
+        super(ValueHead, self).__init__()
+        self._shape = (shape,) if isinstance(shape, int) else shape
+        if len(self._shape) == 0:
+            self._shape = (1,)
+        self._target_units = target_units
+        self._layers = layers
+        self._units = units
+        self._act = act
+        self._norm = norm
+        self._dist = dist
+        self._std = std
+        self._device = device
+        self._embedding = nn.Embedding(len(targets), target_units)
+
+        layers = []
+        inp_dim += self._target_units
+        for index in range(self._layers):
+            layers.append(nn.Linear(inp_dim, self._units, bias=False))
+            layers.append(norm(self._units, eps=1e-03))
+            layers.append(act())
+            if index == 0:
+                inp_dim = self._units
+        self.layers = nn.Sequential(*layers)
+        self.layers.apply(tools.weight_init)
+
+        self.mean_layer = nn.Linear(inp_dim, np.prod(self._shape))
+        self.mean_layer.apply(tools.uniform_weight_init(outscale))
+
+        if self._std == "learned":
+            self.std_layer = nn.Linear(self._units, np.prod(self._shape))
+            self.std_layer.apply(tools.uniform_weight_init(outscale))
+
+    def __call__(self, features, targets, dtype=None):
+        x = features
+        embeddings = self._embedding(targets)
+        x = torch.cat([x, embeddings], -1)
+        out = self.layers(x)
+        mean = self.mean_layer(out)
+        if self._std == "learned":
+            std = self.std_layer(out)
+        else:
+            std = self._std
+        if self._dist == "normal":
+            return tools.ContDist(
+                torchd.independent.Independent(
+                    torchd.normal.Normal(mean, std), len(self._shape)
+                )
+            )
+        if self._dist == "huber":
+            return tools.ContDist(
+                torchd.independent.Independent(
+                    tools.UnnormalizedHuber(mean, std, 1.0), len(self._shape)
+                )
+            )
+        if self._dist == "binary":
+            return tools.Bernoulli(
+                torchd.independent.Independent(
+                    torchd.bernoulli.Bernoulli(logits=mean), len(self._shape)
+                )
+            )
+        if self._dist == "twohot_symlog":
+            return tools.TwoHotDistSymlog(logits=mean, device=self._device)
+        raise NotImplementedError(self._dist)
+
 
 class ActionHead(nn.Module):
     def __init__(
         self,
         inp_dim,
+        target_units,
         size,
         layers,
         units,
@@ -552,6 +633,7 @@ class ActionHead(nn.Module):
     ):
         super(ActionHead, self).__init__()
         self._size = size
+        self._target_units = target_units
         self._layers = layers
         self._units = units
         self._dist = dist
@@ -562,7 +644,9 @@ class ActionHead(nn.Module):
         self._init_std = init_std
         self._unimix_ratio = unimix_ratio
         self._temp = temp() if callable(temp) else temp
+        self._embedding = nn.Embedding(len(targets), target_units)
 
+        inp_dim += self._target_units
         pre_layers = []
         for index in range(self._layers):
             pre_layers.append(nn.Linear(inp_dim, self._units, bias=False))
@@ -581,9 +665,11 @@ class ActionHead(nn.Module):
             self._dist_layer = nn.Linear(self._units, self._size)
             self._dist_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, dtype=None):
+    def __call__(self, features, targets, dtype=None):
         x = features
         x = self._pre_layers(x)
+        embeddings = self._embedding(targets)
+        x = torch.cat([x, embeddings], -1)
         if self._dist == "tanh_normal":
             x = self._dist_layer(x)
             mean, std = torch.split(x, 2, -1)

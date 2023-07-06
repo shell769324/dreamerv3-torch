@@ -87,7 +87,7 @@ defaults:
   opt: 'adam'
 
   # Behavior.
-  discount: 0.997
+  discount: 0.994
   discount_lambda: 0.95
   imag_horizon: 15
   imag_gradient: 'dynamics'
@@ -150,6 +150,7 @@ crafter:
   disag_units: 1024
   disag_layers: 5
   disag_models: 8
+  target_units: 512
 
 
 debug:

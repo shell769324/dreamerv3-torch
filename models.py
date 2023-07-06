@@ -88,8 +88,9 @@ class WorldModel(nn.Module):
             config.decoder_kernels,
         )
         if config.reward_head == "twohot_symlog":
-            self.heads["reward"] = networks.DenseHead(
-                feat_size + len(targets),  # pytorch version
+            self.heads["reward"] = networks.ValueHead(
+                feat_size,  # pytorch version
+                config.target_units,
                 (255,),
                 config.reward_layers,
                 config.units,
@@ -100,8 +101,9 @@ class WorldModel(nn.Module):
                 device=config.device,
             )
         else:
-            self.heads["reward"] = networks.DenseHead(
-                feat_size + len(targets),  # pytorch version
+            self.heads["reward"] = networks.ValueHead(
+                feat_size,  # pytorch version
+                config.target_units,
                 [],
                 config.reward_layers,
                 config.units,
@@ -161,7 +163,7 @@ class WorldModel(nn.Module):
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
                     if name == "reward":
-                        pred = head(torch.cat([feat, data["target"]], -1))
+                        pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
@@ -241,11 +243,12 @@ class ImagBehavior(nn.Module):
         self._stop_grad_actor = stop_grad_actor
         self._reward = reward
         if config.dyn_discrete:
-            feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter + len(targets)
+            feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter
         else:
             feat_size = config.dyn_stoch + config.dyn_deter
         self.actor = networks.ActionHead(
             feat_size,  # pytorch version
+            config.target_units,
             config.num_actions,
             config.actor_layers,
             config.units,
@@ -260,8 +263,9 @@ class ImagBehavior(nn.Module):
             unimix_ratio=config.action_unimix_ratio,
         )  # action_dist -> action_disc?
         if config.value_head == "twohot_symlog":
-            self.value = networks.DenseHead(
+            self.value = networks.ValueHead(
                 feat_size,  # pytorch version
+                config.target_units,
                 (255,),
                 config.value_layers,
                 config.units,
@@ -272,8 +276,9 @@ class ImagBehavior(nn.Module):
                 device=config.device,
             )
         else:
-            self.value = networks.DenseHead(
+            self.value = networks.ValueHead(
                 feat_size,  # pytorch version
+                config.target_units,
                 [],
                 config.value_layers,
                 config.units,

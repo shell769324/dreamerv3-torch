@@ -71,6 +71,7 @@ class Dreamer(nn.Module):
 
     def __call__(self, obs, reset, state=None, reward=None, training=True):
         step = self._step
+        mode = "train" if training else "eval"
         if self._should_reset(step):
             state = None
         if state is not None and reset.any():
@@ -99,6 +100,19 @@ class Dreamer(nn.Module):
                     self._short_metrics = {}
                 wandb.log(averaged, step=step)
             if self._should_log(step):
+                total_successes = 0
+                total_failures = 0
+                for target_name in targets:
+                    success_name = mode + "_" + target_name + "_success"
+                    successes = self._metrics.get(success_name, 0)
+                    total_successes += successes
+                    failure_name = mode + "_" + target_name + "_failure"
+                    failures = self._metrics.get(failure_name, 0)
+                    total_failures += failures
+                    if successes != 0 or failures != 0:
+                        name = mode + "_" + target_name + "_success_rate"
+                        self._logger.scalar(name, float(successes) / (failures + successes))
+                self._logger.scalar("total_success_rate", float(total_successes) / (total_failures + total_successes))
                 for name, values in self._metrics.items():
                     self._logger.scalar(name, float(np.mean(values)))
                     self._metrics = {}
@@ -106,7 +120,6 @@ class Dreamer(nn.Module):
                 self._logger.video("train_openl", to_np(openl))
                 self._logger.write(fps=True)
         for i in range(len(obs["target_steps"])):
-            mode = "train" if training else "eval"
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target_index"][i]]
                 step_name = mode + "_" + target_name + "_step"
@@ -149,19 +162,18 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
-        target_onehot = torch.zeros((len(obs["image"])), len(targets)).to(self._config.device)
+        targets_array = torch.zeros((len(obs["image"]))).to(self._config.device)
         for i, target in enumerate(obs["target"]):
-            target_onehot[i] = target.to(self._config.device)
+            targets_array[i] = target.to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
-        feat = torch.cat([feat, target_onehot], -1)
         if not training:
-            actor = self._task_behavior.actor(feat)
+            actor = self._task_behavior.actor(feat, targets_array)
             action = actor.mode()
         elif self._should_expl(self._step):
-            actor = self._expl_behavior.actor(feat)
+            actor = self._expl_behavior.actor(feat, targets_array)
             action = actor.sample()
         else:
-            actor = self._task_behavior.actor(feat)
+            actor = self._task_behavior.actor(feat, targets_array)
             action = actor.sample()
         logprob = actor.log_prob(action)
         latent = {k: v.detach() for k, v in latent.items()}
