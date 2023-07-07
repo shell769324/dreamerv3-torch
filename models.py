@@ -243,6 +243,7 @@ class ImagBehavior(nn.Module):
         self._world_model = world_model
         self._stop_grad_actor = stop_grad_actor
         self._reward = reward
+        self._device = config.device
         if config.dyn_discrete:
             feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter
         else:
@@ -330,7 +331,7 @@ class ImagBehavior(nn.Module):
         with tools.RequiresGrad(self.actor):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
-                target_array = torch.from_numpy(flatten(data["target"]))
+                target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
