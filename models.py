@@ -331,7 +331,7 @@ class ImagBehavior(nn.Module):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = flatten(data["target"])
                 imag_feat, imag_state, imag_action = self._imagine(
-                    start, self.actor, self._config.imag_horizon, repeats, target_array=target_array
+                    start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
                 reward = objective(imag_feat, imag_state, imag_action)
                 actor_ent = self.actor(imag_feat, target_array).entropy()
@@ -339,7 +339,7 @@ class ImagBehavior(nn.Module):
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
                 target, weights, base = self._compute_target(
-                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent
+                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
                 )
                 actor_loss, mets = self._compute_actor_loss(
                     imag_feat,
@@ -350,7 +350,7 @@ class ImagBehavior(nn.Module):
                     state_ent,
                     weights,
                     base,
-                    data["target"]
+                    target_array
                 )
                 metrics.update(mets)
                 value_input = imag_feat
@@ -388,7 +388,7 @@ class ImagBehavior(nn.Module):
             metrics.update(self._value_opt(value_loss, self.value.parameters()))
         return imag_feat, imag_state, imag_action, weights, metrics
 
-    def _imagine(self, start, policy, horizon, repeats=None, target_array=None):
+    def _imagine(self, start, policy, horizon, target_array, repeats=None):
         dynamics = self._world_model.dynamics
         # start['deter'] (16, 64, 512)
         if repeats:
@@ -414,7 +414,7 @@ class ImagBehavior(nn.Module):
         return feats, states, actions
 
     def _compute_target(
-        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array=None
+        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
     ):
         if "cont" in self._world_model.heads:
             inp = self._world_model.dynamics.get_feat(imag_state)

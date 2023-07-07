@@ -121,7 +121,7 @@ class Dreamer(nn.Module):
                 self._logger.write(fps=True)
         for i in range(len(obs["target_steps"])):
             if obs["target_reached"][i]:
-                target_name = targets[obs["prev_target_index"][i]]
+                target_name = targets[obs["prev_target"][i]]
                 step_name = mode + "_" + target_name + "_step"
                 success_name = mode + "_" + target_name + "_success"
                 if step_name not in self._metrics.keys():

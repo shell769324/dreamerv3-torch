@@ -168,7 +168,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True):
         for i, d in enumerate(done):
             if d and hasattr(agent, '_metrics'):
                 mode = "train" if training else "eval"
-                target_name = targets[obs[i]["prev_target_index"]]
+                target_name = targets[obs[i]["prev_target"]]
                 failure_name = mode + "_" + target_name + "_failure"
                 if failure_name not in agent._metrics.keys():
                     agent._metrics[failure_name] = 1
