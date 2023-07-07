@@ -337,7 +337,6 @@ class ImagBehavior(nn.Module):
                 )
                 expanded = target_array.expand(imag_feat.shape[0], target_array.shape[0])
 
-                print("im shape", imag_feat.shape, "expanded shape", expanded.shape)
                 reward = objective(imag_feat, imag_state, imag_action, expanded)
                 actor_ent = self.actor(imag_feat, expanded).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
@@ -359,8 +358,6 @@ class ImagBehavior(nn.Module):
                 )
                 metrics.update(mets)
                 value_input = imag_feat
-        print("val shape", value_input.shape)
-        print("target shape", target_array.shape)
         with tools.RequiresGrad(self.value):
             with torch.cuda.amp.autocast(self._use_amp):
                 value = self.value(value_input[:-1].detach(), expanded[:-1].detach())
@@ -406,7 +403,6 @@ class ImagBehavior(nn.Module):
             state, _, _ = prev
             feat = dynamics.get_feat(state)
             inp = feat.detach() if self._stop_grad_actor else feat
-            print("feature shape", inp.shape, "target shape", target_array.shape)
             action = policy(inp, target_array).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, feat, action
