@@ -112,7 +112,8 @@ class Dreamer(nn.Module):
                     if successes != 0 or failures != 0:
                         name = mode + "_" + target_name + "_success_rate"
                         self._logger.scalar(name, float(successes) / (failures + successes))
-                self._logger.scalar("total_success_rate", float(total_successes) / (total_failures + total_successes))
+                if total_successes != 0 or total_failures != 0:
+                    self._logger.scalar("total_success_rate", float(total_successes) / (total_failures + total_successes))
                 for name, values in self._metrics.items():
                     self._logger.scalar(name, float(np.mean(values)))
                     self._metrics = {}
