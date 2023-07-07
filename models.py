@@ -363,11 +363,11 @@ class ImagBehavior(nn.Module):
         print("target shape", target_array.shape)
         with tools.RequiresGrad(self.value):
             with torch.cuda.amp.autocast(self._use_amp):
-                value = self.value(value_input[:-1].detach(), data["target"][:-1].detach())
+                value = self.value(value_input[:-1].detach(), expanded[:-1].detach())
                 target = torch.stack(target, dim=1)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
-                slow_target = self._slow_value(value_input[:-1].detach(), data["target"][:-1].detach())
+                slow_target = self._slow_value(value_input[:-1].detach(), expanded[:-1].detach())
                 if self._config.slow_value_target:
                     value_loss = value_loss - value.log_prob(
                         slow_target.mode().detach()
