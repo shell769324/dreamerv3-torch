@@ -162,7 +162,7 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
-        targets_array = torch.zeros((len(obs["image"]))).to(self._config.device)
+        targets_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
         for i, target in enumerate(obs["target"]):
             targets_array[i] = target.to(self._config.device)
         feat = self._wm.dynamics.get_feat(latent)
@@ -205,7 +205,7 @@ class Dreamer(nn.Module):
         start = post
         # start['deter'] (16, 64, 512)
         reward = lambda f, s, a: self._wm.heads["reward"](f).mode()
-        metrics.update(self._task_behavior._train(start, reward)[-1])
+        metrics.update(self._task_behavior._train(start, reward, data=data)[-1])
         if self._config.expl_behavior != "greedy":
             mets = self._expl_behavior.train(start, context, data)[-1]
             metrics.update({"expl_" + key: value for key, value in mets.items()})
