@@ -667,9 +667,9 @@ class ActionHead(nn.Module):
 
     def __call__(self, features, targets, dtype=None):
         x = features
-        x = self._pre_layers(x)
         embeddings = self._embedding(targets)
         x = torch.cat([x, embeddings], -1)
+        x = self._pre_layers(x)
         if self._dist == "tanh_normal":
             x = self._dist_layer(x)
             mean, std = torch.split(x, 2, -1)
