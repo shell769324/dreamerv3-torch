@@ -355,7 +355,7 @@ class ImagBehavior(nn.Module):
                     state_ent,
                     weights,
                     base,
-                    target_array
+                    expanded
                 )
                 metrics.update(mets)
                 value_input = imag_feat
