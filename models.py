@@ -335,6 +335,7 @@ class ImagBehavior(nn.Module):
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
+                print("im shape", imag_feat.shape, "target array shape", target_array.shape)
                 reward = objective(imag_feat, imag_state, imag_action, target_array)
                 actor_ent = self.actor(imag_feat, target_array).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
