@@ -330,7 +330,7 @@ class ImagBehavior(nn.Module):
         with tools.RequiresGrad(self.actor):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
-                target_array = flatten(data["target"])
+                target_array = torch.from_numpy(flatten(data["target"]))
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
