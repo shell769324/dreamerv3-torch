@@ -204,7 +204,7 @@ class Dreamer(nn.Module):
         metrics.update(mets)
         start = post
         # start['deter'] (16, 64, 512)
-        reward = lambda f, s, a: self._wm.heads["reward"](f).mode()
+        reward = lambda f, s, a, t: self._wm.heads["reward"](f, t).mode()
         metrics.update(self._task_behavior._train(start, reward, data=data)[-1])
         if self._config.expl_behavior != "greedy":
             mets = self._expl_behavior.train(start, context, data)[-1]
