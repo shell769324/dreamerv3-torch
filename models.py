@@ -335,14 +335,16 @@ class ImagBehavior(nn.Module):
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
-                print("im shape", imag_feat.shape, "target array shape", target_array.shape)
-                reward = objective(imag_feat, imag_state, imag_action, target_array)
-                actor_ent = self.actor(imag_feat, target_array).entropy()
+                expanded = target_array.expand(imag_feat.shape[0], target_array.shape[0])
+
+                print("im shape", imag_feat.shape, "expanded shape", expanded.shape)
+                reward = objective(imag_feat, imag_state, imag_action, expanded)
+                actor_ent = self.actor(imag_feat, expanded).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
                 target, weights, base = self._compute_target(
-                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
+                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, expanded
                 )
                 actor_loss, mets = self._compute_actor_loss(
                     imag_feat,
