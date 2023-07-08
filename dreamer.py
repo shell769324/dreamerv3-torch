@@ -100,20 +100,23 @@ class Dreamer(nn.Module):
                     self._short_metrics = {}
                 wandb.log(averaged, step=step)
             if self._should_log(step):
-                total_successes = 0
-                total_failures = 0
-                for target_name in targets:
-                    success_name = mode + "_" + target_name + "_success"
-                    successes = self._metrics.get(success_name, 0)
-                    total_successes += successes
-                    failure_name = mode + "_" + target_name + "_failure"
-                    failures = self._metrics.get(failure_name, 0)
-                    total_failures += failures
-                    if successes != 0 or failures != 0:
-                        name = mode + "_" + target_name + "_success_rate"
-                        self._logger.scalar(name, float(successes) / (failures + successes))
-                if total_successes != 0 or total_failures != 0:
-                    self._logger.scalar("total_success_rate", float(total_successes) / (total_failures + total_successes))
+                for prefix in ["train", "eval"]:
+                    total_successes = 0
+                    total_failures = 0
+                    for target_name in targets:
+                        success_name = prefix + "_" + target_name + "_success"
+                        successes = self._metrics.get(success_name, 0)
+                        total_successes += successes
+                        failure_name = prefix + "_" + target_name + "_failure"
+                        failures = self._metrics.get(failure_name, 0)
+                        total_failures += failures
+                        if successes != 0 or failures != 0:
+                            name = prefix + "_" + target_name + "_success_rate"
+                            self._logger.scalar(name, float(successes) / (failures + successes))
+                    if total_successes != 0 or total_failures != 0:
+                        self._logger.scalar("total_" + prefix + "_success_rate", float(total_successes) / (total_failures + total_successes))
+                    self._logger.scalar("total_" + prefix + "_success", total_successes)
+                    self._logger.scalar("total_" + prefix + "_failure", total_failures)
                 for name, values in self._metrics.items():
                     self._logger.scalar(name, float(np.mean(values)))
                     self._metrics = {}
@@ -421,11 +424,11 @@ def main(config, defaults):
             logger.write()
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
-            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False)
+            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             logger.video("eval_openl", to_np(video_pred))
             print("Start training.")
-            state = tools.simulate(agent, train_envs, config.eval_every, state=state)
+            state = tools.simulate(agent, train_envs, config.eval_every, state=state, metrics=agent._metrics)
             torch.save(agent.state_dict(), logdir / "latest_model.pt")
     for env in train_envs + eval_envs:
         try:

@@ -124,7 +124,7 @@ class Logger:
         self._writer.add_video(name, value, step, 16)
 
 
-def simulate(agent, envs, steps=0, episodes=0, state=None, training=True):
+def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metrics=None):
     # Initialize or unpack simulation state.
     if state is None:
         step, episode = 0, 0
@@ -166,7 +166,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True):
         step += (done * length).sum()
         length *= 1 - done
         for i, d in enumerate(done):
-            if d and hasattr(agent, '_metrics'):
+            if d and metrics is not None:
                 mode = "train" if training else "eval"
                 target_name = targets[obs[i]["prev_target"]]
                 failure_name = mode + "_" + target_name + "_failure"
