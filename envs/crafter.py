@@ -57,7 +57,7 @@ class Crafter():
 
   @property
   def action_space(self):
-    return self._env.action_space
+    return gym.spaces.Discrete(5)
 
   def _get_dist(self, player_pos, info):
     min_dist = None
