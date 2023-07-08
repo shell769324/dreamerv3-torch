@@ -91,7 +91,7 @@ class Crafter():
     self._target_steps += 1
     #reward = np.float32(reward)
     reward = np.float32(0)
-    if previous_pos == self._crafter_env._player.pos:
+    if previous_pos[0] == self._crafter_env._player.pos[0] and previous_pos[1] == self._crafter_env._player.pos[1]:
         reward -= 0.1
     player_pos = info['player_pos']
     facing = info['player_facing']
