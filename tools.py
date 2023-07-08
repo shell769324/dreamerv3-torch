@@ -174,10 +174,6 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metric
                     metrics[failure_name] = 1
                 else:
                     metrics[failure_name] += 1
-                if failure_name not in agent._short_metrics.keys():
-                    agent._short_metrics[failure_name] = 1
-                else:
-                    agent._short_metrics[failure_name] += 1
 
     return (step - steps, episode - episodes, done, length, obs, agent_state, reward)
 
