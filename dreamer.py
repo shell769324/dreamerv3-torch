@@ -383,7 +383,8 @@ def main(config, defaults):
     train_envs = [make("train") for _ in range(config.envs)]
     eval_envs = [make("eval") for _ in range(config.envs)]
     acts = train_envs[0].action_space
-    config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
+    #config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
+    config.num_actions = 5
 
     if not config.offline_traindir:
         prefill = max(0, config.prefill - count_steps(config.traindir))

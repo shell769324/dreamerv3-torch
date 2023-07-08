@@ -6,7 +6,7 @@ import random
 import crafter
 import itertools
 
-targets = ["water", "stone", "tree", "coal", "iron", "cow", "skeleton"]
+targets = ["water", "stone", "tree", "coal", "iron", "cow"]
 
 class Crafter():
 
@@ -84,13 +84,15 @@ class Crafter():
   def step(self, action):
     if len(action.shape) >= 1:
         action = np.argmax(action)
-    was_sleeping = self._crafter_env._player.sleeping
+    # don't do noop
+    action += 1
+    previous_pos = self._crafter_env._player.pos
     image, reward, self._done, info = self._env.step(action)
     self._target_steps += 1
     #reward = np.float32(reward)
     reward = np.float32(0)
-    if self._crafter_env._player.sleeping and not was_sleeping:
-        reward -= 5
+    if previous_pos == self._crafter_env._player.pos:
+        reward -= 0.1
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
@@ -105,8 +107,6 @@ class Crafter():
         target_reached = True
         self._target_steps = 0
     else:
-        if face_in_bound and self._id_to_item[info['semantic'][faced_pos]] in targets:
-            reward -= 0.1
         min_dist = self._get_dist(player_pos, info)
         if self._last_min_dist is None:
             if min_dist is not None:
