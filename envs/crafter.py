@@ -84,10 +84,13 @@ class Crafter():
   def step(self, action):
     if len(action.shape) >= 1:
         action = np.argmax(action)
+    was_sleeping = self._crafter_env._player.sleeping
     image, reward, self._done, info = self._env.step(action)
     self._target_steps += 1
     #reward = np.float32(reward)
     reward = np.float32(0)
+    if self._crafter_env._player.sleeping and not was_sleeping:
+        reward -= 5
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
