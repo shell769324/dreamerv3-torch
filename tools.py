@@ -170,10 +170,10 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metric
                 mode = "train" if training else "eval"
                 target_name = targets[obs[i]["prev_target"]]
                 failure_name = mode + "_" + target_name + "_failure"
-                if failure_name not in agent._metrics.keys():
-                    agent._metrics[failure_name] = 1
+                if failure_name not in metrics.keys():
+                    metrics[failure_name] = 1
                 else:
-                    agent._metrics[failure_name] += 1
+                    metrics[failure_name] += 1
                 if failure_name not in agent._short_metrics.keys():
                     agent._short_metrics[failure_name] = 1
                 else:
