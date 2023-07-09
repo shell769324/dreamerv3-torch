@@ -587,7 +587,6 @@ class ValueHead(nn.Module):
         else:
             std = self._std
         if self._dist == "normal":
-            print("normal mean shape", mean.shape)
             return tools.ContDist(
                 torchd.independent.Independent(
                     torchd.normal.Normal(mean, std), len(self._shape)

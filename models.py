@@ -180,14 +180,11 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     else:
                         pred = head(feat)
-                    if name == "distance":
-                        print("data shape", data[name].shape)
                     like = pred.log_prob(data[name])
                     likes[name] = like
                     if name == "distance":
                         # If there is no such object in view, the distance will be negative, and we should ignore them
                         # during backprop
-                        print("like shape", like.shape)
                         like = like.unsqueeze(-1)
                         losses[name] = -torch.mean(like[data[name] > 0]) * self._scales.get(name, 1.0)
                     else:
