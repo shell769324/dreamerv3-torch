@@ -180,6 +180,8 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     else:
                         pred = head(feat)
+                    if name == "distance":
+                        print(pred.shape, data[name].shape)
                     like = pred.log_prob(data[name])
                     likes[name] = like
                     if name == "distance":
