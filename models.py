@@ -187,6 +187,7 @@ class WorldModel(nn.Module):
                     if name == "distance":
                         # If there is no such object in view, the distance will be negative, and we should ignore them
                         # during backprop
+                        print("like shape", like.shape)
                         losses[name] = -torch.mean(like[data[name] > 0]) * self._scales.get(name, 1.0)
                     else:
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
