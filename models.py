@@ -181,7 +181,7 @@ class WorldModel(nn.Module):
                     else:
                         pred = head(feat)
                     if name == "distance":
-                        print(pred.shape, data[name].shape)
+                        print("data shape", data[name].shape)
                     like = pred.log_prob(data[name])
                     likes[name] = like
                     if name == "distance":
