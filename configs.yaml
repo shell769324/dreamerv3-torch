@@ -44,7 +44,7 @@ defaults:
   dyn_std_act: 'sigmoid2'
   dyn_min_std: 0.1
   dyn_temp_post: True
-  grad_heads: ['image', 'reward', 'cont']
+  grad_heads: ['image', 'reward', 'cont', 'distance']
   units: 512
   reward_layers: 2
   cont_layers: 2
@@ -62,6 +62,7 @@ defaults:
   kl_free: '1.0'
   cont_scale: 1.0
   reward_scale: 1.0
+  distance_scale: 1.0
   weight_decay: 0.0
   unimix_ratio: 0.01
   action_unimix_ratio: 0.01
@@ -87,7 +88,7 @@ defaults:
   opt: 'adam'
 
   # Behavior.
-  discount: 0.994
+  discount: 0.99
   discount_lambda: 0.95
   imag_horizon: 15
   imag_gradient: 'dynamics'
@@ -143,7 +144,8 @@ crafter:
   actor_dist: 'onehot'
   units: 1024
   reward_layers: 5
-  cont_layers: 5
+  cont_layers: 4
+  distance_layers: 4
   value_layers: 5
   actor_layers: 5
   imag_gradient: 'reinforce'

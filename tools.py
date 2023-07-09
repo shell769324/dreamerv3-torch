@@ -32,13 +32,18 @@ def symexp(x):
 
 class RequiresGrad:
     def __init__(self, model):
-        self._model = model
+        if isinstance(model, list):
+            self._models = model
+        else:
+            self._models = [model]
 
     def __enter__(self):
-        self._model.requires_grad_(requires_grad=True)
+        for m in self._models:
+            m.requires_grad_(requires_grad=True)
 
     def __exit__(self, *args):
-        self._model.requires_grad_(requires_grad=False)
+        for m in self._models:
+            m.requires_grad_(requires_grad=False)
 
 
 class TimeRecording:

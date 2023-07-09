@@ -47,6 +47,7 @@ class Crafter():
     spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
     spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+    spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
     spaces["target_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
     spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["prev_target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -148,6 +149,7 @@ class Crafter():
         target_steps=target_steps,
         target_reached=target_reached,
         prev_target=prev_target,
+        distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
         **log_achievements,
     )
 

@@ -5,7 +5,6 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import distributions as torchd
-from envs.crafter import targets
 
 import tools
 
@@ -560,8 +559,6 @@ class ValueHead(nn.Module):
         self._dist = dist
         self._std = std
         self._device = device
-        self._embedding = nn.Embedding(len(targets), target_units)
-
         layers = []
         inp_dim += self._target_units
         for index in range(self._layers):
@@ -580,9 +577,8 @@ class ValueHead(nn.Module):
             self.std_layer = nn.Linear(self._units, np.prod(self._shape))
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, targets, dtype=None):
+    def __call__(self, features, embeddings, dtype=None):
         x = features
-        embeddings = self._embedding(targets)
         x = torch.cat([x, embeddings], -1)
         out = self.layers(x)
         mean = self.mean_layer(out)
@@ -644,7 +640,6 @@ class ActionHead(nn.Module):
         self._init_std = init_std
         self._unimix_ratio = unimix_ratio
         self._temp = temp() if callable(temp) else temp
-        self._embedding = nn.Embedding(len(targets), target_units)
 
         inp_dim += self._target_units
         pre_layers = []
@@ -665,9 +660,8 @@ class ActionHead(nn.Module):
             self._dist_layer = nn.Linear(self._units, self._size)
             self._dist_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, targets, dtype=None):
+    def __call__(self, features, embeddings, dtype=None):
         x = features
-        embeddings = self._embedding(targets)
         x = torch.cat([x, embeddings], -1)
         x = self._pre_layers(x)
         if self._dist == "tanh_normal":

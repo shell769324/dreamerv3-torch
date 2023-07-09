@@ -42,6 +42,7 @@ class WorldModel(nn.Module):
             config.norm,
             config.encoder_kernels,
         )
+        self.embedding = nn.Embedding(len(targets), config.target_units)
         if config.size[0] == 64 and config.size[1] == 64:
             embed_size = (
                 (64 // 2 ** (len(config.encoder_kernels))) ** 2
@@ -86,6 +87,18 @@ class WorldModel(nn.Module):
             config.norm,
             shape,
             config.decoder_kernels,
+        )
+        self.heads["distance"] = networks.ValueHead(
+            feat_size,
+            config.target_units,
+            [],
+            config.distance_layers,
+            config.units,
+            config.act,
+            config.norm,
+            dist="normal",
+            outscale=0.0,
+            device=config.device
         )
         if config.reward_head == "twohot_symlog":
             self.heads["reward"] = networks.ValueHead(
@@ -135,7 +148,7 @@ class WorldModel(nn.Module):
             opt=config.opt,
             use_amp=self._use_amp,
         )
-        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
+        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, distance=config.distance_scale)
 
     def _train(self, data):
         # action (batch_size, batch_length, act_dim)
@@ -158,17 +171,23 @@ class WorldModel(nn.Module):
                 )
                 losses = {}
                 likes = {}
+                target_embedding = self.embedding(data["target"])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    if name == "reward":
-                        pred = head(feat, data["target"])
+                    if name in ["reward", "distance"]:
+                        pred = head(feat, target_embedding)
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
                     likes[name] = like
-                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    if name == "distance":
+                        # If there is no such object in view, the distance will be negative, and we should ignore them
+                        # during backprop
+                        losses[name] = -torch.mean(like[data[name] > 0]) * self._scales.get(name, 1.0)
+                    else:
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
 
@@ -201,6 +220,7 @@ class WorldModel(nn.Module):
         # (batch_size, batch_length) -> (batch_size, batch_length, 1)
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
+        obs["distance"] = torch.Tensor(obs["distance"]).type(torch.FloatTensor)
         if "discount" in obs:
             obs["discount"] *= self._config.discount
             # (batch_size, batch_length) -> (batch_size, batch_length, 1)
@@ -328,14 +348,15 @@ class ImagBehavior(nn.Module):
         self._update_slow_target()
         metrics = {}
 
-        with tools.RequiresGrad(self.actor):
+        with tools.RequiresGrad([self.actor, self._world_model.embedding]):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
+                target_embedding = self._world_model.embedding(target_array)
                 imag_feat, imag_state, imag_action = self._imagine(
-                    start, self.actor, self._config.imag_horizon, target_array, repeats
+                    start, self.actor, self._config.imag_horizon, target_embedding, repeats
                 )
-                expanded = target_array.expand(imag_feat.shape[0], target_array.shape[0])
+                expanded = target_embedding.expand(imag_feat.shape[0], target_embedding.shape[0], target_embedding.shape[1])
 
                 reward = objective(imag_feat, imag_state, imag_action, expanded)
                 actor_ent = self.actor(imag_feat, expanded).entropy()
@@ -391,7 +412,7 @@ class ImagBehavior(nn.Module):
             metrics.update(self._value_opt(value_loss, self.value.parameters()))
         return imag_feat, imag_state, imag_action, weights, metrics
 
-    def _imagine(self, start, policy, horizon, target_array, repeats=None):
+    def _imagine(self, start, policy, horizon, target_embedding, repeats=None):
         dynamics = self._world_model.dynamics
         # start['deter'] (16, 64, 512)
         if repeats:
@@ -403,7 +424,7 @@ class ImagBehavior(nn.Module):
             state, _, _ = prev
             feat = dynamics.get_feat(state)
             inp = feat.detach() if self._stop_grad_actor else feat
-            action = policy(inp, target_array).sample()
+            action = policy(inp, target_embedding).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, feat, action
 
@@ -417,7 +438,7 @@ class ImagBehavior(nn.Module):
         return feats, states, actions
 
     def _compute_target(
-        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
+        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_embedding
     ):
         if "cont" in self._world_model.heads:
             inp = self._world_model.dynamics.get_feat(imag_state)
@@ -428,7 +449,7 @@ class ImagBehavior(nn.Module):
             reward += self._config.actor_entropy() * actor_ent
         if self._config.future_entropy and self._config.actor_state_entropy() > 0:
             reward += self._config.actor_state_entropy() * state_ent
-        value = self.value(imag_feat, target_array).mode()
+        value = self.value(imag_feat, target_embedding).mode()
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
@@ -455,11 +476,11 @@ class ImagBehavior(nn.Module):
         state_ent,
         weights,
         base,
-        target_array
+        target_embedding
     ):
         metrics = {}
         inp = imag_feat.detach() if self._stop_grad_actor else imag_feat
-        policy = self.actor(inp, target_array)
+        policy = self.actor(inp, target_embedding)
         actor_ent = policy.entropy()
         # Q-val for actor is not transformed using symlog
         target = torch.stack(target, dim=1)
@@ -478,12 +499,12 @@ class ImagBehavior(nn.Module):
         elif self._config.imag_gradient == "reinforce":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
+                * (target - self.value(imag_feat[:-1], target_embedding[:-1]).mode()).detach()
             )
         elif self._config.imag_gradient == "both":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
+                * (target - self.value(imag_feat[:-1], target_embedding[:-1]).mode()).detach()
             )
             mix = self._config.imag_gradient_mix()
             actor_target = mix * target + (1 - mix) * actor_target
