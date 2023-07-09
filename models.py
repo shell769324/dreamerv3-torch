@@ -222,7 +222,7 @@ class WorldModel(nn.Module):
         # (batch_size, batch_length) -> (batch_size, batch_length, 1)
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
-        obs["distance"] = torch.Tensor(obs["distance"]).type(torch.FloatTensor)
+        obs["distance"] = torch.Tensor(obs["distance"]).type(torch.FloatTensor).unsqueeze(-1)
         if "discount" in obs:
             obs["discount"] *= self._config.discount
             # (batch_size, batch_length) -> (batch_size, batch_length, 1)
