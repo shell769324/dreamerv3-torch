@@ -41,7 +41,6 @@ class Dreamer(nn.Module):
         self._should_reset = tools.Every(config.reset_every)
         self._should_expl = tools.Until(int(config.expl_until / config.action_repeat))
         self._metrics = {}
-        self._short_metrics = {}
         self._step = count_steps(config.traindir)
         self._update_count = 0
         # Schedules.
@@ -91,15 +90,9 @@ class Dreamer(nn.Module):
                 self._train(next(self._dataset))
                 self._update_count += 1
                 self._metrics["update_count"] = self._update_count
-                self._short_metrics["update_count"] = self._update_count
 
-            if self._should_emit(step):
-                averaged = {}
-                for name, values in self._short_metrics.items():
-                    averaged[name] = float(np.mean(values))
-                    self._short_metrics = {}
-                wandb.log(averaged, step=step)
             if self._should_log(step):
+                metrics_dict = {}
                 for prefix in ["train", "eval"]:
                     total_successes = 0
                     total_failures = 0
@@ -112,17 +105,19 @@ class Dreamer(nn.Module):
                         total_failures += failures
                         if successes != 0 or failures != 0:
                             name = prefix + "_" + target_name + "_success_rate"
-                            self._logger.scalar(name, float(successes) / (failures + successes))
+                            metrics_dict[name] = float(successes) / (failures + successes)
                     if total_successes != 0 or total_failures != 0:
-                        self._logger.scalar("total_" + prefix + "_success_rate", float(total_successes) / (total_failures + total_successes))
-                    self._logger.scalar("total_" + prefix + "_success", total_successes)
-                    self._logger.scalar("total_" + prefix + "_failure", total_failures)
+                        metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
+                    metrics_dict["total_" + prefix + "_success"] = total_successes
+                    metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
-                    self._logger.scalar(name, float(np.mean(values)))
-                    self._metrics = {}
+                    metrics_dict[name] = float(np.mean(values))
                 openl = self._wm.video_pred(next(self._dataset))
-                self._logger.video("train_openl", to_np(openl))
-                self._logger.write(fps=True)
+                wandb.log({
+                    "video": wandb.Video(to_np(openl), caption="train_video", fps=10)
+                })
+                wandb.log(metrics_dict, step=step)
+                self._metrics = {}
         for i in range(len(obs["target_steps"])):
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target"][i]]
@@ -134,13 +129,6 @@ class Dreamer(nn.Module):
                 else:
                     self._metrics[step_name].append(obs["target_steps"][i])
                     self._metrics[success_name] += 1
-
-                if step_name not in self._short_metrics.keys():
-                    self._short_metrics[step_name] = [obs["target_steps"][i]]
-                    self._short_metrics[success_name] = 1
-                else:
-                    self._short_metrics[step_name].append(obs["target_steps"][i])
-                    self._short_metrics[success_name] += 1
 
 
         policy_output, state = self._policy(obs, state, training)
@@ -219,10 +207,6 @@ class Dreamer(nn.Module):
                 self._metrics[name] = [value]
             else:
                 self._metrics[name].append(value)
-            if name not in self._short_metrics.keys():
-                self._short_metrics[name] = [value]
-            else:
-                self._short_metrics[name].append(value)
 
 
 def count_steps(folder):
@@ -315,7 +299,7 @@ class ProcessEpisodeWrap:
                     total += len(ep["reward"]) - 1
                 else:
                     del cache[key]
-            logger.scalar("dataset_size", total)
+            wandb.log({"dataset_size": total}, step=logger.step)
             # use dataset_size as log step for a condition of envs > 1
             log_step = total * config.action_repeat
         elif mode == "eval":
@@ -338,17 +322,13 @@ class ProcessEpisodeWrap:
             score = sum(cls.eval_scores) / len(cls.eval_scores)
             length = sum(cls.eval_lengths) / len(cls.eval_lengths)
             episode_num = len(cls.eval_scores)
-            log_step = logger.step
-            logger.video(f"{mode}_policy", video[None])
+            wandb.log({
+                "video": wandb.Video(video[None], caption=f"{mode}_video", fps=10)
+            })
             cls.eval_done = True
 
         print(f"{mode.title()} episode has {length} steps and return {score:.1f}.")
-        logger.scalar(f"{mode}_return", score)
-        logger.scalar(f"{mode}_length", length)
-        logger.scalar(
-            f"{mode}_episodes", len(cache) if mode == "train" else episode_num
-        )
-        logger.write(step=log_step)
+        wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
 
 
 def main(config, defaults):
@@ -420,14 +400,15 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, resume=True):
         while agent._step < config.steps:
-            logger.write()
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
             tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
-            logger.video("eval_openl", to_np(video_pred))
+            wandb.log({
+                "video": wandb.Video(to_np(video_pred), caption="eval_video", fps=10)
+            })
             print("Start training.")
             state = tools.simulate(agent, train_envs, config.eval_every, state=state, metrics=agent._metrics)
             torch.save(agent.state_dict(), logdir / "latest_model.pt")

@@ -48,6 +48,7 @@ class Crafter():
     spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
     spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
+    spaces["present"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["target_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
     spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["prev_target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -92,8 +93,6 @@ class Crafter():
     self._target_steps += 1
     #reward = np.float32(reward)
     reward = np.float32(0)
-    if previous_pos[0] == self._crafter_env._player.pos[0] and previous_pos[1] == self._crafter_env._player.pos[1] and action != 5:
-        reward -= 0.1
     player_pos = info['player_pos']
     facing = info['player_facing']
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
@@ -111,9 +110,9 @@ class Crafter():
         min_dist = self._get_dist(player_pos, info)
         if self._last_min_dist is None:
             if min_dist is not None:
-                reward += 0.75
+                reward += 0.5
         elif min_dist is None:
-            reward -= 0.75
+            reward -= 0.5
         elif self._last_min_dist > min_dist:
             reward += 0.5
         elif self._last_min_dist < min_dist:
@@ -150,6 +149,7 @@ class Crafter():
         target_reached=target_reached,
         prev_target=prev_target,
         distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
+        present=self._last_min_dist is not None,
         **log_achievements,
     )
 

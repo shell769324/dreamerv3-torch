@@ -88,15 +88,15 @@ class WorldModel(nn.Module):
             shape,
             config.decoder_kernels,
         )
-        self.heads["distance"] = networks.ValueHead(
+        self.heads["present"] = networks.ValueHead(
             feat_size,
             config.target_units,
             [],
-            config.distance_layers,
+            config.present_layers,
             config.units,
             config.act,
             config.norm,
-            dist="normal",
+            dist="binary",
             outscale=0.0,
             device=config.device
         )
@@ -148,7 +148,7 @@ class WorldModel(nn.Module):
             opt=config.opt,
             use_amp=self._use_amp,
         )
-        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, distance=config.distance_scale)
+        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, present=config.present_scale)
 
     def _train(self, data):
         # action (batch_size, batch_length, act_dim)
@@ -176,19 +176,13 @@ class WorldModel(nn.Module):
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    if name in ["reward", "distance"]:
+                    if name in ["reward", "present"]:
                         pred = head(feat, target_embedding)
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
                     likes[name] = like
-                    if name == "distance":
-                        # If there is no such object in view, the distance will be negative, and we should ignore them
-                        # during backprop
-                        like = like.unsqueeze(-1)
-                        losses[name] = -torch.mean(like[data[name] > 0]) * self._scales.get(name, 1.0)
-                    else:
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
 
@@ -221,7 +215,7 @@ class WorldModel(nn.Module):
         # (batch_size, batch_length) -> (batch_size, batch_length, 1)
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
-        obs["distance"] = torch.Tensor(obs["distance"]).type(torch.FloatTensor).unsqueeze(-1)
+        obs["present"] = torch.Tensor(obs["distance"]).type(torch.IntTensor).unsqueeze(-1)
         if "discount" in obs:
             obs["discount"] *= self._config.discount
             # (batch_size, batch_length) -> (batch_size, batch_length, 1)

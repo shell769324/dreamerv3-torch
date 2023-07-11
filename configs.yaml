@@ -44,7 +44,7 @@ defaults:
   dyn_std_act: 'sigmoid2'
   dyn_min_std: 0.1
   dyn_temp_post: True
-  grad_heads: ['image', 'reward', 'cont', 'distance']
+  grad_heads: ['image', 'reward', 'cont', 'present']
   units: 512
   reward_layers: 2
   cont_layers: 2
@@ -62,7 +62,7 @@ defaults:
   kl_free: '1.0'
   cont_scale: 1.0
   reward_scale: 1.0
-  distance_scale: 1.0
+  present_scale: 1.0
   weight_decay: 0.0
   unimix_ratio: 0.01
   action_unimix_ratio: 0.01
@@ -137,6 +137,7 @@ atari100k:
   precision: 32
 
 crafter:
+  action_repeat: 1
   steps: 3e7
   dyn_deter: 4096
   dyn_hidden: 1024
@@ -145,7 +146,7 @@ crafter:
   units: 1024
   reward_layers: 5
   cont_layers: 4
-  distance_layers: 4
+  present_layers: 5
   value_layers: 5
   actor_layers: 5
   imag_gradient: 'reinforce'
