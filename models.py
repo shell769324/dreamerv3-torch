@@ -188,6 +188,7 @@ class WorldModel(nn.Module):
                             conditional_metrics[targets[i] + "_" + name] = to_np(torch.mean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
+        print(conditional_metrics)
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
