@@ -112,7 +112,9 @@ class Dreamer(nn.Module):
                     metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.mean(values))
-                print("right before", metrics_dict)
+                for t in targets:
+                    print("_train merge", t, metrics_dict[t + "_present"])
+                    print("_train merge", t, metrics_dict[t + "_reward"])
                 openl = self._wm.video_pred(next(self._dataset))
                 wandb.log({
                     "video": wandb.Video(to_np(openl), caption="train_comp", fps=10)
@@ -208,7 +210,9 @@ class Dreamer(nn.Module):
                 self._metrics[name] = [value]
             else:
                 self._metrics[name].append(value)
-        print("_train merge", self._metrics)
+        for t in targets:
+            print("_train merge", t, self._metrics[t + "_present"])
+            print("_train merge", t, self._metrics[t + "_reward"])
 
 
 def count_steps(folder):
