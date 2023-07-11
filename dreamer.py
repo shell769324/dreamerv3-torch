@@ -324,7 +324,6 @@ class ProcessEpisodeWrap:
             length = sum(cls.eval_lengths) / len(cls.eval_lengths)
             episode_num = len(cls.eval_scores)
             video = video[None].squeeze(0).transpose(0, 3, 1, 2)
-            print(video.shape)
             wandb.log({
                 "video": wandb.Video(video, caption=f"{mode}_video", fps=10)
             })
@@ -404,7 +403,7 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, resume=False):
         while agent._step < config.steps:
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
