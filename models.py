@@ -172,6 +172,7 @@ class WorldModel(nn.Module):
                 losses = {}
                 likes = {}
                 target_embedding = self.embedding(data["target"])
+                print(data["target"][0])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
@@ -185,6 +186,7 @@ class WorldModel(nn.Module):
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
+                            print(targets[i], like[data["target"] == i].shape)
                             conditional_metrics[targets[i] + "_" + name] = to_np(torch.mean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
