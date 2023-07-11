@@ -329,7 +329,8 @@ class ProcessEpisodeWrap:
             cls.eval_done = True
 
         print(f"{mode.title()} episode has {length} steps and return {score:.1f}.")
-        wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
+        if wandb.run is not None:
+            wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
 
 
 def main(config, defaults):
