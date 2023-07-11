@@ -299,7 +299,8 @@ class ProcessEpisodeWrap:
                     total += len(ep["reward"]) - 1
                 else:
                     del cache[key]
-            wandb.log({"dataset_size": total}, step=logger.step)
+            if wandb.run is not None:
+                wandb.log({"dataset_size": total}, step=logger.step)
             # use dataset_size as log step for a condition of envs > 1
             log_step = total * config.action_repeat
         elif mode == "eval":
