@@ -156,7 +156,7 @@ class WorldModel(nn.Module):
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
         data = self.preprocess(data)
-
+        conditional_metrics = {}
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
@@ -183,6 +183,9 @@ class WorldModel(nn.Module):
                     like = pred.log_prob(data[name])
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    if name in ["reward", "present"]:
+                        for i in range(len(targets)):
+                            conditional_metrics[targets[i] + "_" + name] = to_np(torch.mean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
 
@@ -193,6 +196,7 @@ class WorldModel(nn.Module):
         metrics["dyn_loss"] = to_np(dyn_loss)
         metrics["rep_loss"] = to_np(rep_loss)
         metrics["kl"] = to_np(torch.mean(kl_value))
+        metrics = metrics | conditional_metrics
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
