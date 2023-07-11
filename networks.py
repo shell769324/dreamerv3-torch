@@ -601,7 +601,7 @@ class ValueHead(nn.Module):
         if self._dist == "binary":
             return tools.Bernoulli(
                 torchd.independent.Independent(
-                    torchd.bernoulli.Bernoulli(logits=mean), len(self._shape)
+                    torchd.bernoulli.Bernoulli(logits=1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
                 )
             )
         if self._dist == "twohot_symlog":
