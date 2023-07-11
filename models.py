@@ -186,7 +186,6 @@ class WorldModel(nn.Module):
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
-                            print(targets[i], like[data["target"] == i].shape)
                             conditional_metrics[targets[i] + "_" + name] = to_np(torch.mean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
