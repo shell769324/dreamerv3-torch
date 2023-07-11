@@ -323,7 +323,7 @@ class ProcessEpisodeWrap:
             score = sum(cls.eval_scores) / len(cls.eval_scores)
             length = sum(cls.eval_lengths) / len(cls.eval_lengths)
             episode_num = len(cls.eval_scores)
-            print(video[None][0][0])
+            print(video[None].shape)
             wandb.log({
                 "video": wandb.Video(video[None], caption=f"{mode}_video", fps=10)
             })
