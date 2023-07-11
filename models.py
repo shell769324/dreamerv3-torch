@@ -185,10 +185,9 @@ class WorldModel(nn.Module):
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
-                            conditional_metrics[targets[i] + "_" + name] = to_np(torch.mean(like[data["target"] == i]))
+                            conditional_metrics[targets[i] + "_" + name] = to_np(torch.nanmean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
-        print("conditional", conditional_metrics)
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
@@ -198,9 +197,6 @@ class WorldModel(nn.Module):
         metrics["rep_loss"] = to_np(rep_loss)
         metrics["kl"] = to_np(torch.mean(kl_value))
         metrics  = {**metrics, **conditional_metrics}
-        for t in targets:
-            print("model merge", t, metrics[t + "_present"])
-            print("model merge", t, metrics[t + "_reward"])
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
