@@ -327,6 +327,7 @@ class ProcessEpisodeWrap:
             wandb.log({
                 "video": wandb.Video(video[None], caption=f"{mode}_video", fps=10)
             })
+            exit(1)
             cls.eval_done = True
 
         print(f"{mode.title()} episode has {length} steps and return {score:.1f}.")
