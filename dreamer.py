@@ -113,8 +113,8 @@ class Dreamer(nn.Module):
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.mean(values))
                 for t in targets:
-                    print("_train merge", t, metrics_dict[t + "_present"])
-                    print("_train merge", t, metrics_dict[t + "_reward"])
+                    print("right before", t, metrics_dict[t + "_present"])
+                    print("right before", t, metrics_dict[t + "_reward"])
                 openl = self._wm.video_pred(next(self._dataset))
                 wandb.log({
                     "video": wandb.Video(to_np(openl), caption="train_comp", fps=10)

@@ -199,8 +199,8 @@ class WorldModel(nn.Module):
         metrics["kl"] = to_np(torch.mean(kl_value))
         metrics  = {**metrics, **conditional_metrics}
         for t in targets:
-            print("_train merge", t, metrics[t + "_present"])
-            print("_train merge", t, metrics[t + "_reward"])
+            print("model merge", t, metrics[t + "_present"])
+            print("model merge", t, metrics[t + "_reward"])
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
