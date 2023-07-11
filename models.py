@@ -172,7 +172,6 @@ class WorldModel(nn.Module):
                 losses = {}
                 likes = {}
                 target_embedding = self.embedding(data["target"])
-                print(data["target"][0])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
