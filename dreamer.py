@@ -416,6 +416,7 @@ def main(config, defaults):
             eval_policy = functools.partial(agent, training=False)
             tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
+            print(video_pred.shape)
             video = to_np(video_pred).squeeze(0).transpose(0, 3, 1, 2)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
