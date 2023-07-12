@@ -114,6 +114,7 @@ class Dreamer(nn.Module):
                     metrics_dict[name] = float(np.nanmean(values))
                 openl = self._wm.video_pred(next(self._dataset))
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
+                print("train", openl[0].shape)
                 wandb.log({
                     "train_comp": wandb.Video(video, caption="train_comp", fps=10)
                 })
@@ -295,6 +296,7 @@ class ProcessEpisodeWrap:
         video = episode["augmented"]
         cache[str(filename)] = episode
         video = video[None].squeeze(0).transpose(0, 3, 1, 2)
+        print("good", video.shape)
         if mode == "train":
             total = 0
             for key, ep in reversed(sorted(cache.items(), key=lambda x: x[0])):
@@ -417,6 +419,7 @@ def main(config, defaults):
             tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
+            print("eval", video_pred[0].shape)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
             })
