@@ -113,8 +113,9 @@ class Dreamer(nn.Module):
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                 openl = self._wm.video_pred(next(self._dataset))
+                # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
-                print("train", openl[0].shape)
+                print("train", video.shape)
                 wandb.log({
                     "train_comp": wandb.Video(video, caption="train_comp", fps=10)
                 })
@@ -419,7 +420,7 @@ def main(config, defaults):
             tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
-            print("eval", video_pred[0].shape)
+            print("eval", video.shape)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
             })
