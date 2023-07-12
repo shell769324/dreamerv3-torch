@@ -113,8 +113,9 @@ class Dreamer(nn.Module):
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                 openl = self._wm.video_pred(next(self._dataset))
+                video = to_np(openl).squeeze(0).transpose(0, 3, 1, 2)
                 wandb.log({
-                    "video": wandb.Video(to_np(openl), caption="train_comp", fps=10)
+                    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
                 })
                 wandb.log(metrics_dict, step=step)
                 self._metrics = {}
@@ -281,6 +282,7 @@ class ProcessEpisodeWrap:
     eval_lengths = []
     last_step_at_eval = -1
     eval_done = False
+    last_episode = 0
 
     @classmethod
     def process_episode(cls, config, logger, mode, train_eps, eval_eps, episode):
@@ -292,6 +294,7 @@ class ProcessEpisodeWrap:
         score = float(episode["reward"].astype(np.float64).sum())
         video = episode["augmented"]
         cache[str(filename)] = episode
+        video = video[None].squeeze(0).transpose(0, 3, 1, 2)
         if mode == "train":
             total = 0
             for key, ep in reversed(sorted(cache.items(), key=lambda x: x[0])):
@@ -301,6 +304,11 @@ class ProcessEpisodeWrap:
                     del cache[key]
             if wandb.run is not None:
                 wandb.log({"dataset_size": total}, step=logger.step)
+                if logger.step - cls.last_episode >= config.log_every:
+                    cls.last_episode = logger.step
+                    wandb.log({
+                        f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+                    }, step=logger.step)
             # use dataset_size as log step for a condition of envs > 1
             log_step = total * config.action_repeat
         elif mode == "eval":
@@ -323,10 +331,9 @@ class ProcessEpisodeWrap:
             score = sum(cls.eval_scores) / len(cls.eval_scores)
             length = sum(cls.eval_lengths) / len(cls.eval_lengths)
             episode_num = len(cls.eval_scores)
-            video = video[None].squeeze(0).transpose(0, 3, 1, 2)
             wandb.log({
-                "video": wandb.Video(video, caption=f"{mode}_video", fps=10)
-            })
+                f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+            }, step=logger.step)
             cls.eval_done = True
 
         print(f"{mode.title()} episode has {length} steps and return {score:.1f}.")
@@ -409,8 +416,9 @@ def main(config, defaults):
             eval_policy = functools.partial(agent, training=False)
             tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
+            video = to_np(video_pred).squeeze(0).transpose(0, 3, 1, 2)
             wandb.log({
-                "video": wandb.Video(to_np(video_pred), caption="eval_comp", fps=10)
+                "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
             })
             print("Start training.")
             state = tools.simulate(agent, train_envs, config.eval_every, state=state, metrics=agent._metrics)
