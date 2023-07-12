@@ -251,7 +251,7 @@ class WorldModel(nn.Module):
         model = model + 0.5
         error = (model - truth + 1.0) / 2.0
 
-        return torch.cat([truth, model, error], 2)
+        return (torch.cat([truth, model, error], 2) * 255).type(torch.IntTensor)
 
 
 class ImagBehavior(nn.Module):
