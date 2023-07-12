@@ -409,14 +409,6 @@ def main(config, defaults):
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
         agent._should_pretrain._once = False
-    embeddings = {}
-    for i in range(6):
-        embeddings[i] = agent._wm.embedding(torch.IntTensor([i]).to(config.device))
-    for i in range(6):
-        for j in range(6):
-            print(torch.nn.functional.cosine_similarity(embeddings[i], embeddings[j]), end=" ")
-        print("")
-    exit(1)
 
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="xw4dhey7", resume="must"):
