@@ -411,7 +411,7 @@ def main(config, defaults):
         agent._should_pretrain._once = False
     embeddings = {}
     for i in range(6):
-        embeddings[i] = agent._wm.embedding(torch.IntTensor([i]))
+        embeddings[i] = agent._wm.embedding(torch.IntTensor([i]).to(config.device))
     for i in range(6):
         for j in range(6):
             print(torch.nn.functional.cosine_similarity(embeddings[i], embeddings[j]), end=" ")
