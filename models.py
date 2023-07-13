@@ -156,7 +156,6 @@ class WorldModel(nn.Module):
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
-                print("embed shape", embed.shape)
                 post, prior = self.dynamics.observe(
                     embed, data["action"], data["is_first"]
                 )
