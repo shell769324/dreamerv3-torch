@@ -415,7 +415,7 @@ def main(config, defaults):
         while agent._step < config.steps:
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
-            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
+            # tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
             wandb.log({

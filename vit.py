@@ -133,3 +133,6 @@ class ViT(nn.Module):
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
 
         return self.to_latent(x)
+
+    def __call__(self, obs):
+        return self.forward(obs)
