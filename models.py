@@ -231,7 +231,8 @@ class WorldModel(nn.Module):
     def video_pred(self, data):
         data = self.preprocess(data)
         embed = self.encoder(data)
-
+        print("actual", embed.shape)
+        print("half", embed[:6, :5].shape)
         states, _ = self.dynamics.observe(
             embed[:6, :5], data["action"][:6, :5], data["is_first"][:6, :5]
         )
