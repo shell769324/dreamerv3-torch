@@ -41,7 +41,7 @@ class WorldModel(nn.Module):
             patch_size=8,
             dim=2048,
             depth=6,
-            heads=8,
+            heads=4,
             mlp_dim=2048
         )
 
@@ -230,10 +230,7 @@ class WorldModel(nn.Module):
 
     def video_pred(self, data):
         data = self.preprocess(data)
-        print(data["image"].shape)
         embed = self.encoder(data)
-        print("actual", embed.shape)
-        print("half", embed[:6, :5].shape)
         states, _ = self.dynamics.observe(
             embed[:6, :5], data["action"][:6, :5], data["is_first"][:6, :5]
         )
