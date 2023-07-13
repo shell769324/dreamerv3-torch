@@ -94,7 +94,6 @@ class RSSM(nn.Module):
             inp_dim = self._deter + self._embed
         else:
             inp_dim = self._embed
-        print("inp dim",inp_dim)
         for i in range(self._layers_output):
             obs_out_layers.append(nn.Linear(inp_dim, self._hidden, bias=False))
             obs_out_layers.append(self._norm(self._hidden, eps=1e-03))
