@@ -119,8 +119,7 @@ class ViT(nn.Module):
 
     def forward(self, obs):
         x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
-        print(x.shape)
-        exit(1)
+        x = x.permute(0, 3, 1, 2)
         x = self.to_patch_embedding(x)
         b, n, _ = x.shape
 
