@@ -4,6 +4,7 @@ from torch import nn
 import numpy as np
 from PIL import ImageColor, Image, ImageDraw, ImageFont
 from envs.crafter import targets
+from vit import ViT
 
 import networks
 import tools
@@ -35,13 +36,28 @@ class WorldModel(nn.Module):
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
-        self.encoder = networks.ConvEncoder(
+        self.encoder = ViT(
+            image_size=64,
+            patch_size=8,
+            dim=1024,
+            depth=6,
+            heads=8,
+            mlp_dim = 1024
+        )
+        param_size = 0
+        for param in self.encoder.parameters():
+            param_size += param.nelement() * param.element_size()
+        print("bit", param_size, "MB", param_size/8e6)
+        exit(1)
+        """
+        networks.ConvEncoder(
             config.grayscale,
             config.cnn_depth,
             config.act,
             config.norm,
             config.encoder_kernels,
         )
+        """
         self.embedding = nn.Embedding(len(targets), config.target_units)
         if config.size[0] == 64 and config.size[1] == 64:
             embed_size = (
