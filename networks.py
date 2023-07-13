@@ -224,7 +224,7 @@ class RSSM(nn.Module):
                 x = torch.cat([prior["deter"], embed], -1)
             else:
                 x = embed
-            print("embed shape", embed)
+            print("embed shape", embed.shape)
             print("x shape", x.shape)
             # (batch_size, prior_deter + embed) -> (batch_size, hidden)
             x = self._obs_out_layers(x)
