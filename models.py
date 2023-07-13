@@ -52,6 +52,7 @@ class WorldModel(nn.Module):
                 * config.cnn_depth
                 * 2 ** (len(config.encoder_kernels) - 1)
             )
+            print(embed_size)
         else:
             raise NotImplemented(f"{config.size} is not applicable now")
         self.dynamics = networks.RSSM(
@@ -163,6 +164,8 @@ class WorldModel(nn.Module):
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
+                print("embed shape", embed.shape)
+                exit(1)
                 post, prior = self.dynamics.observe(
                     embed, data["action"], data["is_first"]
                 )
