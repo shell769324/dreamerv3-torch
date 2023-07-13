@@ -46,7 +46,7 @@ class WorldModel(nn.Module):
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        embed_size = 8192
+        embed_size = 4096 + 8192
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
