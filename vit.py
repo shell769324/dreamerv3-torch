@@ -131,8 +131,8 @@ class ViT(nn.Module):
         x = self.transformer(x)
 
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
-
-        return self.to_latent(x)
+        shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
+        return self.to_latent(x).reshape(shape)
 
     def __call__(self, obs):
         return self.forward(obs)
