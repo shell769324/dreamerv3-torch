@@ -48,16 +48,21 @@ class WorldModel(nn.Module):
         for param in self.encoder.parameters():
             param_size += param.nelement() * param.element_size()
         print("bit", param_size, "MB", param_size/8e6)
-        exit(1)
-        """
-        networks.ConvEncoder(
+
+        prev = networks.ConvEncoder(
             config.grayscale,
             config.cnn_depth,
             config.act,
             config.norm,
             config.encoder_kernels,
         )
-        """
+
+        param_size = 0
+        for param in prev.parameters():
+            param_size += param.nelement() * param.element_size()
+        print("bit", param_size, "MB", param_size / 8e6)
+        exit(1)
+
         self.embedding = nn.Embedding(len(targets), config.target_units)
         if config.size[0] == 64 and config.size[1] == 64:
             embed_size = (
