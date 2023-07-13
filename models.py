@@ -44,10 +44,6 @@ class WorldModel(nn.Module):
             heads=8,
             mlp_dim=1024
         )
-        param_size = 0
-        for param in self.encoder.parameters():
-            param_size += param.nelement() * param.element_size()
-        print("bit", param_size, "MB", param_size/8e6)
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
         if config.size[0] == 64 and config.size[1] == 64:
