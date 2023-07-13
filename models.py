@@ -39,22 +39,14 @@ class WorldModel(nn.Module):
         self.encoder = ViT(
             image_size=64,
             patch_size=8,
-            dim=1024,
+            dim=2048,
             depth=6,
             heads=8,
-            mlp_dim=1024
+            mlp_dim=2048
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        if config.size[0] == 64 and config.size[1] == 64:
-            embed_size = (
-                (64 // 2 ** (len(config.encoder_kernels))) ** 2
-                * config.cnn_depth
-                * 2 ** (len(config.encoder_kernels) - 1)
-            )
-            print(embed_size)
-        else:
-            raise NotImplemented(f"{config.size} is not applicable now")
+        embed_size=2048
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
