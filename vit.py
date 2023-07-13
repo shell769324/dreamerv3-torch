@@ -78,7 +78,9 @@ class Transformer(nn.Module):
     def forward(self, x):
         for attn, ff in self.layers:
             x = attn(x) + x
+            print("attent", x.shape)
             x = ff(x) + x
+            print("ff", x.shape)
         return x
 
     def __call__(self, x):
@@ -116,17 +118,21 @@ class ViT(nn.Module):
         x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
         x = x.permute(0, 3, 1, 2)
         x = self.to_patch_embedding(x)
+        print("patch embedding", x.shape)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
         x += self.pos_embedding[:, :(n + 1)]
+        print("pos embedding", x.shape)
         x = self.dropout(x)
 
         x = self.transformer(x)
 
         x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
         shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
+        print("x shape", x.shape)
+        exit(1)
         return self.to_latent(x).reshape(shape)
 
     def __call__(self, obs):
