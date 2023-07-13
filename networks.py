@@ -94,6 +94,7 @@ class RSSM(nn.Module):
             inp_dim = self._deter + self._embed
         else:
             inp_dim = self._embed
+        print("inp dim",inp_dim)
         for i in range(self._layers_output):
             obs_out_layers.append(nn.Linear(inp_dim, self._hidden, bias=False))
             obs_out_layers.append(self._norm(self._hidden, eps=1e-03))
@@ -223,6 +224,7 @@ class RSSM(nn.Module):
                 x = torch.cat([prior["deter"], embed], -1)
             else:
                 x = embed
+            print("x shape", x.shape)
             # (batch_size, prior_deter + embed) -> (batch_size, hidden)
             x = self._obs_out_layers(x)
             # (batch_size, hidden) -> (batch_size, stoch, discrete_num)
