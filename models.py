@@ -40,13 +40,13 @@ class WorldModel(nn.Module):
             image_size=64,
             patch_size=16,
             dim=4096,
-            depth=4,
+            depth=6,
             heads=4,
-            mlp_dim=4096
+            mlp_dim=6144
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        embed_size = 4096
+        embed_size = 6144
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
