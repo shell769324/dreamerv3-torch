@@ -230,6 +230,7 @@ class WorldModel(nn.Module):
 
     def video_pred(self, data):
         data = self.preprocess(data)
+        print(data["image"].shape)
         embed = self.encoder(data)
         print("actual", embed.shape)
         print("half", embed[:6, :5].shape)
