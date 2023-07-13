@@ -41,8 +41,8 @@ class WorldModel(nn.Module):
             patch_size=16,
             dim=8192,
             depth=4,
-            heads=4,
-            mlp_dim=4096
+            heads=2,
+            mlp_dim=8192
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
