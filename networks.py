@@ -219,7 +219,6 @@ class RSSM(nn.Module):
         if self._shared:
             post = self.img_step(prev_state, prev_action, embed, sample)
         else:
-            print("embed.shape", embed.shape, "prior deter shape", prior["deter"])
             if self._temp_post:
                 x = torch.cat([prior["deter"], embed], -1)
             else:
