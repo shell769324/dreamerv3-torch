@@ -40,7 +40,7 @@ class WorldModel(nn.Module):
             image_size=64,
             patch_size=16,
             dim=4096,
-            depth=6,
+            depth=4,
             heads=4,
             mlp_dim=8192
         )
