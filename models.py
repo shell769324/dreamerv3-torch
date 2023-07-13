@@ -39,10 +39,10 @@ class WorldModel(nn.Module):
         self.encoder = ViT(
             image_size=64,
             patch_size=16,
-            dim=4096,
+            dim=8192,
             depth=4,
             heads=4,
-            mlp_dim=8192
+            mlp_dim=4096
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
