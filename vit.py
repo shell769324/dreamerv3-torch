@@ -117,8 +117,11 @@ class ViT(nn.Module):
         self.pool = pool
         self.to_latent = nn.Identity()
 
-    def forward(self, img):
-        x = self.to_patch_embedding(img)
+    def forward(self, obs):
+        x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
+        print(x.shape)
+        exit(1)
+        x = self.to_patch_embedding(x)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
