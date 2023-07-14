@@ -92,7 +92,8 @@ class Transformer(nn.Module):
             x = ff(x) + x
             print("post feed", x.shape)
         at, last = self.out
-        return last(at(x) + x)
+        x = at(x) + x
+        return last(x)
 
     def __call__(self, x):
         return self.forward(x)
