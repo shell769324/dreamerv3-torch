@@ -136,6 +136,7 @@ class ViT(nn.Module):
         print("post pool", x.shape)
         shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
         print("last shape", shape)
+        exit(1)
         return self.to_latent(x).reshape(shape)
 
     def __call__(self, obs):
