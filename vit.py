@@ -55,20 +55,14 @@ class Attention(nn.Module):
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim = -1)
-        print("qkv", qkv[0].shape)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-        print("q k v", q.shape, k.shape, v.shape)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        print("dots", dots.shape)
 
         attn = self.attend(dots)
-        print("attn softmax", attn.shape)
 
         out = torch.matmul(attn, v)
-        print("value weighted", out.shape)
         out = rearrange(out, 'b h n d -> b n (h d)')
-        print("post value weighted rearrange", out.shape)
         return self.to_out(out)
 
 
@@ -87,9 +81,7 @@ class Transformer(nn.Module):
     def forward(self, x):
         for attn, ff in self.layers:
             x = attn(x) + x
-            print("post attn", x.shape)
             x = ff(x) + x
-            print("post feed", x.shape)
         x = self.out_att(x) + x
         return self.out(x)
 
@@ -127,26 +119,19 @@ class ViT(nn.Module):
         self.pool = pool
 
     def forward(self, obs):
-        print("initial", obs["image"].shape)
         x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
         x = x.permute(0, 3, 1, 2)
-        print("post permute", x.shape)
         x = self.to_patch_embedding(x)
-        print("post patch embedding", x.shape)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
-        print("post cls cat", x.shape)
         x += self.pos_embedding[:, :(n + 1)]
-        print("post cls cat embedding", x.shape)
         x = self.dropout(x)
 
         x = self.transformer(x)
 
-        print("post transformer", x.shape)
         shape = list(obs["image"].shape[:-3]) + [x.shape[-1] * (n + 1)]
-        print("final shape", shape)
         return x.reshape(shape)
 
     def __call__(self, obs):
