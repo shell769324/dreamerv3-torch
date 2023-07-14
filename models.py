@@ -39,9 +39,9 @@ class WorldModel(nn.Module):
         self.encoder = ViT(
             image_size=64,
             patch_size=16,
-            dim=4096,
+            dim=2048,
             depth=4,
-            heads=4,
+            heads=8,
             mlp_dim=4096
         )
 

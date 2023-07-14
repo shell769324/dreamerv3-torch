@@ -54,14 +54,20 @@ class Attention(nn.Module):
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim = -1)
+        print("qkv", qkv.shape)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+        print("q k v", q.shape, k.shape, v.shape)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        print("dots", dots.shape)
 
         attn = self.attend(dots)
+        print("attn softmax", attn.shape)
 
         out = torch.matmul(attn, v)
+        print("value weighted", out.shape)
         out = rearrange(out, 'b h n d -> b n (h d)')
+        print("post value weighted rearrange", out.shape)
         return self.to_out(out)
 
 
@@ -78,7 +84,9 @@ class Transformer(nn.Module):
     def forward(self, x):
         for attn, ff in self.layers:
             x = attn(x) + x
+            print("post attn", x.shape)
             x = ff(x) + x
+            print("post feed", x.shape)
         return x
 
     def __call__(self, x):
@@ -96,6 +104,8 @@ class ViT(nn.Module):
         patch_dim = channels * patch_height * patch_width
         assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
 
+        # Segmented: 1 16 16*16*3
+        # 16*16*3 dim matrix mult
         self.to_patch_embedding = nn.Sequential(
             Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_height, p2=patch_width),
             nn.LayerNorm(patch_dim),
@@ -103,6 +113,7 @@ class ViT(nn.Module):
             nn.LayerNorm(dim),
         )
 
+        # Concat with cls and then mult
         self.pos_embedding = nn.Parameter(torch.randn(1, num_patches + 1, dim))
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
