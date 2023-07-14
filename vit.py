@@ -145,7 +145,7 @@ class ViT(nn.Module):
         x = self.transformer(x)
 
         print("post transformer", x.shape)
-        shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
+        shape = list(obs["image"].shape[:-3]) + [x.shape[-1] * (n + 1)]
         print("final shape", shape)
         return x.reshape(shape)
 
