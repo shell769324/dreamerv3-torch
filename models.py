@@ -36,7 +36,7 @@ class WorldModel(nn.Module):
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
-        image_embedding = 2048
+        image_embedding = 1024
         self.encoder = ViT(
             image_size=64,
             patch_size=16,

@@ -72,13 +72,13 @@ class Attention(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_head, mlp_dim, dropout = 0.):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim):
         super().__init__()
         self.layers = nn.ModuleList([])
         for _ in range(depth):
             self.layers.append(nn.ModuleList([
-                PreNorm(dim, Attention(dim, heads = heads, dim_head = dim_head, dropout = dropout)),
-                PreNorm(dim, FeedForward(dim, mlp_dim, dropout = dropout))
+                PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head)),
+                PreNorm(dim, FeedForward(dim, mlp_dim))
             ]))
 
     def forward(self, x):
@@ -93,7 +93,7 @@ class Transformer(nn.Module):
         return self.forward(x)
 
 class ViT(nn.Module):
-    def __init__(self, *, image_size, patch_size, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, dropout = 0., emb_dropout = 0.):
+    def __init__(self, *, image_size, patch_size, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, emb_dropout = 0., rep_dim = 8192):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -118,10 +118,10 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, dropout)
+        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim)
 
         self.pool = pool
-        self.to_latent = nn.Identity()
+        self.out = nn.Parameter(torch.randn(1, num_patches + 1, dim))
 
     def forward(self, obs):
         print("initial", obs["image"].shape)
