@@ -72,13 +72,13 @@ class Attention(nn.Module):
 
 
 class Transformer(nn.Module):
-    def __init__(self, dim, depth, heads, dim_head, mlp_dim):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim, output_dim):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for _ in range(depth):
+        for i in range(depth):
             self.layers.append(nn.ModuleList([
                 PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head)),
-                PreNorm(dim, FeedForward(dim, mlp_dim))
+                PreNorm(dim, FeedForward(dim, mlp_dim) if i < depth - 1 else nn.Sequential(nn.Linear(dim, output_dim)))
             ]))
 
     def forward(self, x):
@@ -93,7 +93,7 @@ class Transformer(nn.Module):
         return self.forward(x)
 
 class ViT(nn.Module):
-    def __init__(self, *, image_size, patch_size, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, emb_dropout = 0., rep_dim = 8192):
+    def __init__(self, *, image_size, patch_size, dim, depth, heads, mlp_dim, pool = 'cls', channels = 3, dim_head = 64, emb_dropout = 0., output_dim = 512):
         super().__init__()
         image_height, image_width = pair(image_size)
         patch_height, patch_width = pair(patch_size)
@@ -118,10 +118,9 @@ class ViT(nn.Module):
         self.cls_token = nn.Parameter(torch.randn(1, 1, dim))
         self.dropout = nn.Dropout(emb_dropout)
 
-        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim)
+        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim, output_dim)
 
         self.pool = pool
-        self.out = nn.Parameter(torch.randn(1, num_patches + 1, dim))
 
     def forward(self, obs):
         print("initial", obs["image"].shape)
@@ -142,13 +141,9 @@ class ViT(nn.Module):
         x = self.transformer(x)
 
         print("post transformer", x.shape)
-
-        x = x.mean(dim=1) if self.pool == 'mean' else x[:, 0]
-        print("post pool", x.shape)
         shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
-        print("last shape", shape)
-        exit(1)
-        return self.to_latent(x).reshape(shape)
+        print("final shape", shape)
+        return x.reshape(shape)
 
     def __call__(self, obs):
         return self.forward(obs)
