@@ -44,7 +44,7 @@ class WorldModel(nn.Module):
             depth=6,
             heads=8,
             mlp_dim=2048,
-            dim_head=256
+            dim_head=128
         )
         param_size = 0
         for param in self.encoder.parameters():
