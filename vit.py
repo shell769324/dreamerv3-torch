@@ -97,7 +97,7 @@ class ViT(nn.Module):
         assert pool in {'cls', 'mean'}, 'pool type must be either cls (cls token) or mean (mean pooling)'
 
         self.to_patch_embedding = nn.Sequential(
-            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1 = patch_height, p2 = patch_width),
+            Rearrange('b c (h p1) (w p2) -> b (h w) (p1 p2 c)', p1=patch_height, p2=patch_width),
             nn.LayerNorm(patch_dim),
             nn.Linear(patch_dim, dim),
             nn.LayerNorm(dim),
@@ -113,20 +113,29 @@ class ViT(nn.Module):
         self.to_latent = nn.Identity()
 
     def forward(self, obs):
+        print("initial", obs["image"].shape)
         x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
         x = x.permute(0, 3, 1, 2)
+        print("post permute", x.shape)
         x = self.to_patch_embedding(x)
+        print("post patch embedding", x.shape)
         b, n, _ = x.shape
 
         cls_tokens = repeat(self.cls_token, '1 1 d -> b 1 d', b = b)
         x = torch.cat((cls_tokens, x), dim=1)
+        print("post cls cat", x.shape)
         x += self.pos_embedding[:, :(n + 1)]
+        print("post cls cat embedding", x.shape)
         x = self.dropout(x)
 
         x = self.transformer(x)
 
-        x = x.mean(dim = 1) if self.pool == 'mean' else x[:, 0]
+        print("post transformer", x.shape)
+
+        x = x.mean(dim=1) if self.pool == 'mean' else x[:, 0]
+        print("post pool", x.shape)
         shape = list(obs["image"].shape[:-3]) + [x.shape[-1]]
+        print("last shape", shape)
         return self.to_latent(x).reshape(shape)
 
     def __call__(self, obs):
