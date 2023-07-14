@@ -41,11 +41,15 @@ class WorldModel(nn.Module):
             image_size=64,
             patch_size=16,
             dim=image_embedding,
-            depth=4,
+            depth=6,
             heads=8,
             mlp_dim=2048,
             dim_head=256
         )
+        param_size = 0
+        for param in self.encoder.parameters():
+            param_size += param.nelement() * param.element_size()
+        print(param_size/8e6, "MB")
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
         embed_size = image_embedding
