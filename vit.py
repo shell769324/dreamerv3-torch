@@ -54,7 +54,7 @@ class Attention(nn.Module):
 
     def forward(self, x):
         qkv = self.to_qkv(x).chunk(3, dim = -1)
-        print("qkv", qkv.shape)
+        print("qkv", qkv[0].shape)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
         print("q k v", q.shape, k.shape, v.shape)
 
