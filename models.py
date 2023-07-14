@@ -36,17 +36,18 @@ class WorldModel(nn.Module):
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
+        image_embedding = 2048
         self.encoder = ViT(
             image_size=64,
             patch_size=16,
-            dim=2048,
+            dim=image_embedding,
             depth=4,
             heads=8,
             mlp_dim=4096
         )
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        embed_size = 4096
+        embed_size = image_embedding
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
