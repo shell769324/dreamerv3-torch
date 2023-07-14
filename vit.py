@@ -75,10 +75,14 @@ class Transformer(nn.Module):
     def __init__(self, dim, depth, heads, dim_head, mlp_dim, output_dim):
         super().__init__()
         self.layers = nn.ModuleList([])
-        for i in range(depth):
+        self.out = [
+                PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head)),
+                PreNorm(dim, nn.Sequential(nn.Linear(dim, output_dim)))
+            ]
+        for i in range(depth - 1):
             self.layers.append(nn.ModuleList([
                 PreNorm(dim, Attention(dim, heads=heads, dim_head=dim_head)),
-                PreNorm(dim, FeedForward(dim, mlp_dim) if i < depth - 1 else nn.Sequential(nn.Linear(dim, output_dim)))
+                PreNorm(dim, FeedForward(dim, mlp_dim))
             ]))
 
     def forward(self, x):
@@ -87,7 +91,7 @@ class Transformer(nn.Module):
             print("post attn", x.shape)
             x = ff(x) + x
             print("post feed", x.shape)
-        return x
+        return self.out(x)
 
     def __call__(self, x):
         return self.forward(x)
