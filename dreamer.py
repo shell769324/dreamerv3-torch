@@ -150,7 +150,7 @@ class Dreamer(nn.Module):
         else:
             latent, action = state
         obs = self._wm.preprocess(obs)
-        embed = self._wm.encoder(obs)
+        embed = self._wm.encoder(obs["image"])
         latent, _ = self._wm.dynamics.obs_step(
             latent, action, embed, obs["is_first"], self._config.collect_dyn_sample
         )
