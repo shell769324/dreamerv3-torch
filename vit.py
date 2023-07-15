@@ -285,6 +285,7 @@ class TransformerClassifier(nn.Module):
             x = torch.cat((cls_token, x), dim=1)
 
         if exists(self.positional_emb):
+            print("pos emb", self.positional_emb.shape)
             x += self.positional_emb
 
         x = self.dropout(x)
