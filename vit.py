@@ -204,7 +204,9 @@ class Tokenizer(nn.Module):
         return self.forward(torch.zeros((1, n_channels, height, width))).shape[1]
 
     def forward(self, x):
-        return rearrange(self.conv_layers(x), 'b c h w -> b (h w) c')
+        x = self.conv_layers(x)
+        print("after conv", x.shape)
+        return rearrange(x, 'b c h w -> b (h w) c')
 
     def __call__(self, x):
         return self.forward(x)
