@@ -368,4 +368,5 @@ class CCT(nn.Module):
         x = self.classifier(x)
         print("classifier x", x.shape)
         shape = list(original) + [x.shape[-1]]
+        print("final shape", shape)
         return x.reshape(shape)
