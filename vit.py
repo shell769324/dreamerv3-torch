@@ -201,13 +201,10 @@ class Tokenizer(nn.Module):
         self.apply(self.init_weight)
 
     def sequence_length(self, n_channels=3, height=224, width=224):
-        print("Expected input", (1, n_channels, height, width))
-        print("Supposed seq length", self.forward(torch.zeros((1, n_channels, height, width))).shape)
         return self.forward(torch.zeros((1, n_channels, height, width))).shape[1]
 
     def forward(self, x):
         x = self.conv_layers(x)
-        print("after conv", x.shape)
         return rearrange(x, 'b c h w -> b (h w) c')
 
     def __call__(self, x):
@@ -287,7 +284,6 @@ class TransformerClassifier(nn.Module):
             x = torch.cat((cls_token, x), dim=1)
 
         if exists(self.positional_emb):
-            print("pos emb", self.positional_emb.shape)
             x += self.positional_emb
 
         x = self.dropout(x)
@@ -363,15 +359,10 @@ class CCT(nn.Module):
             *args, **kwargs)
 
     def forward(self, x):
-        print("x", x.shape)
         original = x.shape[:-3]
         x = x.reshape((-1,) + tuple(x.shape[-3:]))
         x = x.permute(0, 3, 1, 2)
-        print("permute x", x.shape)
         x = self.tokenizer(x)
-        print("tokenizer x", x.shape)
         x = self.classifier(x)
-        print("classifier x", x.shape)
         shape = list(original) + [x.shape[-1]]
-        print("final shape", shape)
         return x.reshape(shape)
