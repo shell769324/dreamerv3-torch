@@ -358,7 +358,10 @@ class CCT(nn.Module):
             *args, **kwargs)
 
     def forward(self, x):
+        original = x.shape[:-3]
         x = x.reshape((-1,) + tuple(x.shape[-3:]))
         x = x.permute(0, 3, 1, 2)
         x = self.tokenizer(x)
-        return self.classifier(x)
+        x = self.classifier(x)
+        shape = list(original) + [x.shape[-1]]
+        return x.reshape(shape)
