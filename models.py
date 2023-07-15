@@ -4,7 +4,7 @@ from torch import nn
 import numpy as np
 from PIL import ImageColor, Image, ImageDraw, ImageFont
 from envs.crafter import targets
-from vit import ViT
+from vit import CCT
 
 import networks
 import tools
@@ -36,16 +36,17 @@ class WorldModel(nn.Module):
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
-        output_dim = 512
-        self.encoder = ViT(
+        num_classes = 2048
+        self.encoder = CCT(
             image_size=64,
-            patch_size=16,
-            dim=1024,
-            depth=6,
-            heads=8,
-            mlp_dim=2048,
-            dim_head=128,
-            output_dim=output_dim
+            embedding_dim=1024,
+            n_conv_layers=2,
+            num_classes=2048,
+            num_layers=6,
+            num_heads=4,
+            mlp_ratio=2,
+            kernel_size=5,
+            in_planes=32
         )
         param_size = 0
         for param in self.encoder.parameters():
@@ -53,7 +54,7 @@ class WorldModel(nn.Module):
         print(param_size/8e6, "MB")
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        embed_size = output_dim * 17
+        embed_size = num_classes
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
