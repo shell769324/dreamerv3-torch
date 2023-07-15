@@ -163,7 +163,7 @@ class WorldModel(nn.Module):
         conditional_metrics = {}
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
-                embed = self.encoder(data)
+                embed = self.encoder(data["image"])
                 post, prior = self.dynamics.observe(
                     embed, data["action"], data["is_first"]
                 )
@@ -238,7 +238,7 @@ class WorldModel(nn.Module):
 
     def video_pred(self, data):
         data = self.preprocess(data)
-        embed = self.encoder(data)
+        embed = self.encoder(data["image"])
         states, _ = self.dynamics.observe(
             embed[:6, :5], data["action"][:6, :5], data["is_first"][:6, :5]
         )
