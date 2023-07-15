@@ -38,7 +38,7 @@ class WorldModel(nn.Module):
         self._config = config
         num_classes = 2048
         self.encoder = CCT(
-            image_size=64,
+            img_size=64,
             embedding_dim=1024,
             n_conv_layers=2,
             num_classes=2048,
