@@ -201,6 +201,7 @@ class Tokenizer(nn.Module):
         self.apply(self.init_weight)
 
     def sequence_length(self, n_channels=3, height=224, width=224):
+        print("Supposed seq length", self.forward(torch.zeros((1, n_channels, height, width))).shape)
         return self.forward(torch.zeros((1, n_channels, height, width))).shape[1]
 
     def forward(self, x):
