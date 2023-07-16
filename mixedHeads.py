@@ -132,7 +132,7 @@ class MixedHead(nn.Module):
         q = repeat(q, 'b h d -> b h n d', n=6)
         print("r q", q.shape)
         out = self.layers((q, k, v))
-        out.reshape(original[:2], -1)
+        out.reshape(original[0], original[1], -1)
 
         print("out", out.shape)
         mean = self.mean_layer(out)
