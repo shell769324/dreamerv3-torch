@@ -116,16 +116,16 @@ class MixedHead(nn.Module):
             self.std_layer = nn.Linear(self._units, np.prod(self._shape))
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, targets, dtype=None):
+    def __call__(self, features, targets_array, dtype=None):
         features = features.reshape(-1, features.shape[-1])
-        targets = targets.reshape(-1)
+        targets_array = targets_array.reshape(-1)
         kv = self.feature_layer(features).chunk(2, dim=-1)
         print("feature", features.shape)
         print("k", kv[0].shape)
-        print("targets", targets.shape)
-        k, v = map(lambda t: rearrange(t.reshape(-1, len(targets), self.embed_dim), 'b (n h d) -> b h n d', h=self.heads), kv)
+        print("targets array", targets_array.shape)
+        k, v = map(lambda t: rearrange(t.reshape(len(targets_array), len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
         print("k, v", k.shape, v.shape)
-        q = self.embedding(targets).reshape(-1, self.heads, self.embed_dim // self.heads)
+        q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
         print("q", q.shape)
         q = repeat(q, 'b h d -> b h n d', n=6)
         print("r q", q.shape)
