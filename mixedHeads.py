@@ -114,7 +114,7 @@ class MixedHead(nn.Module):
     def __call__(self, features, targets, dtype=None):
         kv = self.feature_layer(features).chunk(2, dim=-1)
         k, v = map(lambda t: rearrange(t.reshape(-1, len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
-        q = self.embedding(targets).reshape(-1, self.heads, self.embedding // self.heads)
+        q = self.embedding(targets).reshape(-1, self.heads, self.embed_dim // self.heads)
         q = repeat(q, 'b h d -> b h n d', n=6)
         out = self.layers((q, k, v))
         mean = self.mean_layer(out)
