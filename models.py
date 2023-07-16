@@ -176,8 +176,10 @@ class WorldModel(nn.Module):
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    if name in ["reward", "present"]:
+                    if name in ["reward"]:
                         pred = head(feat, target_embedding)
+                    elif name in ["present"]:
+                        pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
