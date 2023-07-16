@@ -123,7 +123,7 @@ class MixedHead(nn.Module):
         print("feature", features.shape)
         print("k", kv[0].shape)
         print("targets", targets.shape)
-        k, v = map(lambda t: rearrange(t.reshape(-1, len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
+        k, v = map(lambda t: rearrange(t.reshape(-1, len(targets), self.embed_dim), 'b (n h d) -> b h n d', h=self.heads), kv)
         print("k, v", k.shape, v.shape)
         q = self.embedding(targets).reshape(-1, self.heads, self.embed_dim // self.heads)
         print("q", q.shape)
