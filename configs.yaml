@@ -8,9 +8,9 @@ defaults:
   offline_evaldir: ''
   seed: 0
   steps: 1e6
-  eval_every: 3e3
+  eval_every: 2e3
   eval_episode_num: 10
-  log_every: 3e3
+  log_every: 2e3
   emit_every: 50
   reset_every: 0
   device: 'cuda:0'
