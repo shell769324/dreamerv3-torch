@@ -55,16 +55,21 @@ class Attention(nn.Module):
     def forward(self, x):
         if type(x) is tuple:
             q, k, v = x
+            print("tuple", q.shape, k.shape, v.shape)
         else:
             qkv = self.to_qkv(x).chunk(3, dim=-1)
             q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+            print("linear", q.shape, k.shape, v.shape)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        print("dots", dots.shape)
 
         attn = self.attend(dots)
         attn = self.dropout(attn)
+        print("attn", attn.shape)
 
         out = torch.matmul(attn, v)
+        print("out", out.shape)
         out = rearrange(out, 'b h n d -> b n (h d)')
         if type(x) is not tuple:
             return self.to_out(out) + x
