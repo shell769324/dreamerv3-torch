@@ -87,7 +87,7 @@ class MixedHead(nn.Module):
         self._shape = (shape,) if isinstance(shape, int) else shape
         if len(self._shape) == 0:
             self._shape = (1,)
-        self._layers = layers
+        self.layers = layers
         self._units = units
         self._dist = dist
         self._std = std
@@ -99,7 +99,7 @@ class MixedHead(nn.Module):
         self.embed_dim = embed_dim
 
 
-        for index in range(self._layers):
+        for index in range(self.layers):
             layers.append(Attention(embed_dim, heads=self.heads))
             layers.append(FeedForward(embed_dim, embed_dim * 2))
         self.layers.apply(tools.weight_init)
