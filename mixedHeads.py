@@ -30,7 +30,7 @@ class FeedForward(nn.Module):
         )
 
     def forward(self, x):
-        return self.net(x)
+        return self.net(x) + x
 
 
 class Attention(nn.Module):
@@ -66,7 +66,8 @@ class Attention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
-        return self.to_out(out)
+        if type(x) is not tuple:
+            return self.to_out(out) + x
 
 
 class MixedHead(nn.Module):
@@ -87,21 +88,20 @@ class MixedHead(nn.Module):
         self._shape = (shape,) if isinstance(shape, int) else shape
         if len(self._shape) == 0:
             self._shape = (1,)
-        self.layers = layers
+        self.layers = []
         self._units = units
         self._dist = dist
         self._std = std
         self._device = device
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        layers = []
         self.feature_layer = nn.Linear(inp_dim, embed_dim * 2 * len(targets), bias=True)
         self.embed_dim = embed_dim
 
-
-        for index in range(self.layers):
-            layers.append(Attention(embed_dim, heads=self.heads))
-            layers.append(FeedForward(embed_dim, embed_dim * 2))
+        for index in range(layers):
+            self.layers.append(Attention(embed_dim, heads=self.heads))
+            self.layers.append(FeedForward(embed_dim, embed_dim * 2))
+        self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
 
         self.mean_layer = nn.Linear(embed_dim, len(targets))
