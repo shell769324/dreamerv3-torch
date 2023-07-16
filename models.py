@@ -5,6 +5,7 @@ import numpy as np
 from PIL import ImageColor, Image, ImageDraw, ImageFont
 from envs.crafter import targets
 from vit import CCT
+from mixedHeads import MixedHead
 
 import networks
 import tools
@@ -36,25 +37,22 @@ class WorldModel(nn.Module):
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
-        num_classes = 2048
-        self.encoder = CCT(
-            img_size=64,
-            embedding_dim=1024,
-            n_conv_layers=2,
-            num_classes=2048,
-            num_layers=6,
-            num_heads=4,
-            mlp_ratio=2,
-            kernel_size=5,
-            in_planes=32
+
+        self.encoder = networks.ConvEncoder(
+            config.grayscale,
+            config.cnn_depth,
+            config.act,
+            config.norm,
+            config.encoder_kernels
         )
-        param_size = 0
-        for param in self.encoder.parameters():
-            param_size += param.nelement() * param.element_size()
-        print(param_size/8e6, "MB")
+
+        if config.size[0] == 64 and config.size[1] == 64:
+            embed_size = ((64 // 2 ** (len(config.encoder_kernels))) ** 2 * config.cnn_depth * 2 **
+                          (len(config.encoder_kernels) - 1))
+        else:
+            raise NotImplemented(f"{config.size} is not applicable now")
 
         self.embedding = nn.Embedding(len(targets), config.target_units)
-        embed_size = num_classes
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
@@ -92,14 +90,12 @@ class WorldModel(nn.Module):
             shape,
             config.decoder_kernels,
         )
-        self.heads["present"] = networks.ValueHead(
+        self.heads["present"] = MixedHead(
             feat_size,
-            config.target_units,
+            config.embed_dim,
             [],
             config.present_layers,
             config.units,
-            config.act,
-            config.norm,
             dist="binary",
             outscale=0.0,
             device=config.device
