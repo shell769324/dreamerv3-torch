@@ -579,6 +579,7 @@ class Optimizer:
         wd_pattern=r".*",
         opt="adam",
         use_amp=False,
+        sub=dict()
     ):
         assert 0 <= wd < 1
         assert not clip or 1 <= clip
@@ -595,6 +596,7 @@ class Optimizer:
             "momentum": lambda: torch.optim.SGD(parameters, lr=lr, momentum=0.9),
         }[opt]()
         self._scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+        self._sub = sub
 
     def __call__(self, loss, params, retain_graph=False):
         assert len(loss.shape) == 0, loss.shape
@@ -604,6 +606,9 @@ class Optimizer:
         self._scaler.unscale_(self._opt)
         # loss.backward(retain_graph=retain_graph)
         norm = torch.nn.utils.clip_grad_norm_(params, self._clip)
+        norms = {}
+        for k, v in self._sub:
+            norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         if self._wd:
             self._apply_weight_decay(params)
         self._scaler.step(self._opt)
@@ -611,6 +616,8 @@ class Optimizer:
         # self._opt.step()
         self._opt.zero_grad()
         metrics[f"{self._name}_grad_norm"] = norm.item()
+        for k, v in norms:
+            metrics[f"{k}_grad_norm"] = v.item()
         return metrics
 
     def _apply_weight_decay(self, varibs):

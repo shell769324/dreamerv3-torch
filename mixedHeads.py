@@ -57,7 +57,7 @@ class Attention(nn.Module):
             q, k, v = x
         else:
             qkv = self.to_qkv(x).chunk(3, dim=-1)
-            q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+            q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
 
@@ -97,6 +97,7 @@ class MixedHead(nn.Module):
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
         self.feature_layer = nn.Linear(inp_dim, embed_dim * 2 * len(targets), bias=True)
+        self.feature_layer.apply(tools.weight_init)
         self.embed_dim = embed_dim
 
         for index in range(layers):
@@ -119,7 +120,7 @@ class MixedHead(nn.Module):
         kv = self.feature_layer(features).chunk(2, dim=-1)
         k, v = map(lambda t: rearrange(t.reshape(len(targets_array), len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
-        q = repeat(q, 'b h d -> b h n d', n=6)
+        q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
         out = out.reshape(original[0], original[1], -1)
 
