@@ -607,7 +607,7 @@ class Optimizer:
         # loss.backward(retain_graph=retain_graph)
         norm = torch.nn.utils.clip_grad_norm_(params, self._clip)
         norms = {}
-        for k, v in self._sub:
+        for k, v in self._sub.items():
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         if self._wd:
             self._apply_weight_decay(params)
@@ -616,7 +616,7 @@ class Optimizer:
         # self._opt.step()
         self._opt.zero_grad()
         metrics[f"{self._name}_grad_norm"] = norm.item()
-        for k, v in norms:
+        for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
         return metrics
 
