@@ -118,6 +118,7 @@ class MixedHead(nn.Module):
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
     def __call__(self, features, targets_array, dtype=None):
+        original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
         kv = self.feature_layer(features).chunk(2, dim=-1)
@@ -132,7 +133,7 @@ class MixedHead(nn.Module):
         print("r q", q.shape)
         out = self.layers((q, k, v))
         print("out", out.shape)
-        out.reshape(out.shape[0], -1)
+        out.reshape(original[:2], -1)
         mean = self.mean_layer(out)
         print("mean", mean.shape)
         if self._std == "learned":
