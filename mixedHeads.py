@@ -131,6 +131,7 @@ class MixedHead(nn.Module):
         q = repeat(q, 'b h d -> b h n d', n=6)
         print("r q", q.shape)
         out = self.layers((q, k, v))
+        print("out", out.shape)
         mean = self.mean_layer(out)
         print("mean", mean.shape)
         if self._std == "learned":
