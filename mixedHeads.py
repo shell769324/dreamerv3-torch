@@ -55,21 +55,16 @@ class Attention(nn.Module):
     def forward(self, x):
         if type(x) is tuple:
             q, k, v = x
-            print("tuple", q.shape, k.shape, v.shape)
         else:
             qkv = self.to_qkv(x).chunk(3, dim=-1)
             q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
-            print("linear", q.shape, k.shape, v.shape)
 
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-        print("dots", dots.shape)
 
         attn = self.attend(dots)
         attn = self.dropout(attn)
-        print("attn", attn.shape)
 
         out = torch.matmul(attn, v)
-        print("out", out.shape)
         out = rearrange(out, 'b h n d -> b n (h d)')
         if type(x) is not tuple:
             return self.to_out(out) + x
@@ -122,21 +117,13 @@ class MixedHead(nn.Module):
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
         kv = self.feature_layer(features).chunk(2, dim=-1)
-        print("feature", features.shape)
-        print("k", kv[0].shape)
-        print("targets array", targets_array.shape)
         k, v = map(lambda t: rearrange(t.reshape(len(targets_array), len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
-        print("k, v", k.shape, v.shape)
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
-        print("q", q.shape)
         q = repeat(q, 'b h d -> b h n d', n=6)
-        print("r q", q.shape)
         out = self.layers((q, k, v))
         out = out.reshape(original[0], original[1], -1)
 
-        print("out", out.shape)
         mean = self.mean_layer(out)
-        print("mean", mean.shape)
         if self._std == "learned":
             std = self.std_layer(out)
         else:
