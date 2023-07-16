@@ -155,6 +155,7 @@ crafter:
   disag_layers: 5
   disag_models: 8
   embed_dim: 512
+  target_units: 512
 
 
 debug:
