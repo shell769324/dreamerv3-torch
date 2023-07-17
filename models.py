@@ -181,7 +181,8 @@ class WorldModel(nn.Module):
                     if name in ["reward"]:
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
-                        pred = head(feat, data["target"])
+                        continue
+                        # pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
