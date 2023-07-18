@@ -120,8 +120,10 @@ class MixedHead(nn.Module):
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
+        print("before out mean", torch.isnan(out).nonzero())
         out = out.mean(dim=1)
         out = out.reshape(original[0], original[1], -1)
+        print("before mean layer", torch.isnan(out).nonzero())
 
         mean = self.mean_layer(out)
         if self._std == "learned":

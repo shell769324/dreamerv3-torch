@@ -181,13 +181,9 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
                         pred = head(feat, data["target"])
-                        print("like", pred.mean.shape, torch.isnan(pred.mean).nonzero())
-                        print("pred mean mean", torch.mean(pred.mean))
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
-                    if name in ["present"]:
-                        print("like", like.shape, torch.isnan(like).nonzero())
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
@@ -197,7 +193,6 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_log_prob"] = to_np(torch.nanmean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
-                print("model_loss", model_loss)
                 exit(1)
             metrics = self._model_opt(model_loss, self.parameters())
 
