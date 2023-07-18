@@ -63,7 +63,6 @@ class Attention(nn.Module):
             print("dots die", torch.isnan(dots).nonzero())
             exit(1)
         print("dots shape", dots.shape)
-        print("dots random", dots[])
         attn = self.attend(dots)
         if torch.isnan(attn).any():
             print("attn die", torch.isnan(attn).nonzero())
