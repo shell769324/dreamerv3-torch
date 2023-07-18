@@ -181,17 +181,17 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
                         pred = head(feat, data["target"])
-                        print(pred.mean[10:20])
+                        print("pred mean", pred.mean[0])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
                     if name in ["present"]:
-                        print(like[10:20])
+                        print("like", like[0])
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name in ["present"]:
-                        print(losses[name][10:20])
+                        print("loss", losses)
                         exit(1)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
