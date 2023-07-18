@@ -42,7 +42,7 @@ class Attention(nn.Module):
         self.heads = heads
         self.scale = dim_head ** -0.5
 
-        self.attend = nn.Softmax(dim = -1)
+        self.attend = nn.LogSoftmax(dim = -1)
         self.dropout = nn.Dropout(dropout)
 
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
@@ -62,7 +62,8 @@ class Attention(nn.Module):
         if torch.isnan(dots).any():
             print("dots die", torch.isnan(dots).nonzero())
             exit(1)
-
+        print("dots shape", dots.shape)
+        print("dots random", dots[])
         attn = self.attend(dots)
         if torch.isnan(attn).any():
             print("attn die", torch.isnan(attn).nonzero())
