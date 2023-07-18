@@ -181,7 +181,7 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
                         pred = head(feat, data["target"])
-                        print("pred mean", pred.mean[0][0])
+                        print("pred mean", (pred.mean < 0 or pred.mean > 0).nonzero())
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
