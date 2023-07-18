@@ -95,7 +95,6 @@ class WorldModel(nn.Module):
             config.embed_dim,
             [],
             config.present_layers,
-            config.units,
             dist="binary",
             outscale=0.0,
             device=config.device
@@ -181,8 +180,7 @@ class WorldModel(nn.Module):
                     if name in ["reward"]:
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
-                        continue
-                        # pred = head(feat, data["target"])
+                        pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])

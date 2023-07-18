@@ -78,7 +78,6 @@ class MixedHead(nn.Module):
         embed_dim,
         shape,
         layers,
-        units,
         dist="normal",
         std=1.0,
         outscale=1.0,
@@ -90,7 +89,6 @@ class MixedHead(nn.Module):
         if len(self._shape) == 0:
             self._shape = (1,)
         self.layers = []
-        self._units = units
         self._dist = dist
         self._std = std
         self._device = device
@@ -118,10 +116,14 @@ class MixedHead(nn.Module):
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
         kv = self.feature_layer(features).chunk(2, dim=-1)
-        k, v = map(lambda t: rearrange(t.reshape(len(targets_array), len(targets), self.embed_dim), 'b n (h d) -> b h n d', h=self.heads), kv)
+        k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
+        print("out", out.shape)
+        out = out.mean(dim=1)
+        print("out mean", out.shape)
+        exit(1)
         out = out.reshape(original[0], original[1], -1)
 
         mean = self.mean_layer(out)
