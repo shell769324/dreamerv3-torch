@@ -181,11 +181,18 @@ class WorldModel(nn.Module):
                         pred = head(feat, target_embedding)
                     elif name in ["present"]:
                         pred = head(feat, data["target"])
+                        print(pred[10:20])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
+                    if name in ["present"]:
+                        print(like[10:20])
+
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    if name in ["present"]:
+                        print(losses[name][10:20])
+                        exit(1)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_log_prob"] = to_np(torch.nanmean(like[data["target"] == i]))

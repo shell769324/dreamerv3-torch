@@ -112,8 +112,6 @@ class MixedHead(nn.Module):
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
     def __call__(self, features, targets_array, dtype=None):
-        features = features.detach()
-        targets_array = targets_array.detach()
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
