@@ -64,8 +64,8 @@ class Attention(nn.Module):
             exit(1)
         print("dots shape", dots.shape)
         attn = self.attend(dots)
+        print(dots[0][0], attn[0][0])
         if torch.isnan(attn).any():
-            print(dots[0], attn[0])
             print("attn die", torch.isnan(attn).nonzero())
             exit(1)
         attn = self.dropout(attn)
