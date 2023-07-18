@@ -115,9 +115,13 @@ class MixedHead(nn.Module):
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
+        print("targets_array mean", torch.isnan(targets_array).nonzero())
         kv = self.feature_layer(features).chunk(2, dim=-1)
         k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
+        print("k", torch.isnan(k).nonzero())
+        print("v", torch.isnan(v).nonzero())
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
+        print("q", torch.isnan(q).nonzero())
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
         print("before out mean", torch.isnan(out).nonzero())
