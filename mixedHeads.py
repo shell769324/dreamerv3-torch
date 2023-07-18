@@ -58,13 +58,21 @@ class Attention(nn.Module):
         else:
             qkv = self.to_qkv(x).chunk(3, dim=-1)
             q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
-
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        if torch.isnan(dots).any():
+            print("dots die", torch.isnan(dots).nonzero())
+            exit(1)
 
         attn = self.attend(dots)
+        if torch.isnan(attn).any():
+            print("attn die", torch.isnan(attn).nonzero())
+            exit(1)
         attn = self.dropout(attn)
 
         out = torch.matmul(attn, v)
+        if torch.isnan(attn).any():
+            print("out die", torch.isnan(out).nonzero())
+            exit(1)
         out = rearrange(out, 'b h n d -> b n (h d)')
         if type(x) is not tuple:
             return self.to_out(out) + x
