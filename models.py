@@ -187,13 +187,10 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                    if name in ["present"]:
-                        print("loss", losses[name])
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_log_prob"] = to_np(torch.nanmean(like[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
-                exit(1)
             metrics = self._model_opt(model_loss, self.parameters())
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})

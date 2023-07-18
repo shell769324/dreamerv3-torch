@@ -59,22 +59,10 @@ class Attention(nn.Module):
             qkv = self.to_qkv(x).chunk(3, dim=-1)
             q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
-
-        print("dots", dots[0][0][0], "q", q[0][0][0],  "k",k[0][0][0])
-        if torch.isnan(dots).any():
-            print("dots die", torch.isnan(dots).nonzero())
-            exit(1)
-        print("dots shape", dots.shape)
         attn = self.attend(dots)
-        if torch.isnan(attn).any():
-            print("attn die", torch.isnan(attn).nonzero())
-            exit(1)
         attn = self.dropout(attn)
 
         out = torch.matmul(attn, v)
-        if torch.isnan(attn).any():
-            print("out die", torch.isnan(out).nonzero())
-            exit(1)
         out = rearrange(out, 'b h n d -> b n (h d)')
         if type(x) is not tuple:
             return self.to_out(out) + x
@@ -128,19 +116,13 @@ class MixedHead(nn.Module):
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
-        print("targets_array mean", torch.isnan(targets_array).nonzero())
         kv = self.feature_layer(features).chunk(2, dim=-1)
         k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
-        print("k", torch.isnan(k).nonzero())
-        print("v", torch.isnan(v).nonzero())
         q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
-        print("q", torch.isnan(q).nonzero())
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
-        print("before out mean", torch.isnan(out).nonzero())
         out = out.mean(dim=1)
         out = out.reshape(original[0], original[1], -1)
-        print("before mean layer", torch.isnan(out).nonzero())
 
         mean = self.mean_layer(out)
         if self._std == "learned":
