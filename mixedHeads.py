@@ -110,15 +110,10 @@ class MixedHead(nn.Module):
 
         for index in range(layers):
             if index == 0:
-                self.layers.append(nn.ModuleList([
-                    Attention(embed_dim, heads=heads),
-                    PreNorm(embed_dim, FeedForward(embed_dim, embed_dim * 2))
-                ]))
+                self.layers.append(Attention(embed_dim, heads=heads))
             else:
-                self.layers.append(nn.ModuleList([
-                    PreNorm(embed_dim, Attention(embed_dim, heads=heads)),
-                    PreNorm(embed_dim, FeedForward(embed_dim, embed_dim * 2))
-                ]))
+                self.layers.append(PreNorm(embed_dim, Attention(embed_dim, heads=heads)))
+            self.layers.append(PreNorm(embed_dim, FeedForward(embed_dim, embed_dim * 2)))
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
 
