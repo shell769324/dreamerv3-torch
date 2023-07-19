@@ -138,6 +138,8 @@ class MixedHead(nn.Module):
         mean = self.mean_layer(out)
         print("mean comp", mean[:, 0], targets_array.reshape(original[0], original[1])[:, 0])
         print("mean var comp", torch.var(mean))
+        logits = 1/(torch.pow(torch.e, -mean) + 1)
+        print("logits", logits[:, 0])
         exit(1)
         if self._std == "learned":
             std = self.std_layer(out)
