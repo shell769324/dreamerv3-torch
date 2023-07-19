@@ -159,7 +159,7 @@ class MixedHead(nn.Module):
         if self._dist == "binary":
             return tools.Bernoulli(
                 torchd.independent.Independent(
-                    torchd.bernoulli.Bernoulli(logits=1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
+                    torchd.bernoulli.Bernoulli(1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
                 )
             )
         if self._dist == "twohot_symlog":
