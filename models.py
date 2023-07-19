@@ -185,7 +185,8 @@ class WorldModel(nn.Module):
                         pred = head(feat)
                     like = pred.log_prob(data[name])
                     if name == "present":
-                        print("like", like[:, 5])
+                        print("like", like[:, 0])
+                        print("present", data[name][:, 0])
                         exit(1)
 
                     likes[name] = like
