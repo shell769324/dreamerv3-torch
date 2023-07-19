@@ -140,7 +140,6 @@ class MixedHead(nn.Module):
         print("mean var comp", torch.var(mean))
         logits = 1/(torch.pow(torch.e, -mean) + 1)
         print("logits", logits[:, 0])
-        exit(1)
         if self._std == "learned":
             std = self.std_layer(out)
         else:
