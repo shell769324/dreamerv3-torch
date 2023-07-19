@@ -113,6 +113,13 @@ class MixedHead(nn.Module):
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
     def __call__(self, features, targets_array, dtype=None):
+        print("Embedding cosine-similarity")
+        for i in range(len(targets)):
+            if i == 0:
+                print(targets, end=" ")
+            for j in range(len(targets)):
+                print(nn.functional.cosine_similarity(self.embedding(torch.IntTensor([i])), torch.IntTensor([j])), end=" ")
+
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
@@ -123,8 +130,12 @@ class MixedHead(nn.Module):
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
         out = out.reshape(original[0], original[1], -1)
+        print("out", torch.mean(out, dim=(1, 2)), torch.var())
 
         mean = self.mean_layer(out)
+        print("mean comp", mean[0], features.reshape(original)[0])
+        print("mean var comp", torch.var(mean))
+        exit(1)
         if self._std == "learned":
             std = self.std_layer(out)
         else:
