@@ -105,7 +105,7 @@ class MixedHead(nn.Module):
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
 
-        self.mean_layer = nn.Linear(embed_dim, 1)
+        self.mean_layer = nn.Linear(embed_dim, np.prod(self._shape))
         self.mean_layer.apply(tools.uniform_weight_init(outscale))
 
         if self._std == "learned":

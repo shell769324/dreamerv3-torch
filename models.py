@@ -101,7 +101,7 @@ class WorldModel(nn.Module):
         )
         if config.reward_head == "twohot_symlog":
             self.heads["reward"] = MixedHead(
-                feat_size,  # pytorch version
+                feat_size,
                 config.embed_dim,
                 (255,),
                 config.reward_layers,
