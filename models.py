@@ -183,10 +183,10 @@ class WorldModel(nn.Module):
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
-                    like = pred.log_prob(data[name])
+                    like = pred.log_prob(data[name].type(torch.DoubleTensor))
                     if name == "present":
                         print("like", like[:, 0])
-                        print("present", data[name][:, 0])
+                        print("present", data[name][:, 0].type(torch.DoubleTensor))
                         exit(1)
 
                     likes[name] = like
