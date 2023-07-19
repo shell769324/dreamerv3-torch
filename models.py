@@ -183,7 +183,7 @@ class WorldModel(nn.Module):
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
-                    like = pred.log_prob(data[name].type(torch.DoubleTensor).to(self._config.device))
+                    like = pred.log_prob(data[name])
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
