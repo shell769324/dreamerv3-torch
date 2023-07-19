@@ -100,27 +100,21 @@ class WorldModel(nn.Module):
             device=config.device
         )
         if config.reward_head == "twohot_symlog":
-            self.heads["reward"] = networks.ValueHead(
+            self.heads["reward"] = MixedHead(
                 feat_size,  # pytorch version
-                config.target_units,
+                config.embed_dim,
                 (255,),
                 config.reward_layers,
-                config.units,
-                config.act,
-                config.norm,
                 dist=config.reward_head,
                 outscale=0.0,
                 device=config.device,
             )
         else:
-            self.heads["reward"] = networks.ValueHead(
+            self.heads["reward"] = MixedHead(
                 feat_size,  # pytorch version
-                config.target_units,
+                config.embed_dim,
                 [],
                 config.reward_layers,
-                config.units,
-                config.act,
-                config.norm,
                 dist=config.reward_head,
                 outscale=0.0,
                 device=config.device,
