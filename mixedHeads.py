@@ -117,8 +117,9 @@ class MixedHead(nn.Module):
         for i in range(len(targets)):
             if i == 0:
                 print(targets, end=" ")
+                print("")
             for j in range(len(targets)):
-                print(nn.functional.cosine_similarity(self.embedding(torch.IntTensor([i]).to(self._device)), self.embedding(torch.IntTensor([j]).to(self._device))), end=" ")
+                print(nn.functional.cosine_similarity(self.embedding(torch.IntTensor([i]).to(self._device)), self.embedding(torch.IntTensor([j]).to(self._device))).item(), end=" ")
 
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
