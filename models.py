@@ -166,14 +166,11 @@ class WorldModel(nn.Module):
                 )
                 losses = {}
                 likes = {}
-                target_embedding = self.embedding(data["target"])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    if name in ["reward"]:
-                        pred = head(feat, target_embedding)
-                    elif name in ["present"]:
+                    if name in ["reward", "present"]:
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
