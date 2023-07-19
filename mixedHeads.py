@@ -120,6 +120,7 @@ class MixedHead(nn.Module):
                 print("")
             for j in range(len(targets)):
                 print(nn.functional.cosine_similarity(self.embedding(torch.IntTensor([i]).to(self._device)), self.embedding(torch.IntTensor([j]).to(self._device))).item(), end=" ")
+            print("")
 
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
@@ -134,7 +135,7 @@ class MixedHead(nn.Module):
         print("out", torch.mean(out, dim=(1, 2)), torch.var(out, dim=(1, 2)))
 
         mean = self.mean_layer(out)
-        print("mean comp", mean[0], features.reshape(original)[0])
+        print("mean comp", mean[0], targets_array.reshape(original[0], original[1])[0])
         print("mean var comp", torch.var(mean))
         exit(1)
         if self._std == "learned":
