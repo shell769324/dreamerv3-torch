@@ -349,9 +349,10 @@ class ImagBehavior(nn.Module):
                 imag_feat, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_embedding, repeats
                 )
+                target_array_expanded = target_array.expand(imag_feat.shape[0], target_embedding.shape[0])
                 expanded = target_embedding.expand(imag_feat.shape[0], target_embedding.shape[0], target_embedding.shape[1])
 
-                reward = objective(imag_feat, imag_state, imag_action, expanded)
+                reward = objective(imag_feat, imag_state, imag_action, target_array_expanded)
                 actor_ent = self.actor(imag_feat, expanded).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
                 # this target is not scaled
