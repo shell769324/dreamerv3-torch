@@ -130,7 +130,7 @@ class MixedHead(nn.Module):
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
         out = out.reshape(original[0], original[1], -1)
-        print("out", torch.mean(out, dim=(1, 2)), torch.var())
+        print("out", torch.mean(out, dim=(1, 2)), torch.var(out, dim=(1, 2)))
 
         mean = self.mean_layer(out)
         print("mean comp", mean[0], features.reshape(original)[0])
