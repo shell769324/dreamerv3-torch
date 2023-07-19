@@ -185,6 +185,7 @@ class WorldModel(nn.Module):
                         pred = head(feat)
                     like = pred.log_prob(data[name].type(torch.DoubleTensor).to(self._config.device))
                     if name == "present":
+                        print("weights", pred.mean[:, 0])
                         print("like", like[:, 0])
                         print("present", data[name][:, 0].type(torch.DoubleTensor))
                         exit(1)
