@@ -166,7 +166,7 @@ class WorldModel(nn.Module):
                 )
                 losses = {}
                 likes = {}
-                print("present", data["present"[:, 0]])
+                print("present", data["present"][:, 0])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
