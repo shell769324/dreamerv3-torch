@@ -90,15 +90,6 @@ class WorldModel(nn.Module):
             shape,
             config.decoder_kernels,
         )
-        self.heads["present"] = MixedHead(
-            feat_size,
-            config.embed_dim,
-            [],
-            config.present_layers,
-            dist="binary",
-            outscale=0.0,
-            device=config.device
-        )
         if config.reward_head == "twohot_symlog":
             self.heads["reward"] = MixedHead(
                 feat_size,
@@ -166,26 +157,21 @@ class WorldModel(nn.Module):
                 )
                 losses = {}
                 likes = {}
-                print("present", data["present"][:, 0])
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
                     if name in ["reward", "present"]:
-                        print(name, "analysis")
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
-                    if name in ["reward", "present"]:
-                        print("like", like[:, 0])
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
-                exit(1)
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
 
@@ -283,28 +269,22 @@ class ImagBehavior(nn.Module):
             unimix_ratio=config.action_unimix_ratio,
         )  # action_dist -> action_disc?
         if config.value_head == "twohot_symlog":
-            self.value = networks.ValueHead(
-                feat_size,  # pytorch version
-                config.target_units,
+            self.value = MixedHead(
+                feat_size,
+                config.embed_dim,
                 (255,),
-                config.value_layers,
-                config.units,
-                config.act,
-                config.norm,
-                config.value_head,
+                config.reward_layers,
+                dist=config.reward_head,
                 outscale=0.0,
                 device=config.device,
             )
         else:
-            self.value = networks.ValueHead(
-                feat_size,  # pytorch version
-                config.target_units,
+            self.value = MixedHead(
+                feat_size,
+                config.embed_dim,
                 [],
-                config.value_layers,
-                config.units,
-                config.act,
-                config.norm,
-                config.value_head,
+                config.reward_layers,
+                dist=config.reward_head,
                 outscale=0.0,
                 device=config.device,
             )
@@ -363,7 +343,7 @@ class ImagBehavior(nn.Module):
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
                 target, weights, base = self._compute_target(
-                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, expanded
+                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array_expanded
                 )
                 actor_loss, mets = self._compute_actor_loss(
                     imag_feat,
@@ -374,17 +354,18 @@ class ImagBehavior(nn.Module):
                     state_ent,
                     weights,
                     base,
-                    expanded
+                    expanded,
+                    target_array_expanded
                 )
                 metrics.update(mets)
                 value_input = imag_feat
         with tools.RequiresGrad(self.value):
             with torch.cuda.amp.autocast(self._use_amp):
-                value = self.value(value_input[:-1].detach(), expanded[:-1].detach())
+                value = self.value(value_input[:-1].detach(), target_array_expanded[:-1].detach())
                 target = torch.stack(target, dim=1)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
-                slow_target = self._slow_value(value_input[:-1].detach(), expanded[:-1].detach())
+                slow_target = self._slow_value(value_input[:-1].detach(), target_array_expanded[:-1].detach())
                 if self._config.slow_value_target:
                     value_loss = value_loss - value.log_prob(
                         slow_target.mode().detach()
@@ -437,7 +418,7 @@ class ImagBehavior(nn.Module):
         return feats, states, actions
 
     def _compute_target(
-        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_embedding
+        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
     ):
         if "cont" in self._world_model.heads:
             inp = self._world_model.dynamics.get_feat(imag_state)
@@ -448,7 +429,7 @@ class ImagBehavior(nn.Module):
             reward += self._config.actor_entropy() * actor_ent
         if self._config.future_entropy and self._config.actor_state_entropy() > 0:
             reward += self._config.actor_state_entropy() * state_ent
-        value = self.value(imag_feat, target_embedding).mode()
+        value = self.value(imag_feat, target_array).mode()
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
@@ -475,7 +456,8 @@ class ImagBehavior(nn.Module):
         state_ent,
         weights,
         base,
-        target_embedding
+        target_embedding,
+        target_array
     ):
         metrics = {}
         inp = imag_feat.detach() if self._stop_grad_actor else imag_feat
@@ -498,12 +480,12 @@ class ImagBehavior(nn.Module):
         elif self._config.imag_gradient == "reinforce":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_embedding[:-1]).mode()).detach()
+                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
             )
         elif self._config.imag_gradient == "both":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_embedding[:-1]).mode()).detach()
+                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
             )
             mix = self._config.imag_gradient_mix()
             actor_target = mix * target + (1 - mix) * actor_target

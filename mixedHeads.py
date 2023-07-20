@@ -130,7 +130,6 @@ class MixedHead(nn.Module):
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
         out = out.reshape(original[0], original[1], -1)
-        print("target", targets_array.reshape(original[0], original[1])[:, 0])
 
         mean = self.mean_layer(out)
         if self._std == "learned":
@@ -150,8 +149,6 @@ class MixedHead(nn.Module):
                 )
             )
         if self._dist == "binary":
-            actual=1/(torch.pow(torch.e, -mean) + 1)
-            print("mean", actual[:, 0])
             return tools.Bernoulli(
                 torchd.independent.Independent(
                     torchd.bernoulli.Bernoulli(1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
