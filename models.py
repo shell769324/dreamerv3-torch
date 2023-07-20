@@ -131,7 +131,7 @@ class WorldModel(nn.Module):
             config.weight_decay,
             opt=config.opt,
             use_amp=self._use_amp,
-            sub={"reward": self.heads["reward"], "present": self.heads["present"], "cont": self.heads["cont"],
+            sub={"reward": self.heads["reward"], "cont": self.heads["cont"],
                  "image": self.heads["image"], "encoder": self.encoder}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, present=config.present_scale)
