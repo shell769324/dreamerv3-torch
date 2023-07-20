@@ -177,6 +177,8 @@ class WorldModel(nn.Module):
                     else:
                         pred = head(feat)
                     like = pred.log_prob(data[name])
+                    if name in ["reward", "present"]:
+                        print("like", like[:, 0])
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
