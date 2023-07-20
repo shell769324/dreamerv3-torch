@@ -133,7 +133,6 @@ class MixedHead(nn.Module):
         print("target", targets_array.reshape(original[0], original[1])[:, 0])
 
         mean = self.mean_layer(out)
-        print("mean", mean[:, 0])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
@@ -151,11 +150,14 @@ class MixedHead(nn.Module):
                 )
             )
         if self._dist == "binary":
+            actual=1/(torch.pow(torch.e, -mean) + 1)
+            print("mean", actual[:, 0])
             return tools.Bernoulli(
                 torchd.independent.Independent(
                     torchd.bernoulli.Bernoulli(1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
                 )
             )
         if self._dist == "twohot_symlog":
+            print("mean", mean[:, 0])
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
