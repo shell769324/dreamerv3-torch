@@ -171,6 +171,7 @@ class WorldModel(nn.Module):
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
                     if name in ["reward", "present"]:
+                        print(name, "analysis")
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
@@ -181,6 +182,7 @@ class WorldModel(nn.Module):
                     if name in ["reward", "present"]:
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
+                exit(1)
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self.parameters())
 
