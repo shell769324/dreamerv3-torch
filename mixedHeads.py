@@ -195,7 +195,7 @@ class ActionMixedHead(nn.Module):
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
         print("original", original)
-        out = out.reshape(original[0], original[1], -1)
+        out = out.reshape(original[0], -1)
         x = self._dist_layer(out)
         dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
         return dist
