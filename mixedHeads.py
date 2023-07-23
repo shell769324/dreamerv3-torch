@@ -193,14 +193,11 @@ class ActionMixedHead(nn.Module):
         q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads)
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
-        print("out", out.shape)
         out = out.mean(dim=1)
-        print("original", original)
         if len(original) == 2:
             out = out.reshape(original[0], -1)
         else:
             out = out.reshape(original[0], original[1], -1)
-        print("out last", out.shape)
         x = self._dist_layer(out)
         dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
         return dist
