@@ -194,7 +194,7 @@ class ActionMixedHead(nn.Module):
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
-        print("original", original.shape)
+        print("original", original)
         out = out.reshape(original[0], original[1], -1)
         x = self._dist_layer(out)
         dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
