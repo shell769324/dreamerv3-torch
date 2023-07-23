@@ -253,7 +253,7 @@ class ImagBehavior(nn.Module):
             feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter
         else:
             feat_size = config.dyn_stoch + config.dyn_deter
-        self.actor = networks.ActionMixedHead(
+        self.actor = ActionMixedHead(
             feat_size,  # pytorch version
             config.embed_dim,
             config.attention_dim,
