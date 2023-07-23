@@ -5,7 +5,7 @@ import numpy as np
 from PIL import ImageColor, Image, ImageDraw, ImageFont
 from envs.crafter import targets
 from vit import CCT
-from mixedHeads import MixedHead
+from mixedHeads import MixedHead, ActionMixedHead
 
 import networks
 import tools
@@ -253,7 +253,7 @@ class ImagBehavior(nn.Module):
             feat_size = config.dyn_stoch * config.dyn_discrete + config.dyn_deter
         else:
             feat_size = config.dyn_stoch + config.dyn_deter
-        self.actor = networks.ActionHead(
+        self.actor = networks.ActionMixedHead(
             feat_size,  # pytorch version
             config.embed_dim,
             config.attention_dim,
