@@ -153,7 +153,7 @@ crafter:
   disag_units: 1024
   disag_layers: 5
   disag_models: 8
-  embed_dim: 512
+  embed_dim: 384
   attention_dim: 384
   target_units: 512
 
