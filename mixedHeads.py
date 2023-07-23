@@ -1,6 +1,5 @@
 import numpy as np
 from einops import rearrange, repeat
-from einops.layers.torch import Rearrange
 from envs.crafter import targets
 
 import torch
@@ -34,7 +33,7 @@ class FeedForward(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, heads = 8, dim_head = 64, dropout = 0.):
+    def __init__(self, dim, heads=6, dim_head = 64, dropout = 0.):
         super().__init__()
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
@@ -74,13 +73,14 @@ class MixedHead(nn.Module):
         self,
         inp_dim,
         embed_dim,
+        attention_dim,
         shape,
         layers,
         dist="normal",
         std=1.0,
         outscale=1.0,
         device="cuda",
-        heads=8
+        heads=6
     ):
         super(MixedHead, self).__init__()
         self._shape = (shape,) if isinstance(shape, int) else shape
@@ -92,20 +92,20 @@ class MixedHead(nn.Module):
         self._device = device
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.feature_layer = nn.Linear(inp_dim, embed_dim * 2 * len(targets), bias=True)
+        self.feature_layer = nn.Linear(inp_dim, attention_dim * 2 * len(targets), bias=True)
         self.feature_layer.apply(tools.weight_init)
-        self.embed_dim = embed_dim
+        self.attention_dim = attention_dim
 
         for index in range(layers):
             if index == 0:
-                self.layers.append(Attention(embed_dim, heads=heads))
+                self.layers.append(Attention(attention_dim, heads=heads))
             else:
-                self.layers.append(PreNorm(embed_dim, Attention(embed_dim, heads=heads)))
-            self.layers.append(PreNorm(embed_dim, FeedForward(embed_dim, embed_dim * 2)))
+                self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
+            self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
 
-        self.mean_layer = nn.Linear(embed_dim, np.prod(self._shape))
+        self.mean_layer = nn.Linear(attention_dim, np.prod(self._shape))
         self.mean_layer.apply(tools.uniform_weight_init(outscale))
 
         if self._std == "learned":
@@ -113,19 +113,12 @@ class MixedHead(nn.Module):
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
     def __call__(self, features, targets_array, dtype=None):
-        for i in range(len(targets)):
-            print(targets[i], end=" ")
-        print("")
-        for i in range(len(targets)):
-            for j in range(len(targets)):
-                print(torch.nn.functional.cosine_similarity(self.embedding(torch.IntTensor([i]).to(self._device)), self.embedding(torch.IntTensor([j]).to(self._device))).item(), end=" ")
-            print("")
         original = features.shape
         features = features.reshape(-1, features.shape[-1])
         targets_array = targets_array.reshape(-1)
         kv = self.feature_layer(features).chunk(2, dim=-1)
         k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
-        q = self.embedding(targets_array).reshape(-1, self.heads, self.embed_dim // self.heads)
+        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads)
         q = repeat(q, 'b h d -> b h n d', n=len(targets))
         out = self.layers((q, k, v))
         out = out.mean(dim=1)
@@ -155,6 +148,53 @@ class MixedHead(nn.Module):
                 )
             )
         if self._dist == "twohot_symlog":
-            print("mean", mean[:, 0])
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
+
+class ActionMixedHead(nn.Module):
+    def __init__(
+        self,
+        inp_dim,
+        embed_dim,
+        attention_dim,
+        num_action,
+        layer_count,
+        outscale=1.0,
+        unimix_ratio=0.01,
+        heads=6
+    ):
+        super(ActionMixedHead, self).__init__()
+        self._unimix_ratio = unimix_ratio
+
+        self.heads = heads
+        self.embedding = nn.Embedding(len(targets), embed_dim)
+        self.feature_layer = nn.Linear(inp_dim, attention_dim * 2 * len(targets), bias=True)
+        self.feature_layer.apply(tools.weight_init)
+        self.attention_dim = attention_dim
+        self.layers = []
+        for index in range(layer_count):
+            if index == 0:
+                self.layers.append(Attention(attention_dim, heads=heads))
+            else:
+                self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
+            self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
+        self.layers = nn.Sequential(*self.layers)
+        self.layers.apply(tools.weight_init)
+
+        self._dist_layer = nn.Linear(attention_dim, num_action)
+        self._dist_layer.apply(tools.uniform_weight_init(outscale))
+
+    def __call__(self, features, targets_array, dtype=None):
+        original = features.shape
+        features = features.reshape(-1, features.shape[-1])
+        targets_array = targets_array.reshape(-1)
+        kv = self.feature_layer(features).chunk(2, dim=-1)
+        k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
+        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads)
+        q = repeat(q, 'b h d -> b h n d', n=len(targets))
+        out = self.layers((q, k, v))
+        out = out.mean(dim=1)
+        out = out.reshape(original[0], original[1], -1)
+        x = self._dist_layer(out)
+        dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
+        return dist

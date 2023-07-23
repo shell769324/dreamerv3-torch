@@ -94,6 +94,7 @@ class WorldModel(nn.Module):
             self.heads["reward"] = MixedHead(
                 feat_size,
                 config.embed_dim,
+                config.attention_dim,
                 (255,),
                 config.reward_layers,
                 dist=config.reward_head,
@@ -104,6 +105,7 @@ class WorldModel(nn.Module):
             self.heads["reward"] = MixedHead(
                 feat_size,  # pytorch version
                 config.embed_dim,
+                config.attention_dim,
                 [],
                 config.reward_layers,
                 dist=config.reward_head,
@@ -134,7 +136,7 @@ class WorldModel(nn.Module):
             sub={"reward": self.heads["reward"], "cont": self.heads["cont"],
                  "image": self.heads["image"], "encoder": self.encoder}
         )
-        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, present=config.present_scale)
+        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
     def _train(self, data):
         # action (batch_size, batch_length, act_dim)
@@ -161,7 +163,7 @@ class WorldModel(nn.Module):
                     grad_head = name in self._config.grad_heads
                     feat = self.dynamics.get_feat(post)
                     feat = feat if grad_head else feat.detach()
-                    if name in ["reward", "present"]:
+                    if name == "reward":
                         pred = head(feat, data["target"])
                     else:
                         pred = head(feat)
@@ -169,7 +171,7 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                    if name in ["reward", "present"]:
+                    if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
@@ -205,7 +207,6 @@ class WorldModel(nn.Module):
         # (batch_size, batch_length) -> (batch_size, batch_length, 1)
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
-        obs["present"] = torch.Tensor(obs["present"]).type(torch.IntTensor).unsqueeze(-1)
         if "discount" in obs:
             obs["discount"] *= self._config.discount
             # (batch_size, batch_length) -> (batch_size, batch_length, 1)
@@ -254,17 +255,10 @@ class ImagBehavior(nn.Module):
             feat_size = config.dyn_stoch + config.dyn_deter
         self.actor = networks.ActionHead(
             feat_size,  # pytorch version
-            config.target_units,
+            config.embed_dim,
+            config.attention_dim,
             config.num_actions,
             config.actor_layers,
-            config.units,
-            config.act,
-            config.norm,
-            config.actor_dist,
-            config.actor_init_std,
-            config.actor_min_std,
-            config.actor_max_std,
-            config.actor_temp,
             outscale=1.0,
             unimix_ratio=config.action_unimix_ratio,
         )  # action_dist -> action_disc?
@@ -272,6 +266,7 @@ class ImagBehavior(nn.Module):
             self.value = MixedHead(
                 feat_size,
                 config.embed_dim,
+                config.attention_dim,
                 (255,),
                 config.reward_layers,
                 dist=config.reward_head,
@@ -282,6 +277,7 @@ class ImagBehavior(nn.Module):
             self.value = MixedHead(
                 feat_size,
                 config.embed_dim,
+                config.attention_dim,
                 [],
                 config.reward_layers,
                 dist=config.reward_head,
@@ -332,13 +328,12 @@ class ImagBehavior(nn.Module):
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
                 target_embedding = self._world_model.embedding(target_array)
                 imag_feat, imag_state, imag_action = self._imagine(
-                    start, self.actor, self._config.imag_horizon, target_embedding, repeats
+                    start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
                 target_array_expanded = target_array.expand(imag_feat.shape[0], target_embedding.shape[0])
-                expanded = target_embedding.expand(imag_feat.shape[0], target_embedding.shape[0], target_embedding.shape[1])
 
                 reward = objective(imag_feat, imag_state, imag_action, target_array_expanded)
-                actor_ent = self.actor(imag_feat, expanded).entropy()
+                actor_ent = self.actor(imag_feat, target_array_expanded).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
@@ -354,7 +349,6 @@ class ImagBehavior(nn.Module):
                     state_ent,
                     weights,
                     base,
-                    expanded,
                     target_array_expanded
                 )
                 metrics.update(mets)
@@ -392,7 +386,7 @@ class ImagBehavior(nn.Module):
             metrics.update(self._value_opt(value_loss, self.value.parameters()))
         return imag_feat, imag_state, imag_action, weights, metrics
 
-    def _imagine(self, start, policy, horizon, target_embedding, repeats=None):
+    def _imagine(self, start, policy, horizon, target_array, repeats=None):
         dynamics = self._world_model.dynamics
         # start['deter'] (16, 64, 512)
         if repeats:
@@ -404,7 +398,7 @@ class ImagBehavior(nn.Module):
             state, _, _ = prev
             feat = dynamics.get_feat(state)
             inp = feat.detach() if self._stop_grad_actor else feat
-            action = policy(inp, target_embedding).sample()
+            action = policy(inp, target_array).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, feat, action
 
@@ -456,12 +450,11 @@ class ImagBehavior(nn.Module):
         state_ent,
         weights,
         base,
-        target_embedding,
         target_array
     ):
         metrics = {}
         inp = imag_feat.detach() if self._stop_grad_actor else imag_feat
-        policy = self.actor(inp, target_embedding)
+        policy = self.actor(inp, target_array)
         actor_ent = policy.entropy()
         # Q-val for actor is not transformed using symlog
         target = torch.stack(target, dim=1)
