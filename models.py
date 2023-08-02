@@ -399,7 +399,7 @@ class ImagBehavior(nn.Module):
         start = {k: flatten(v) for k, v in start.items()}
 
         def step(prev, _):
-            state, _, _ = prev
+            state, _, _, _ = prev
             stoch, deter = self.dynamics.get_sep(state)
             stoch, deter = (stoch, deter) if self._stop_grad_actor else (stoch.detach(), deter.detach())
             action = policy(stoch, deter, target_array).sample()
