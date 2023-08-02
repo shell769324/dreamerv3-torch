@@ -207,8 +207,7 @@ class ActionMixedHead(nn.Module):
         token2 = self.deter_layer(deter).unsqueeze(-2)
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
-        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads).unsqueeze(-2)
-        (_, out) = self.layers((feature, q))
+        (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         if len(original) == 2:
             out = out.reshape(original[0], -1)
         else:
