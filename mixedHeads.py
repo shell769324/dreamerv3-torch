@@ -105,8 +105,8 @@ class MixedHead(nn.Module):
         self._device = device
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.stoch_layer = nn.Linear(inp_dim, attention_dim, bias=True)
-        self.deter_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.stoch_layer = nn.Linear(stoch_size, attention_dim, bias=True)
+        self.deter_layer = nn.Linear(deter_size, attention_dim, bias=True)
         self.stoch_layer.apply(tools.weight_init)
         self.deter_layer.apply(tools.weight_init)
         self.attention_dim = attention_dim
@@ -182,8 +182,8 @@ class ActionMixedHead(nn.Module):
 
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.stoch_layer = nn.Linear(inp_dim, attention_dim, bias=True)
-        self.deter_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.stoch_layer = nn.Linear(stoch_size, attention_dim, bias=True)
+        self.deter_layer = nn.Linear(deter_size, attention_dim, bias=True)
         self.stoch_layer.apply(tools.weight_init)
         self.deter_layer.apply(tools.weight_init)
         self.attention_dim = attention_dim
