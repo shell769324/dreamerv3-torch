@@ -63,8 +63,8 @@ class Attention(nn.Module):
         ) if project_out else nn.Identity()
 
     def forward(self, x):
-        x, q2 = x
-        q2 = rearrange(q2, 'b n (h d) -> b h n d', h=self.heads)
+        x, qoir = x
+        q2 = rearrange(qoir, 'b n (h d) -> b h n d', h=self.heads)
         qkv = self.to_qkv(x).chunk(3, dim=-1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
@@ -79,7 +79,7 @@ class Attention(nn.Module):
         qout = torch.matmul(attn2, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
-        return self.to_out(out) + x, qout + q2
+        return self.to_out(out) + x, qout + qoir
 
 
 class MixedHead(nn.Module):
