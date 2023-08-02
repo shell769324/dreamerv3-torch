@@ -17,9 +17,10 @@ class PreNorm(nn.Module):
     def forward(self, x, **kwargs):
         x, q2 = x
 
+        h = q2.shape[1]
         q2 = rearrange(q2, 'b h n d -> b n (h d)')
         q2 = self.norm(q2)
-        q2 = rearrange(q2, ' b n (h d) -> b h n d')
+        q2 = rearrange(q2, ' b n (h d) -> b h n d', h=h, n=1)
         return self.fn((self.norm(x), q2), **kwargs)
 
 
