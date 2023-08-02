@@ -400,7 +400,7 @@ class ImagBehavior(nn.Module):
 
         def step(prev, _):
             state, _, _, _ = prev
-            stoch, deter = self.dynamics.get_sep(state)
+            stoch, deter = dynamics.get_sep(state)
             stoch, deter = (stoch, deter) if self._stop_grad_actor else (stoch.detach(), deter.detach())
             action = policy(stoch, deter, target_array).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
