@@ -159,15 +159,15 @@ class Dreamer(nn.Module):
         target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
-        feat = self._wm.dynamics.get_feat(latent)
+        stoch, deter = self._wm.dynamics.get_sep(latent)
         if not training:
-            actor = self._task_behavior.actor(feat, target_array)
+            actor = self._task_behavior.actor(stoch, deter, target_array)
             action = actor.mode()
         elif self._should_expl(self._step):
-            actor = self._expl_behavior.actor(feat, target_array)
+            actor = self._expl_behavior.actor(stoch, deter, target_array)
             action = actor.sample()
         else:
-            actor = self._task_behavior.actor(feat, target_array)
+            actor = self._task_behavior.actor(stoch, deter, target_array)
             action = actor.sample()
         logprob = actor.log_prob(action)
         latent = {k: v.detach() for k, v in latent.items()}
