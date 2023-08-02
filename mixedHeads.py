@@ -16,12 +16,7 @@ class PreNorm(nn.Module):
 
     def forward(self, x, **kwargs):
         x, q2 = x
-
-        h = q2.shape[1]
-        q2 = rearrange(q2, 'b h n d -> b n (h d)')
-        q2 = self.norm(q2)
-        q2 = rearrange(q2, ' b n (h d) -> b h n d', h=h, n=1)
-        return self.fn((self.norm(x), q2), **kwargs)
+        return self.fn((self.norm(x), self.norm(q2)), **kwargs)
 
 
 class FeedForward(nn.Module):
@@ -69,6 +64,7 @@ class Attention(nn.Module):
 
     def forward(self, x):
         x, q2 = x
+        q2 = rearrange(q2, 'b n (h d) -> b h n d', h=self.heads)
         qkv = self.to_qkv(x).chunk(3, dim=-1)
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
@@ -82,6 +78,7 @@ class Attention(nn.Module):
         out = torch.matmul(attn, v)
         qout = torch.matmul(attn2, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
+        qout = rearrange(qout, 'b h n d -> b n (h d)')
         return self.to_out(out) + x, qout + q2
 
 
@@ -138,8 +135,7 @@ class MixedHead(nn.Module):
         token2 = self.deter_layer(deter).unsqueeze(-2)
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
-        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads).unsqueeze(-2)
-        (_, out) = self.layers((feature, q))
+        (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
 
         mean = self.mean_layer(out)
