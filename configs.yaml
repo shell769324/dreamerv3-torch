@@ -145,16 +145,16 @@ crafter:
   cnn_depth: 96
   actor_dist: 'onehot'
   units: 1024
-  reward_layers: 4
+  reward_layers: 3
   cont_layers: 4
-  value_layers: 4
-  actor_layers: 4
+  value_layers: 3
+  actor_layers: 3
   imag_gradient: 'reinforce'
   disag_units: 1024
   disag_layers: 5
   disag_models: 8
-  embed_dim: 384
-  attention_dim: 384
+  embed_dim: 512
+  attention_dim: 512
   target_units: 512
 
 

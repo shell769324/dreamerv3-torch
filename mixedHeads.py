@@ -13,8 +13,10 @@ class PreNorm(nn.Module):
         super().__init__()
         self.norm = nn.LayerNorm(dim)
         self.fn = fn
+
     def forward(self, x, **kwargs):
-        return self.fn(self.norm(x), **kwargs)
+        x, q2 = x
+        return self.fn((self.norm(x), self.norm(q2)), **kwargs)
 
 
 class FeedForward(nn.Module):
@@ -28,12 +30,21 @@ class FeedForward(nn.Module):
             nn.Dropout(dropout)
         )
 
+        self.net2 = nn.Sequential(
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Dropout(dropout),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(dropout)
+        )
+
     def forward(self, x):
-        return self.net(x) + x
+        x, q2 = x
+        return self.net(x) + x, self.net2(q2) + q2
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, heads=6, dim_head = 64, dropout = 0.):
+    def __init__(self, dim, heads=8, dim_head = 64, dropout = 0.):
         super().__init__()
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
@@ -52,20 +63,21 @@ class Attention(nn.Module):
         ) if project_out else nn.Identity()
 
     def forward(self, x):
-        if type(x) is tuple:
-            q, k, v = x
-        else:
-            qkv = self.to_qkv(x).chunk(3, dim=-1)
-            q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
+        x, q2 = x
+        qkv = self.to_qkv(x).chunk(3, dim=-1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+        # b h 1 d
+        dots2 = torch.matmul(q2, k.transpose(-1, -2)) * self.scale
         attn = self.attend(dots)
+        attn2 = self.attend(dots2)
         attn = self.dropout(attn)
+        attn2 = self.dropout(attn2)
 
         out = torch.matmul(attn, v)
+        qout = torch.matmul(attn2, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
-        if type(x) is not tuple:
-            return self.to_out(out) + x
-        return self.to_out(out)
+        return self.to_out(out) + x, qout + q2
 
 
 class MixedHead(nn.Module):
@@ -80,7 +92,7 @@ class MixedHead(nn.Module):
         std=1.0,
         outscale=1.0,
         device="cuda",
-        heads=6
+        heads=8
     ):
         super(MixedHead, self).__init__()
         self._shape = (shape,) if isinstance(shape, int) else shape
@@ -92,15 +104,14 @@ class MixedHead(nn.Module):
         self._device = device
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.feature_layer = nn.Linear(inp_dim, attention_dim * 2 * len(targets), bias=True)
-        self.feature_layer.apply(tools.weight_init)
+        self.stoch_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.deter_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.stoch_layer.apply(tools.weight_init)
+        self.deter_layer.apply(tools.weight_init)
         self.attention_dim = attention_dim
 
         for index in range(layers):
-            if index == 0:
-                self.layers.append(Attention(attention_dim, heads=heads))
-            else:
-                self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
+            self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
             self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
@@ -112,16 +123,17 @@ class MixedHead(nn.Module):
             self.std_layer = nn.Linear(self._units, np.prod(self._shape))
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, targets_array, dtype=None):
-        original = features.shape
-        features = features.reshape(-1, features.shape[-1])
+    def __call__(self, stoch, deter, targets_array, dtype=None):
+        original = deter.shape
+        stoch = stoch.reshape(-1, stoch.shape[-1])
+        deter = deter.reshape(-1, deter.shape[-1])
         targets_array = targets_array.reshape(-1)
-        kv = self.feature_layer(features).chunk(2, dim=-1)
-        k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
-        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads)
-        q = repeat(q, 'b h d -> b h n d', n=len(targets))
-        out = self.layers((q, k, v))
-        out = out.mean(dim=1)
+        token1 = self.stoch_layer(stoch).unsqueeze(-2)
+        token2 = self.deter_layer(deter).unsqueeze(-2)
+        feature = torch.cat([token1, token2], dim=-2)
+        # b h 1 d
+        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads).unsqueeze(-2)
+        (_, out) = self.layers((feature, q))
         out = out.reshape(original[0], original[1], -1)
 
         mean = self.mean_layer(out)
@@ -161,22 +173,21 @@ class ActionMixedHead(nn.Module):
         layer_count,
         outscale=1.0,
         unimix_ratio=0.01,
-        heads=6
+        heads=8
     ):
         super(ActionMixedHead, self).__init__()
         self._unimix_ratio = unimix_ratio
 
         self.heads = heads
         self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.feature_layer = nn.Linear(inp_dim, attention_dim * 2 * len(targets), bias=True)
-        self.feature_layer.apply(tools.weight_init)
+        self.stoch_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.deter_layer = nn.Linear(inp_dim, attention_dim, bias=True)
+        self.stoch_layer.apply(tools.weight_init)
+        self.deter_layer.apply(tools.weight_init)
         self.attention_dim = attention_dim
         self.layers = []
         for index in range(layer_count):
-            if index == 0:
-                self.layers.append(Attention(attention_dim, heads=heads))
-            else:
-                self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
+            self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
             self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
@@ -184,16 +195,17 @@ class ActionMixedHead(nn.Module):
         self._dist_layer = nn.Linear(attention_dim, num_action)
         self._dist_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, targets_array, dtype=None):
-        original = features.shape
-        features = features.reshape(-1, features.shape[-1])
+    def __call__(self, stoch, deter, targets_array, dtype=None):
+        original = deter.shape
+        stoch = stoch.reshape(-1, stoch.shape[-1])
+        deter = deter.reshape(-1, deter.shape[-1])
         targets_array = targets_array.reshape(-1)
-        kv = self.feature_layer(features).chunk(2, dim=-1)
-        k, v = map(lambda t: rearrange(t, 'b (n h d) -> b h n d', n=len(targets), h=self.heads), kv)
-        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads)
-        q = repeat(q, 'b h d -> b h n d', n=len(targets))
-        out = self.layers((q, k, v))
-        out = out.mean(dim=1)
+        token1 = self.stoch_layer(stoch).unsqueeze(-2)
+        token2 = self.deter_layer(deter).unsqueeze(-2)
+        feature = torch.cat([token1, token2], dim=-2)
+        # b h 1 d
+        q = self.embedding(targets_array).reshape(-1, self.heads, self.attention_dim // self.heads).unsqueeze(-2)
+        (_, out) = self.layers((feature, q))
         if len(original) == 2:
             out = out.reshape(original[0], -1)
         else:

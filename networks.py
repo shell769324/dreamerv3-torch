@@ -187,6 +187,13 @@ class RSSM(nn.Module):
             stoch = stoch.reshape(shape)
         return torch.cat([stoch, state["deter"]], -1)
 
+    def get_sep(self, state):
+        stoch = state["stoch"]
+        if self._discrete:
+            shape = list(stoch.shape[:-2]) + [self._stoch * self._discrete]
+            stoch = stoch.reshape(shape)
+        return stoch, state["deter"]
+
     def get_dist(self, state, dtype=None):
         if self._discrete:
             logit = state["logit"]

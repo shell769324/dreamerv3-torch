@@ -161,11 +161,14 @@ class WorldModel(nn.Module):
                 likes = {}
                 for name, head in self.heads.items():
                     grad_head = name in self._config.grad_heads
-                    feat = self.dynamics.get_feat(post)
-                    feat = feat if grad_head else feat.detach()
                     if name == "reward":
-                        pred = head(feat, data["target"])
+                        stoch, deter = self.dynamics.get_sep(post)
+                        stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
+                        pred = head(stoch, deter, data["target"])
                     else:
+
+                        feat = self.dynamics.get_feat(post)
+                        feat = feat if grad_head else feat.detach()
                         pred = head(feat)
                     like = pred.log_prob(data[name])
 
@@ -312,10 +315,6 @@ class ImagBehavior(nn.Module):
         start,
         objective=None,
         data=None,
-        action=None,
-        reward=None,
-        imagine=None,
-        tape=None,
         repeats=None,
     ):
         objective = objective or self._reward
@@ -327,21 +326,22 @@ class ImagBehavior(nn.Module):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
                 target_embedding = self._world_model.embedding(target_array)
-                imag_feat, imag_state, imag_action = self._imagine(
+                imag_stoch, imag_deter, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
-                target_array_expanded = target_array.expand(imag_feat.shape[0], target_embedding.shape[0])
+                target_array_expanded = target_array.expand(imag_stoch.shape[0], target_embedding.shape[0])
 
-                reward = objective(imag_feat, imag_state, imag_action, target_array_expanded)
-                actor_ent = self.actor(imag_feat, target_array_expanded).entropy()
+                reward = objective(imag_stoch, imag_deter, imag_state, imag_action, target_array_expanded)
+                actor_ent = self.actor(imag_stoch, imag_deter, target_array_expanded).entropy()
                 state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
                 # this target is not scaled
                 # slow is flag to indicate whether slow_target is used for lambda-return
                 target, weights, base = self._compute_target(
-                    imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array_expanded
+                    imag_stoch, imag_deter, imag_state, imag_action, reward, actor_ent, state_ent, target_array_expanded
                 )
                 actor_loss, mets = self._compute_actor_loss(
-                    imag_feat,
+                    imag_stoch,
+                    imag_deter,
                     imag_state,
                     imag_action,
                     target,
@@ -352,14 +352,13 @@ class ImagBehavior(nn.Module):
                     target_array_expanded
                 )
                 metrics.update(mets)
-                value_input = imag_feat
         with tools.RequiresGrad(self.value):
             with torch.cuda.amp.autocast(self._use_amp):
-                value = self.value(value_input[:-1].detach(), target_array_expanded[:-1].detach())
+                value = self.value(imag_stoch[:-1].detach(), imag_deter[:-1].detach(), target_array_expanded[:-1].detach())
                 target = torch.stack(target, dim=1)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
-                slow_target = self._slow_value(value_input[:-1].detach(), target_array_expanded[:-1].detach())
+                slow_target = self._slow_value(imag_stoch[:-1].detach(), imag_deter[:-1].detach(), target_array_expanded[:-1].detach())
                 if self._config.slow_value_target:
                     value_loss = value_loss - value.log_prob(
                         slow_target.mode().detach()
@@ -384,7 +383,7 @@ class ImagBehavior(nn.Module):
         with tools.RequiresGrad(self):
             metrics.update(self._actor_opt(actor_loss, self.actor.parameters()))
             metrics.update(self._value_opt(value_loss, self.value.parameters()))
-        return imag_feat, imag_state, imag_action, weights, metrics
+        return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, policy, horizon, target_array, repeats=None):
         dynamics = self._world_model.dynamics
@@ -396,23 +395,23 @@ class ImagBehavior(nn.Module):
 
         def step(prev, _):
             state, _, _ = prev
-            feat = dynamics.get_feat(state)
-            inp = feat.detach() if self._stop_grad_actor else feat
-            action = policy(inp, target_array).sample()
+            stoch, deter = self.dynamics.get_sep(state)
+            stoch, deter = (stoch, deter) if self._stop_grad_actor else (stoch.detach(), deter.detach())
+            action = policy(stoch, deter, target_array).sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
-            return succ, feat, action
+            return succ, stoch, deter, action
 
-        succ, feats, actions = tools.static_scan(
-            step, [torch.arange(horizon)], (start, None, None)
+        succ, stoches, deters, actions = tools.static_scan(
+            step, [torch.arange(horizon)], (start, None, None, None)
         )
         states = {k: torch.cat([start[k][None], v[:-1]], 0) for k, v in succ.items()}
         if repeats:
             raise NotImplemented("repeats is not implemented in this version")
 
-        return feats, states, actions
+        return stoches, deters, states, actions
 
     def _compute_target(
-        self, imag_feat, imag_state, imag_action, reward, actor_ent, state_ent, target_array
+        self, imag_stoch, imag_deter, imag_state, imag_action, reward, actor_ent, state_ent, target_array
     ):
         if "cont" in self._world_model.heads:
             inp = self._world_model.dynamics.get_feat(imag_state)
@@ -423,7 +422,7 @@ class ImagBehavior(nn.Module):
             reward += self._config.actor_entropy() * actor_ent
         if self._config.future_entropy and self._config.actor_state_entropy() > 0:
             reward += self._config.actor_state_entropy() * state_ent
-        value = self.value(imag_feat, target_array).mode()
+        value = self.value(imag_stoch, imag_deter, target_array).mode()
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
@@ -442,7 +441,8 @@ class ImagBehavior(nn.Module):
 
     def _compute_actor_loss(
         self,
-        imag_feat,
+        imag_stoch,
+        imag_deter,
         imag_state,
         imag_action,
         target,
@@ -453,8 +453,8 @@ class ImagBehavior(nn.Module):
         target_array
     ):
         metrics = {}
-        inp = imag_feat.detach() if self._stop_grad_actor else imag_feat
-        policy = self.actor(inp, target_array)
+        imag_stoch, imag_deter = imag_stoch.detach(), imag_deter.detach() if self._stop_grad_actor else (imag_stoch, imag_deter)
+        policy = self.actor(imag_stoch, imag_deter, target_array)
         actor_ent = policy.entropy()
         # Q-val for actor is not transformed using symlog
         target = torch.stack(target, dim=1)
@@ -473,12 +473,12 @@ class ImagBehavior(nn.Module):
         elif self._config.imag_gradient == "reinforce":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
+                * (target - self.value(imag_stoch[:-1], imag_deter[:-1], target_array[:-1]).mode()).detach()
             )
         elif self._config.imag_gradient == "both":
             actor_target = (
                 policy.log_prob(imag_action)[:-1][:, :, None]
-                * (target - self.value(imag_feat[:-1], target_array[:-1]).mode()).detach()
+                * (target - self.value(imag_stoch[:-1], imag_deter[:-1], target_array[:-1]).mode()).detach()
             )
             mix = self._config.imag_gradient_mix()
             actor_target = mix * target + (1 - mix) * actor_target
