@@ -92,7 +92,8 @@ class WorldModel(nn.Module):
         )
         if config.reward_head == "twohot_symlog":
             self.heads["reward"] = MixedHead(
-                feat_size,
+                config.dyn_hidden,
+                config.dyn_deter,
                 config.embed_dim,
                 config.attention_dim,
                 (255,),
@@ -103,7 +104,8 @@ class WorldModel(nn.Module):
             )
         else:
             self.heads["reward"] = MixedHead(
-                feat_size,  # pytorch version
+                config.dyn_hidden,
+                config.dyn_deter,  # pytorch version
                 config.embed_dim,
                 config.attention_dim,
                 [],
@@ -257,7 +259,8 @@ class ImagBehavior(nn.Module):
         else:
             feat_size = config.dyn_stoch + config.dyn_deter
         self.actor = ActionMixedHead(
-            feat_size,  # pytorch version
+            config.dyn_hidden,
+            config.dyn_deter,  # pytorch version
             config.embed_dim,
             config.attention_dim,
             config.num_actions,
@@ -267,7 +270,8 @@ class ImagBehavior(nn.Module):
         )  # action_dist -> action_disc?
         if config.value_head == "twohot_symlog":
             self.value = MixedHead(
-                feat_size,
+                config.dyn_hidden,
+                config.dyn_deter,
                 config.embed_dim,
                 config.attention_dim,
                 (255,),
@@ -278,7 +282,8 @@ class ImagBehavior(nn.Module):
             )
         else:
             self.value = MixedHead(
-                feat_size,
+                config.dyn_hidden,
+                config.dyn_deter,
                 config.embed_dim,
                 config.attention_dim,
                 [],

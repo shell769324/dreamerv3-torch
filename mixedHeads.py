@@ -83,7 +83,8 @@ class Attention(nn.Module):
 class MixedHead(nn.Module):
     def __init__(
         self,
-        inp_dim,
+        stoch_size,
+        deter_size,
         embed_dim,
         attention_dim,
         shape,
@@ -166,7 +167,8 @@ class MixedHead(nn.Module):
 class ActionMixedHead(nn.Module):
     def __init__(
         self,
-        inp_dim,
+        stoch_size,
+        deter_size,
         embed_dim,
         attention_dim,
         num_action,
