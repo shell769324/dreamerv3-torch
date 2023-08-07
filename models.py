@@ -171,6 +171,7 @@ class WorldModel(nn.Module):
                         print(pred.mean().shape, data[name].shape)
                         print(pred.mean().squeeze(-1)[2:6, 20:40])
                         print(data[name].squeeze(-1)[2:6, 20:40])
+                        print((pred.mean() - data[name]).squeeze(-1)[2:6, 20:40])
                         exit(1)
                     else:
                         feat = self.dynamics.get_feat(post)
