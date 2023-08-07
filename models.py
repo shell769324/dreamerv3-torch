@@ -168,7 +168,7 @@ class WorldModel(nn.Module):
                         stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
                         pred = head(stoch, deter, data["target"])
                         print(pred.mean().shape, data[name].shape)
-                        print(pred.mean(), data[name])
+                        print(pred.mean().squeeze(-1), data[name].squeeze(-1))
                         exit(1)
                     else:
                         feat = self.dynamics.get_feat(post)
