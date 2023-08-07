@@ -142,7 +142,7 @@ class WorldModel(nn.Module):
 
     def _train(self, data):
         torch.set_printoptions(precision=3, sci_mode=False)
-        np.set_printoptions(precision=3, suppress=True)
+        np.set_printoptions(precision=3, suppress=True, linewidth=110)
         # action (batch_size, batch_length, act_dim)
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
