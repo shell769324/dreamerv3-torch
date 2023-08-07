@@ -149,9 +149,6 @@ class WorldModel(nn.Module):
         # discount (batch_size, batch_length)
         data = self.preprocess(data)
         conditional_metrics = {}
-        print("stoch", self.heads["reward"].stoch_layer.weight.mean())
-        print("deter", self.heads["reward"].deter_layer.weight.mean())
-        print("mean", self.heads["reward"].mean_layer.weight.mean())
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
