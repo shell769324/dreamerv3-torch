@@ -137,11 +137,11 @@ class MixedHead(nn.Module):
         token1 = self.stoch_layer(stoch).unsqueeze(-2)
         token2 = self.deter_layer(deter).unsqueeze(-2)
         feature = torch.cat([token1, token2], dim=-2)
-        print("feature", feature.shape)
+        print("feature", feature[100][:, 150:250])
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
-        print("before mean", out[4][30][100:300])
+        print("before mean", out[4][30][150:250])
 
         mean = self.mean_layer(out)
         if self._std == "learned":
