@@ -25,13 +25,18 @@ class FeedForward(nn.Module):
         self.net = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, dim)
+            nn.Dropout(0),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(0)
         )
 
         self.net2 = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
-            nn.Linear(hidden_dim, dim)
+            nn.Dropout(0),
+            nn.Linear(hidden_dim, dim),
+            nn.Dropout(0)
+
         )
 
     def forward(self, x):
