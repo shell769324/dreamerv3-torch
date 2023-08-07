@@ -167,8 +167,9 @@ class WorldModel(nn.Module):
                         stoch, deter = self.dynamics.get_sep(post)
                         stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
                         pred = head(stoch, deter, data["target"])
+                        print(pred.mean.shape, data[name].shape)
+                        break
                     else:
-
                         feat = self.dynamics.get_feat(post)
                         feat = feat if grad_head else feat.detach()
                         pred = head(feat)
@@ -275,8 +276,8 @@ class ImagBehavior(nn.Module):
                 config.embed_dim,
                 config.attention_dim,
                 (255,),
-                config.reward_layers,
-                dist=config.reward_head,
+                config.value_layers,
+                dist=config.value_head,
                 outscale=0.0,
                 device=config.device,
             )
@@ -287,8 +288,8 @@ class ImagBehavior(nn.Module):
                 config.embed_dim,
                 config.attention_dim,
                 [],
-                config.reward_layers,
-                dist=config.reward_head,
+                config.value_layers,
+                dist=config.value_head,
                 outscale=0.0,
                 device=config.device,
             )
