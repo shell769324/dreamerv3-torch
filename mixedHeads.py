@@ -20,26 +20,24 @@ class PreNorm(nn.Module):
 
 
 class FeedForward(nn.Module):
-    def __init__(self, dim, hidden_dim, dropout = 0.):
+    def __init__(self, dim, hidden_dim):
         super().__init__()
         self.net = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
+            nn.Linear(hidden_dim, dim)
         )
 
         self.net2 = nn.Sequential(
             nn.Linear(dim, hidden_dim),
             nn.GELU(),
-            nn.Dropout(dropout),
-            nn.Linear(hidden_dim, dim),
-            nn.Dropout(dropout)
+            nn.Linear(hidden_dim, dim)
         )
 
     def forward(self, x):
         x, q2 = x
+        print("first net norm", self.net[0].weight.norm(), self.net[1].weight.norm())
+        print("second net norm", self.net2[0].weight.norm(), self.net2[1].weight.norm())
         return self.net(x) + x, self.net2(q2) + q2
 
 
@@ -127,9 +125,9 @@ class MixedHead(nn.Module):
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
-        print("stoch", self.stoch_layer.weight.mean())
-        print("deter", self.deter_layer.weight.mean())
-        print("mean", self.mean_layer.weight.mean())
+        print("stoch", self.stoch_layer.weight.norm())
+        print("deter", self.deter_layer.weight.norm())
+        print("mean", self.mean_layer.weight.norm())
         original = deter.shape
         stoch = stoch.reshape(-1, stoch.shape[-1])
         deter = deter.reshape(-1, deter.shape[-1])
