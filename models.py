@@ -141,7 +141,7 @@ class WorldModel(nn.Module):
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
     def _train(self, data):
-        torch.set_printoptions(precision=3)
+        torch.set_printoptions(precision=3, sci_mode=False)
         # action (batch_size, batch_length, act_dim)
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
@@ -169,7 +169,8 @@ class WorldModel(nn.Module):
                         stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
                         pred = head(stoch, deter, data["target"])
                         print(pred.mean().shape, data[name].shape)
-                        print(pred.mean().squeeze(-1)[2:6, 20:40], data[name].squeeze(-1)[2:6, 20:40])
+                        print(pred.mean().squeeze(-1)[2:6, 20:40])
+                        print(data[name].squeeze(-1)[2:6, 20:40])
                         exit(1)
                     else:
                         feat = self.dynamics.get_feat(post)
