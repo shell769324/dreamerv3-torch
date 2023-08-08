@@ -6,6 +6,7 @@ from PIL import ImageColor, Image, ImageDraw, ImageFont
 from envs.crafter import targets
 from vit import CCT
 from mixedHeads import MixedHead, ActionMixedHead
+import itertools
 
 import networks
 import tools
@@ -52,7 +53,6 @@ class WorldModel(nn.Module):
         else:
             raise NotImplemented(f"{config.size} is not applicable now")
 
-        self.embedding = nn.Embedding(len(targets), config.target_units)
         self.dynamics = networks.RSSM(
             config.dyn_stoch,
             config.dyn_deter,
@@ -126,17 +126,32 @@ class WorldModel(nn.Module):
         )
         for name in config.grad_heads:
             assert name in self.heads, name
+
+        self._regular_parameters = itertools.chain(self.heads["image"].parameters(), self.encoder.parameters(),
+                                                   self.heads["cont"].parameters(), self.dynamics.parameters())
+
         self._model_opt = tools.Optimizer(
             "model",
-            self.parameters(),
+            self._regular_parameters,
             config.model_lr,
             config.opt_eps,
             config.grad_clip,
             config.weight_decay,
             opt=config.opt,
             use_amp=self._use_amp,
-            sub={"reward": self.heads["reward"], "cont": self.heads["cont"],
-                 "image": self.heads["image"], "encoder": self.encoder}
+            sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
+                 "rssm": self.dynamics}
+        )
+        self._transformer_opt = tools.Optimizer(
+            "transformer",
+            self.heads["reward"].parameters(),
+            config.reward_lr,
+            config.opt_eps,
+            config.grad_clip,
+            config.reward_weight_decay,
+            opt=config.opt,
+            use_amp=self._use_amp,
+            sub={"reward": self.heads["reward"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
@@ -169,11 +184,6 @@ class WorldModel(nn.Module):
                         stoch, deter = self.dynamics.get_sep(post)
                         stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
                         pred = head(stoch, deter, data["target"])
-                        print(pred.mean().shape, data[name].shape)
-                        print(pred.mean().squeeze(-1)[2:6, 20:40].cpu().detach().numpy())
-                        print(data[name].squeeze(-1)[2:6, 20:40].cpu().detach().numpy())
-                        print((pred.mean() - data[name]).squeeze(-1)[2:6, 20:40].cpu().detach().numpy())
-                        exit(1)
                     else:
                         feat = self.dynamics.get_feat(post)
                         feat = feat if grad_head else feat.detach()
@@ -181,21 +191,26 @@ class WorldModel(nn.Module):
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
-                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    if name == "reward":
+                        transformer_loss = -torch.mean(like) * self._scales.get(name, 1.0)
+                    else:
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
-            metrics = self._model_opt(model_loss, self.parameters())
+            metrics = self._model_opt(model_loss, self._regular_parameters)
+            transformer_metrics = self._transformer_opt(transformer_loss, self.heads["reward"].parameters())
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
+        transformer_metrics["reward_loss"] = to_np(transformer_loss)
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
         metrics["rep_scale"] = rep_scale
         metrics["dyn_loss"] = to_np(dyn_loss)
         metrics["rep_loss"] = to_np(rep_loss)
         metrics["kl"] = to_np(torch.mean(kl_value))
-        metrics  = {**metrics, **conditional_metrics}
+        metrics  = {**metrics, **conditional_metrics, **transformer_metrics}
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
@@ -332,15 +347,14 @@ class ImagBehavior(nn.Module):
         self._update_slow_target()
         metrics = {}
 
-        with tools.RequiresGrad([self.actor, self._world_model.embedding]):
+        with tools.RequiresGrad([self.actor]):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
-                target_embedding = self._world_model.embedding(target_array)
                 imag_stoch, imag_deter, imag_state, imag_action = self._imagine(
                     start, self.actor, self._config.imag_horizon, target_array, repeats
                 )
-                target_array_expanded = target_array.expand(imag_stoch.shape[0], target_embedding.shape[0])
+                target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
 
                 reward = objective(imag_stoch, imag_deter, imag_state, imag_action, target_array_expanded)
                 actor_ent = self.actor(imag_stoch, imag_deter, target_array_expanded).entropy()
