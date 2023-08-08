@@ -200,6 +200,9 @@ class WorldModel(nn.Module):
             metrics = self._model_opt(model_loss, self._regular_parameters)
             transformer_metrics = self._transformer_opt(transformer_loss, self.heads["reward"].parameters())
 
+            self._model_opt._opt.zero_grad()
+            self._transformer_opt._opt.zero_grad()
+
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         transformer_metrics["reward_loss"] = to_np(transformer_loss)
         metrics["kl_free"] = kl_free
