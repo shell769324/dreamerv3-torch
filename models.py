@@ -199,7 +199,7 @@ class WorldModel(nn.Module):
                 model_loss = sum(losses.values()) + kl_loss
 
             self._model_opt._scaler.scale(model_loss).backward(retain_graph=True)
-            self._transformer_opt._scaler.scale(model_loss).backward(retain_graph=True)
+            self._transformer_opt._scaler.scale(transformer_loss).backward(retain_graph=True)
             metrics = self._model_opt(model_loss, self._regular_parameters)
             transformer_metrics = self._transformer_opt(transformer_loss, self.heads["reward"].parameters())
 
