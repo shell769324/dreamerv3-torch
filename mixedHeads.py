@@ -40,8 +40,6 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         x, q2 = x
-        print("first net norm", self.net[0].weight.norm(), self.net[3].weight.norm())
-        print("second net norm", self.net2[0].weight.norm(), self.net2[3].weight.norm())
         return self.net(x) + x, self.net2(q2) + q2
 
 

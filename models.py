@@ -128,7 +128,7 @@ class WorldModel(nn.Module):
             assert name in self.heads, name
 
         self._regular_parameters = itertools.chain(self.heads["image"].parameters(), self.encoder.parameters(),
-                                                   self.heads["cont"].parameters())
+                                                   self.heads["cont"].parameters(), self.dynamics.parameters())
 
         self._model_opt = tools.Optimizer(
             "model",
@@ -139,7 +139,8 @@ class WorldModel(nn.Module):
             config.weight_decay,
             opt=config.opt,
             use_amp=self._use_amp,
-            sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder}
+            sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
+                 "rssm": self.dynamics}
         )
         self._transformer_opt = tools.Optimizer(
             "transformer",
