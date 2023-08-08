@@ -611,13 +611,16 @@ class Optimizer:
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         if self._wd:
             self._apply_weight_decay(params)
-        self._scaler.step(self._opt)
-        self._scaler.update()
-        # self._opt.step()
         metrics[f"{self._name}_grad_norm"] = norm.item()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
         return metrics
+
+    def post(self):
+        self._scaler.step(self._opt)
+        self._scaler.update()
+        # self._opt.step()
+        self._opt.zero_grad()
 
     def _apply_weight_decay(self, varibs):
         nontrivial = self._wd_pattern != r".*"
