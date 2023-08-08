@@ -199,8 +199,6 @@ class WorldModel(nn.Module):
                 model_loss = sum(losses.values()) + kl_loss
             metrics = self._model_opt(model_loss, self._regular_parameters)
             transformer_metrics = self._transformer_opt(transformer_loss, self.heads["reward"].parameters())
-            self._model_opt.post()
-            self._transformer_opt.post()
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         transformer_metrics["reward_loss"] = to_np(transformer_loss)
