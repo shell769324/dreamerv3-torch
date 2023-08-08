@@ -156,8 +156,6 @@ class WorldModel(nn.Module):
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
     def _train(self, data):
-        torch.set_printoptions(precision=3, sci_mode=False)
-        np.set_printoptions(precision=3, suppress=True, linewidth=150)
         # action (batch_size, batch_length, act_dim)
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
