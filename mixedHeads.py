@@ -40,7 +40,7 @@ class FeedForward(nn.Module):
 
 
 class Attention(nn.Module):
-    def __init__(self, dim, heads=8, dim_head = 64, dropout = 0.):
+    def __init__(self, dim, heads=8, dim_head = 64):
         super().__init__()
         inner_dim = dim_head *  heads
         project_out = not (heads == 1 and dim_head == dim)
@@ -49,13 +49,11 @@ class Attention(nn.Module):
         self.scale = dim_head ** -0.5
 
         self.attend = nn.LogSoftmax(dim = -1)
-        self.dropout = nn.Dropout(dropout)
 
         self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
 
         self.to_out = nn.Sequential(
-            nn.Linear(inner_dim, dim),
-            nn.Dropout(dropout)
+            nn.Linear(inner_dim, dim)
         ) if project_out else nn.Identity()
 
     def forward(self, x):
@@ -68,8 +66,6 @@ class Attention(nn.Module):
         dots2 = torch.matmul(q2, k.transpose(-1, -2)) * self.scale
         attn = self.attend(dots)
         attn2 = self.attend(dots2)
-        attn = self.dropout(attn)
-        attn2 = self.dropout(attn2)
 
         out = torch.matmul(attn, v)
         qout = torch.matmul(attn2, v)
