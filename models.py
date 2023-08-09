@@ -132,7 +132,7 @@ class WorldModel(nn.Module):
 
         self._model_opt = tools.Optimizer(
             "model",
-            [{'params': self._regular_parameters}, {'transformers': self.heads["reward"].parameters(),
+            [{'params': self._regular_parameters}, {'params': self.heads["reward"].parameters(),
                                                     'lr': config.transformer_lr, 'weight_decay': config.transformer_weight_decay}],
             config.model_lr,
             config.opt_eps,
