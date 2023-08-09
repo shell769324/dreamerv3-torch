@@ -127,12 +127,13 @@ class WorldModel(nn.Module):
         for name in config.grad_heads:
             assert name in self.heads, name
 
-        self._regular_parameters = itertools.chain(self.heads["image"].parameters(), self.encoder.parameters(),
-                                                   self.heads["cont"].parameters(), self.dynamics.parameters())
+        self._regular_parameters = list(self.heads["image"].parameters()) + list(self.encoder.parameters()) + \
+                                                   list(self.heads["cont"].parameters()) + list(self.dynamics.parameters())
 
         self._model_opt = tools.Optimizer(
             "model",
-            self._regular_parameters,
+            [{'params': self._regular_parameters}, {'transformers': self.heads["reward"].parameters(),
+                                                    'lr': self.transformer_lr, 'weight_decay': config.transformer_weight_decay}],
             config.model_lr,
             config.opt_eps,
             config.grad_clip,
@@ -140,18 +141,7 @@ class WorldModel(nn.Module):
             opt=config.opt,
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
-                 "rssm": self.dynamics}
-        )
-        self._transformer_opt = tools.Optimizer(
-            "transformer",
-            self.heads["reward"].parameters(),
-            config.reward_lr,
-            config.opt_eps,
-            config.grad_clip,
-            config.reward_weight_decay,
-            opt=config.opt,
-            use_amp=self._use_amp,
-            sub={"reward": self.heads["reward"]}
+                 "rssm": self.dynamics, "reward": self.heads["reward"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
@@ -189,29 +179,22 @@ class WorldModel(nn.Module):
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
-                    if name == "reward":
-                        transformer_loss = -torch.mean(like) * self._scales.get(name, 1.0)
-                    else:
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
                 model_loss = sum(losses.values()) + kl_loss
 
-            #self._model_opt._scaler.scale(model_loss).backward(retain_graph=True)
-            #self._transformer_opt._scaler.scale(transformer_loss).backward(retain_graph=True)
             metrics = self._model_opt(model_loss, self._regular_parameters)
-            transformer_metrics = self._transformer_opt(transformer_loss, self.heads["reward"].parameters())
 
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
-        transformer_metrics["reward_loss"] = to_np(transformer_loss)
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
         metrics["rep_scale"] = rep_scale
         metrics["dyn_loss"] = to_np(dyn_loss)
         metrics["rep_loss"] = to_np(rep_loss)
         metrics["kl"] = to_np(torch.mean(kl_value))
-        metrics  = {**metrics, **conditional_metrics, **transformer_metrics}
+        metrics  = {**metrics, **conditional_metrics}
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
