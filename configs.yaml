@@ -65,7 +65,7 @@ defaults:
   reward_scale: 1.0
   present_scale: 1.0
   weight_decay: 0.0
-  transformer_weight_decay: 0.0
+  transformer_weight_decay: 0.01
   unimix_ratio: 0.01
   action_unimix_ratio: 0.01
   initial: 'learned'
@@ -108,7 +108,7 @@ defaults:
   eval_state_mean: False
   collect_dyn_sample: True
   behavior_stop_grad: True
-  value_decay: 0.0
+  value_decay: 0.01
   future_entropy: False
 
   # Exploration
