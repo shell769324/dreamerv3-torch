@@ -108,7 +108,9 @@ defaults:
   eval_state_mean: False
   collect_dyn_sample: True
   behavior_stop_grad: True
-  value_decay: 0.01
+  value_decay: 0.0
+  value_weight_decay: 0.01
+  actor_weight_decay: 0.01
   future_entropy: False
 
   # Exploration

@@ -315,6 +315,7 @@ class ImagBehavior(nn.Module):
             config.value_lr,
             config.ac_opt_eps,
             config.value_grad_clip,
+            wd=config.value_weight_decay
             **kw,
         )
         if self._config.reward_EMA:
