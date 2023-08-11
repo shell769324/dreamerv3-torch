@@ -300,7 +300,7 @@ class ImagBehavior(nn.Module):
         if config.slow_value_target:
             self._slow_value = copy.deepcopy(self.value)
             self._updates = 0
-        kw = dict(wd=config.weight_decay, opt=config.opt, use_amp=self._use_amp)
+        kw = dict(wd=config.transformer_weight_decay, opt=config.opt, use_amp=self._use_amp)
         self._actor_opt = tools.Optimizer(
             "actor",
             self.actor.parameters(),

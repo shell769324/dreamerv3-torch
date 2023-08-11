@@ -64,7 +64,7 @@ defaults:
   cont_scale: 1.0
   reward_scale: 1.0
   present_scale: 1.0
-  weight_decay: 0.01
+  weight_decay: 0
   transformer_weight_decay: 0.01
   unimix_ratio: 0.01
   action_unimix_ratio: 0.01
