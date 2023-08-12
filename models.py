@@ -303,7 +303,6 @@ class ImagBehavior(nn.Module):
         kw = dict(opt=config.opt, use_amp=self._use_amp)
         self._actor_opt = tools.Optimizer(
             "actor",
-            self.actor.parameters(),
             [{'params': self.actor.parameters(), 'lr': config.actor_lr, 'weight_decay': config.transformer_weight_decay}],
             config.actor_lr,
             config.ac_opt_eps,
