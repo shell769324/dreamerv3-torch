@@ -160,8 +160,6 @@ class WorldModel(nn.Module):
                         feat = self.dynamics.get_feat(post)
                         feat = feat if grad_head else feat.detach()
                         pred = head(feat)
-                    if name == "where":
-                        print(name, pred.mean.shape, data[name].shape)
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
@@ -379,9 +377,7 @@ class ImagBehavior(nn.Module):
         value
     ):
         metrics = {}
-        # Q-val for actor is not transformed using symlog
-        target = torch.stack(target, dim=1)
-        print(target.shape, value.shape)
+        # Q-val for actor is not transformed usi
         actor_target = (
             policy.log_prob(imag_action)[:-1][:, :, None]
             * (target - value).detach()
