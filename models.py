@@ -162,7 +162,7 @@ class WorldModel(nn.Module):
                         pred = head(feat)
                     if name == "where":
                         print(name, pred.mean.shape, data[name].shape)
-                    like = pred.log_prob(data[name].reshape())
+                    like = pred.log_prob(data[name])
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
