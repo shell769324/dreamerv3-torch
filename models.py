@@ -332,7 +332,7 @@ class ImagBehavior(nn.Module):
             stoch, deter = dynamics.get_sep(state)
             stoch, deter = stoch.detach(), deter.detach()
             value, policy_param = self.a2c(stoch, deter, target_array)
-            policy = tools.OneHotDist(policy_param, self._config.action_unimix_ratio)
+            policy = tools.OneHotDist(policy_param, unimix_ratio=self._config.action_unimix_ratio)
             action = policy.sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, stoch, deter, action, value, policy_param
