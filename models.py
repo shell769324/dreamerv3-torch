@@ -352,6 +352,7 @@ class ImagBehavior(nn.Module):
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
+        print("taget", reward.shape, value.shape)
         target = tools.lambda_return(
             reward[:-1],
             value[:-1],
