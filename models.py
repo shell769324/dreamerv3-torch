@@ -320,8 +320,8 @@ class ImagBehavior(nn.Module):
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
             metrics.update(self._a2c_opt(actor_loss + value_loss, self.a2c.parameters()))
-        metrics["value_loss"] = value_loss
-        metrics["actor_loss"] = actor_loss
+        metrics["value_loss"] = value_loss.detach().cpu().numpy()
+        metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array):
