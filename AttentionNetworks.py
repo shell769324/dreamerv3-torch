@@ -160,59 +160,6 @@ class MixedHead(nn.Module):
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
 
-
-class ActionMixedHead(nn.Module):
-    def __init__(
-        self,
-        stoch_size,
-        deter_size,
-        embed_dim,
-        attention_dim,
-        num_action,
-        layer_count,
-        outscale=1.0,
-        unimix_ratio=0.01,
-        heads=8
-    ):
-        super(ActionMixedHead, self).__init__()
-        self._unimix_ratio = unimix_ratio
-
-        self.heads = heads
-        self.embedding = nn.Embedding(len(targets), embed_dim)
-        self.stoch_layer = nn.Linear(stoch_size, attention_dim, bias=True)
-        self.deter_layer = nn.Linear(deter_size, attention_dim, bias=True)
-        self.stoch_layer.apply(tools.weight_init)
-        self.deter_layer.apply(tools.weight_init)
-        self.attention_dim = attention_dim
-        self.layers = []
-        for index in range(layer_count):
-            self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
-            self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
-        self.layers = nn.Sequential(*self.layers)
-        self.layers.apply(tools.weight_init)
-
-        self._dist_layer = nn.Linear(attention_dim, num_action)
-        self._dist_layer.apply(tools.uniform_weight_init(outscale))
-
-    def __call__(self, stoch, deter, targets_array, dtype=None):
-        original = deter.shape
-        stoch = stoch.reshape(-1, stoch.shape[-1])
-        deter = deter.reshape(-1, deter.shape[-1])
-        targets_array = targets_array.reshape(-1)
-        token1 = self.stoch_layer(stoch).unsqueeze(-2)
-        token2 = self.deter_layer(deter).unsqueeze(-2)
-        feature = torch.cat([token1, token2], dim=-2)
-        # b h 1 d
-        (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
-        if len(original) == 2:
-            out = out.reshape(original[0], -1)
-        else:
-            out = out.reshape(original[0], original[1], -1)
-        x = self._dist_layer(out)
-        dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
-        return dist
-
-
 class A2C(nn.Module):
     def __init__(
         self,
@@ -249,7 +196,7 @@ class A2C(nn.Module):
         self.layers.apply(tools.weight_init)
         self._out_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
                                         nn.GELU(),
-                                        nn.Linear(attention_dim, num_action + shape, bias=True))
+                                        nn.Linear(attention_dim, num_action + shape[0], bias=True))
         self._out_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
