@@ -110,8 +110,8 @@ class WorldModel(nn.Module):
             assert name in self.heads, name
 
         self._regular_parameters = list(self.heads["image"].parameters()) + list(self.encoder.parameters()) + \
-                                   list(self.heads["cont"].parameters()) + list(self.dynamics.parameters() + \
-                                   list(self.heads["where"].parameters()))
+                                   list(self.heads["cont"].parameters()) + list(self.dynamics.parameters()) + \
+                                   list(self.heads["where"].parameters())
 
         self._model_opt = tools.Optimizer(
             "world_model",
