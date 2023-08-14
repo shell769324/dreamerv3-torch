@@ -377,7 +377,8 @@ class ImagBehavior(nn.Module):
         value
     ):
         metrics = {}
-        # Q-val for actor is not transformed usi
+        # Q-val for actor is not transformed using symlog
+        target = torch.stack(target, dim=1)
         actor_target = (
             policy.log_prob(imag_action)[:-1][:, :, None]
             * (target - value).detach()
