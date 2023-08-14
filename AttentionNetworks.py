@@ -214,6 +214,6 @@ class A2C(nn.Module):
         else:
             out = out.reshape(original[0], original[1], -1)
         x = self._out_layer(out)
-        values = x[..., 0:self.shape]
-        actions = x[..., self.shape:]
+        values = x[..., 0:self.shape[0]]
+        actions = x[..., self.shape[0]:]
         return values, actions
