@@ -253,7 +253,7 @@ class ImagBehavior(nn.Module):
             config.actor_layers,
             unimix_ratio=config.action_unimix_ratio,
         )
-        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0)
+        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, _sub={"a2c": self.a2c.parameters()})
         self._a2c_opt = tools.Optimizer(
             "a2c",
             [{'params': self.a2c.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
@@ -320,6 +320,8 @@ class ImagBehavior(nn.Module):
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
             metrics.update(self._a2c_opt(actor_loss + value_loss, self.a2c.parameters()))
+        metrics["value_loss"] = value_loss
+        metrics["actor_loss"] = actor_loss
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array):

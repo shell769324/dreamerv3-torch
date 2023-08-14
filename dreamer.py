@@ -355,7 +355,7 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
         while agent._step < config.steps:
             print("Start evaluation.")
             eval_policy = functools.partial(agent, training=False)
