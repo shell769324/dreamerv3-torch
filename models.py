@@ -87,7 +87,7 @@ class WorldModel(nn.Module):
             device=config.device,
         )
         self.heads["reward"] = MixedHead(
-            config.dyn_hidden,
+            config.dyn_stoch * config.dyn_discrete,
             config.dyn_deter,
             config.embed_dim,
             config.attention_dim,
