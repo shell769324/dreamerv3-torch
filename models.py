@@ -348,6 +348,7 @@ class ImagBehavior(nn.Module):
         self, imag_state, reward, value
     ):
         inp = self._world_model.dynamics.get_feat(imag_state)
+        print("inp", inp.shape)
         discount = self._config.find_discount * self._world_model.heads["cont"](inp).mean
         # value(15, 960, ch)
         # action(15, 960, ch)
