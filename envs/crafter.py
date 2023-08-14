@@ -90,6 +90,7 @@ class Crafter():
               for j in range(player_pos[1], self._size[1]):
                   if self._id_to_item[info['semantic'][(i, j)]] == t:
                       where[index][3] = 1
+      return where
 
   def reset(self):
     self._done = False
@@ -170,6 +171,7 @@ class Crafter():
         target_reached=target_reached,
         prev_target=prev_target,
         distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
+        where=where
         **log_achievements,
     )
 
