@@ -253,7 +253,7 @@ class ImagBehavior(nn.Module):
             config.actor_layers,
             unimix_ratio=config.action_unimix_ratio,
         )
-        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c.parameters()})
+        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c})
         self._a2c_opt = tools.Optimizer(
             "a2c",
             [{'params': self.a2c.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
