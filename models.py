@@ -292,6 +292,9 @@ class ImagBehavior(nn.Module):
                 target, weights = self._compute_target(
                     imag_state, reward, value_mode
                 )
+
+                value = tools.TwoHotDistSymlog(logits=value_params[:-1], device=self._device)
+                value_mode = value.mode().detach()
                 actor_loss, mets = self._compute_actor_loss(
                     imag_action,
                     target,
@@ -303,7 +306,6 @@ class ImagBehavior(nn.Module):
                 )
                 metrics.update(mets)
                 target = torch.stack(target, dim=1)
-                value = tools.TwoHotDistSymlog(logits=value_params[:-1], device=self._device)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
@@ -349,12 +351,10 @@ class ImagBehavior(nn.Module):
         self, imag_state, reward, value
     ):
         inp = self._world_model.dynamics.get_feat(imag_state)
-        print("inp", inp.shape)
         discount = self._config.find_discount * self._world_model.heads["cont"](inp).mean
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
-        print("target", reward.shape, value.shape, discount.shape)
         target = tools.lambda_return(
             reward[1:],
             value[:-1],
@@ -363,7 +363,6 @@ class ImagBehavior(nn.Module):
             lambda_=self._config.discount_lambda,
             axis=0,
         )
-        print(len(target), target[0].shape)
         weights = torch.cumprod(
             torch.cat([torch.ones_like(discount[:1]), discount[:-1]], 0), 0
         ).detach()
