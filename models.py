@@ -203,7 +203,7 @@ class WorldModel(nn.Module):
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
         if "discount" in obs:
-            obs["discount"] *= self._config.discount
+            obs["discount"] *= self._config.find_discount
             # (batch_size, batch_length) -> (batch_size, batch_length, 1)
             obs["discount"] = torch.Tensor(obs["discount"]).unsqueeze(-1)
         if "is_terminal" in obs:
