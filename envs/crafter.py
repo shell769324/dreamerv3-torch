@@ -91,7 +91,7 @@ class Crafter():
               for j in range(player_pos[1], self._size[1]):
                   if self._id_to_item[info['semantic'][(i, j)]] == t:
                       where[index][3] = 1
-      return np.flatten(where)
+      return np.reshape(-1)
 
   def reset(self):
     self._done = False
