@@ -278,10 +278,10 @@ class ImagBehavior(nn.Module):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
-                imag_stoch, imag_deter, imag_state, imag_action, value, policy_params = self._imagine(
+                imag_stoch, imag_deter, imag_state, imag_action, value_params, policy_params = self._imagine(
                     start, self._config.imag_horizon, target_array,
                 )
-                value = tools.TwoHotDistSymlog(logits=value, device=self._device)
+                value = tools.TwoHotDistSymlog(logits=value_params, device=self._device)
                 target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
                 reward = self._world_model.heads["reward"](imag_stoch, imag_deter, target_array_expanded).mode()
                 policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
@@ -303,6 +303,7 @@ class ImagBehavior(nn.Module):
                 )
                 metrics.update(mets)
                 target = torch.stack(target, dim=1)
+                value = tools.TwoHotDistSymlog(logits=value_params[:-1], device=self._device)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
@@ -355,9 +356,9 @@ class ImagBehavior(nn.Module):
         # discount(15, 960, ch)
         print("target", reward.shape, value.shape, discount.shape)
         target = tools.lambda_return(
-            reward[:-1],
+            reward[1:],
             value[:-1],
-            discount[:-1],
+            discount[1:],
             bootstrap=value[-1],
             lambda_=self._config.discount_lambda,
             axis=0,
