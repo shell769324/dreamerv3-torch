@@ -352,7 +352,7 @@ class ImagBehavior(nn.Module):
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
-        print("taget", reward.shape, value.shape)
+        print("target", reward.shape, value.shape, discount.shape)
         target = tools.lambda_return(
             reward[:-1],
             value[:-1],
@@ -361,7 +361,7 @@ class ImagBehavior(nn.Module):
             lambda_=self._config.discount_lambda,
             axis=0,
         )
-        print(len(target))
+        print(len(target), target[0].shape)
         weights = torch.cumprod(
             torch.cat([torch.ones_like(discount[:1]), discount[:-1]], 0), 0
         ).detach()
