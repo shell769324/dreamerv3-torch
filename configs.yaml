@@ -72,7 +72,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 9
+  batch_size: 16
   batch_length: 64
   train_ratio: 512
   pretrain: 100
@@ -129,15 +129,15 @@ defaults:
 crafter:
   action_repeat: 1
   steps: 3e7
-  dyn_deter: 2048
+  dyn_deter: 3072
   dyn_hidden: 1536
   cnn_depth: 96
   actor_dist: 'onehot'
   units: 1024
-  reward_layers: 3
+  reward_layers: 4
   cont_layers: 4
   value_layers: 3
-  actor_layers: 3
+  actor_layers: 4
   where_layers: 4
   imag_gradient: 'reinforce'
   disag_units: 1024
