@@ -330,7 +330,7 @@ class ImagBehavior(nn.Module):
         def step(prev, _):
             state, _, _, _, _, _ = prev
             stoch, deter = dynamics.get_sep(state)
-            stoch, deter = (stoch, deter) if self._stop_grad_actor else (stoch.detach(), deter.detach())
+            stoch, deter = stoch.detach(), deter.detach()
             value, policy_param = self.a2c(stoch, deter, target_array)
             policy = tools.OneHotDist(policy_param, self._config.action_unimix_ratio)
             action = policy.sample()
