@@ -605,12 +605,6 @@ class Optimizer:
         metrics[f"{self._name}_loss"] = loss.detach().cpu().numpy()
         self._scaler.scale(loss).backward()
         self._scaler.unscale_(self._opt)
-        total_norm = 0
-        for p in self._parameters:
-            param_norm = p.grad.data.norm(2)
-            total_norm += param_norm.item() ** 2
-        total_norm = total_norm ** (1. / 2)
-        metrics[f"{self._name}_grad_norm"] = total_norm
         norms = {}
         for k, v in self._sub.items():
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
