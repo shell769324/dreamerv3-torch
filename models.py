@@ -244,7 +244,7 @@ class ImagBehavior(nn.Module):
         self._reward = reward
         self._device = config.device
         self.a2c = A2C(
-            config.dyn_hidden,
+            self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,  # pytorch version
             config.embed_dim,
             config.attention_dim,
