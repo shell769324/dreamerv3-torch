@@ -171,7 +171,7 @@ class Crafter():
         target_reached=target_reached,
         prev_target=prev_target,
         distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
-        where=where
+        where=where,
         **log_achievements,
     )
 
