@@ -4,6 +4,7 @@ import numpy as np
 import gym
 import random
 import crafter
+import torch
 import itertools
 
 targets = ["water", "stone", "tree", "coal", "iron", "cow"]
@@ -90,7 +91,7 @@ class Crafter():
               for j in range(player_pos[1], self._size[1]):
                   if self._id_to_item[info['semantic'][(i, j)]] == t:
                       where[index][3] = 1
-      return where.flatten()
+      return torch.flatten(where)
 
   def reset(self):
     self._done = False
