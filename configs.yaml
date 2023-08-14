@@ -66,6 +66,7 @@ defaults:
   present_scale: 1.0
   weight_decay: 0
   transformer_weight_decay: 0.01
+  A2C_weight_decay: 0.01
   unimix_ratio: 0.01
   action_unimix_ratio: 0.01
   initial: 'learned'
@@ -77,10 +78,9 @@ defaults:
   pretrain: 100
   model_lr: 1e-4
   transformer_lr: 3e-5
+  ac_lr: 3e-5
   opt_eps: 1e-8
   grad_clip: 1000
-  value_lr: 3e-5
-  actor_lr: 3e-5
   ac_opt_eps: 1e-5
   value_grad_clip: 100
   actor_grad_clip: 100
@@ -88,10 +88,10 @@ defaults:
   slow_value_target: True
   slow_target_update: 1
   slow_target_fraction: 0.02
-  opt: 'adam'
+  opt: 'adamw'
 
   # Behavior.
-  discount: 0.95
+  find_discount: 0.75
   discount_lambda: 0.95
   imag_horizon: 15
   imag_gradient: 'dynamics'
@@ -126,26 +126,11 @@ defaults:
   disag_units: 400
   disag_action_cond: False
 
-atari100k:
-  steps: 4e5
-  action_repeat: 4
-  eval_episode_num: 100
-  stickey: False
-  lives: unused
-  noops: 30
-  resize: opencv
-  actions: needed
-  actor_dist: 'onehot'
-  train_ratio: 1024
-  imag_gradient: 'reinforce'
-  time_limit: 108000
-  precision: 32
-
 crafter:
   action_repeat: 1
   steps: 3e7
-  dyn_deter: 4096
-  dyn_hidden: 1024
+  dyn_deter: 2048
+  dyn_hidden: 1536
   cnn_depth: 96
   actor_dist: 'onehot'
   units: 1024
@@ -153,6 +138,7 @@ crafter:
   cont_layers: 4
   value_layers: 3
   actor_layers: 3
+  where_layers: 4
   imag_gradient: 'reinforce'
   disag_units: 1024
   disag_layers: 5
@@ -160,11 +146,3 @@ crafter:
   embed_dim: 512
   attention_dim: 512
   target_units: 512
-
-
-debug:
-  debug: True
-  pretrain: 1
-  prefill: 1
-  batch_size: 10
-  batch_length: 20

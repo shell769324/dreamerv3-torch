@@ -594,6 +594,7 @@ class Optimizer:
             "adamax": lambda: torch.optim.Adamax(parameters, lr=lr, eps=eps),
             "sgd": lambda: torch.optim.SGD(parameters, lr=lr),
             "momentum": lambda: torch.optim.SGD(parameters, lr=lr, momentum=0.9),
+            'adamw': lambda: torch.optim.AdamW(parameters, lr=lr, eps=eps)
         }[opt]()
         self._scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
         self._sub = sub
@@ -604,17 +605,19 @@ class Optimizer:
         metrics[f"{self._name}_loss"] = loss.detach().cpu().numpy()
         self._scaler.scale(loss).backward()
         self._scaler.unscale_(self._opt)
-        norm = torch.nn.utils.clip_grad_norm_(params, self._clip)
+        total_norm = 0
+        for p in self._parameters:
+            param_norm = p.grad.data.norm(2)
+            total_norm += param_norm.item() ** 2
+        total_norm = total_norm ** (1. / 2)
+        metrics[f"{self._name}_grad_norm"] = total_norm
         norms = {}
         for k, v in self._sub.items():
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
-        if self._wd:
-            self._apply_weight_decay(params)
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()
         self._opt.zero_grad()
-        metrics[f"{self._name}_grad_norm"] = norm.item()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
         return metrics

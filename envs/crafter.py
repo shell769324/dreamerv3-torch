@@ -47,8 +47,8 @@ class Crafter():
     spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
     spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+    spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(targets), 4), dtype=np.uint8)
     spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
-    spaces["present"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["target_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
     spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
     spaces["prev_target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -71,17 +71,37 @@ class Crafter():
                 min_dist = dist if min_dist is None else min(dist, min_dist)
     return min_dist
 
+  def compute_where(self, player_pos, info):
+      where = np.zeros(len(targets), 4, dtype=np.uint8)
+      for index, t in enumerate(targets):
+          for i in range(0, player_pos[0] + 1):
+              for j in range(0, player_pos[1] + 1):
+                  if self._id_to_item[info['semantic'][(i, j)]] == t:
+                      where[index][0] = 1
+          for i in range(player_pos[0], self._size[0]):
+              for j in range(0, player_pos[1] + 1):
+                  if self._id_to_item[info['semantic'][(i, j)]] == t:
+                      where[index][1] = 1
+          for i in range(0, player_pos[0] + 1):
+              for j in range(player_pos[1], self._size[1]):
+                  if self._id_to_item[info['semantic'][(i, j)]] == t:
+                      where[index][2] = 1
+          for i in range(player_pos[0], self._size[0]):
+              for j in range(player_pos[1], self._size[1]):
+                  if self._id_to_item[info['semantic'][(i, j)]] == t:
+                      where[index][3] = 1
+
   def reset(self):
     self._done = False
     image = self._env.reset()
     self._target = np.random.randint(0, len(targets))
     self._target_steps = 0
     info = {
-        'semantic': self._crafter_env._sem_view()
+        'semantic': self._crafter_env._sem_view(),
     }
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0)
-    return self._obs(image, 0.0, {}, is_first=True, augmented=augmented)
+    return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=self.compute_where(self._crafter_env._player.pos, info))
 
   def step(self, action):
     if len(action.shape) >= 1:
@@ -100,6 +120,7 @@ class Crafter():
     target_steps = self._target_steps
     prev_target = self._target
     face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
+
     if face_in_bound and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target]:
         reward += 1
         self._target = np.random.randint(0, len(targets))
@@ -125,12 +146,12 @@ class Crafter():
         image, reward, info, augmented=augmented,
         is_last=self._done,
         is_terminal=info['discount'] == 0, target_reached=target_reached, target_steps=target_steps,
-        prev_target=prev_target), reward, self._done, info
+        prev_target=prev_target, where=self.compute_where(player_pos, info)), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
       is_first=False, is_last=False, is_terminal=False, augmented=None, target_reached=False,
-          target_steps=0, prev_target=None):
+          target_steps=0, prev_target=None, where=None):
     if prev_target is None:
         prev_target = self._target
     log_achievements = {
@@ -149,7 +170,6 @@ class Crafter():
         target_reached=target_reached,
         prev_target=prev_target,
         distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
-        present=self._last_min_dist is not None,
         **log_achievements,
     )
 

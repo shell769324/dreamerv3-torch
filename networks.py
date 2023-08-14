@@ -18,17 +18,10 @@ class RSSM(nn.Module):
         layers_input=1,
         layers_output=1,
         rec_depth=1,
-        shared=False,
         discrete=False,
         act=nn.ELU,
         norm=nn.LayerNorm,
-        mean_act="none",
-        std_act="softplus",
-        temp_post=True,
-        min_std=0.1,
-        cell="gru",
         unimix_ratio=0.01,
-        initial="learned",
         num_actions=None,
         embed=None,
         device=None,
@@ -37,116 +30,74 @@ class RSSM(nn.Module):
         self._stoch = stoch
         self._deter = deter
         self._hidden = hidden
-        self._min_std = min_std
         self._layers_input = layers_input
         self._layers_output = layers_output
         self._rec_depth = rec_depth
-        self._shared = shared
         self._discrete = discrete
         self._act = act
         self._norm = norm
-        self._mean_act = mean_act
-        self._std_act = std_act
-        self._temp_post = temp_post
         self._unimix_ratio = unimix_ratio
-        self._initial = initial
         self._embed = embed
         self._device = device
 
         inp_layers = []
-        if self._discrete:
-            inp_dim = self._stoch * self._discrete + num_actions
-        else:
-            inp_dim = self._stoch + num_actions
-        if self._shared:
-            inp_dim += self._embed
+        prev_layer_dim = self._stoch * self._discrete + num_actions
         for i in range(self._layers_input):
-            inp_layers.append(nn.Linear(inp_dim, self._hidden, bias=False))
+            inp_layers.append(nn.Linear(prev_layer_dim, self._hidden, bias=False))
             inp_layers.append(self._norm(self._hidden, eps=1e-03))
             inp_layers.append(self._act())
-            if i == 0:
-                inp_dim = self._hidden
+            prev_layer_dim = self._hidden
         self._inp_layers = nn.Sequential(*inp_layers)
         self._inp_layers.apply(tools.weight_init)
 
-        if cell == "gru":
-            self._cell = GRUCell(self._hidden, self._deter)
-            self._cell.apply(tools.weight_init)
-        elif cell == "gru_layer_norm":
-            self._cell = GRUCell(self._hidden, self._deter, norm=True)
-            self._cell.apply(tools.weight_init)
-        else:
-            raise NotImplementedError(cell)
+
+        self._cell = GRUCell(self._hidden, self._deter, norm=True)
+        self._cell.apply(tools.weight_init)
 
         img_out_layers = []
-        inp_dim = self._deter
+        prev_layer_dim = self._deter
         for i in range(self._layers_output):
-            img_out_layers.append(nn.Linear(inp_dim, self._hidden, bias=False))
+            img_out_layers.append(nn.Linear(prev_layer_dim, self._hidden, bias=False))
             img_out_layers.append(self._norm(self._hidden, eps=1e-03))
             img_out_layers.append(self._act())
-            if i == 0:
-                inp_dim = self._hidden
+            prev_layer_dim = self._hidden
         self._img_out_layers = nn.Sequential(*img_out_layers)
         self._img_out_layers.apply(tools.weight_init)
 
         obs_out_layers = []
-        if self._temp_post:
-            inp_dim = self._deter + self._embed
-        else:
-            inp_dim = self._embed
+        prev_layer_dim = self._deter + self._embed
         for i in range(self._layers_output):
-            obs_out_layers.append(nn.Linear(inp_dim, self._hidden, bias=False))
+            obs_out_layers.append(nn.Linear(prev_layer_dim, self._hidden, bias=False))
             obs_out_layers.append(self._norm(self._hidden, eps=1e-03))
             obs_out_layers.append(self._act())
-            if i == 0:
-                inp_dim = self._hidden
+            prev_layer_dim = self._hidden
         self._obs_out_layers = nn.Sequential(*obs_out_layers)
         self._obs_out_layers.apply(tools.weight_init)
 
-        if self._discrete:
-            self._ims_stat_layer = nn.Linear(self._hidden, self._stoch * self._discrete)
-            self._ims_stat_layer.apply(tools.weight_init)
-            self._obs_stat_layer = nn.Linear(self._hidden, self._stoch * self._discrete)
-            self._obs_stat_layer.apply(tools.weight_init)
-        else:
-            self._ims_stat_layer = nn.Linear(self._hidden, 2 * self._stoch)
-            self._ims_stat_layer.apply(tools.weight_init)
-            self._obs_stat_layer = nn.Linear(self._hidden, 2 * self._stoch)
-            self._obs_stat_layer.apply(tools.weight_init)
+        self._ims_stat_layer = nn.Linear(self._hidden, self._stoch * self._discrete)
+        self._ims_stat_layer.apply(tools.weight_init)
+        self._obs_stat_layer = nn.Linear(self._hidden, self._stoch * self._discrete)
+        self._obs_stat_layer.apply(tools.weight_init)
 
-        if self._initial == "learned":
-            self.W = torch.nn.Parameter(
-                torch.zeros((1, self._deter), device=torch.device(self._device)),
-                requires_grad=True,
-            )
+        self.W = torch.nn.Parameter(
+            torch.zeros((1, self._deter), device=torch.device(self._device)),
+            requires_grad=True,
+        )
 
     def initial(self, batch_size):
         deter = torch.zeros(batch_size, self._deter).to(self._device)
-        if self._discrete:
-            state = dict(
-                logit=torch.zeros([batch_size, self._stoch, self._discrete]).to(
-                    self._device
-                ),
-                stoch=torch.zeros([batch_size, self._stoch, self._discrete]).to(
-                    self._device
-                ),
-                deter=deter,
-            )
-        else:
-            state = dict(
-                mean=torch.zeros([batch_size, self._stoch]).to(self._device),
-                std=torch.zeros([batch_size, self._stoch]).to(self._device),
-                stoch=torch.zeros([batch_size, self._stoch]).to(self._device),
-                deter=deter,
-            )
-        if self._initial == "zeros":
-            return state
-        elif self._initial == "learned":
-            state["deter"] = torch.tanh(self.W).repeat(batch_size, 1)
-            state["stoch"] = self.get_stoch(state["deter"])
-            return state
-        else:
-            raise NotImplementedError(self._initial)
+        state = dict(
+            logit=torch.zeros([batch_size, self._stoch, self._discrete]).to(
+                self._device
+            ),
+            stoch=torch.zeros([batch_size, self._stoch, self._discrete]).to(
+                self._device
+            ),
+            deter=deter,
+        )
+        state["deter"] = torch.tanh(self.W).repeat(batch_size, 1)
+        state["stoch"] = self.get_stoch(state["deter"])
+        return state
 
     def observe(self, embed, action, is_first, state=None):
         swap = lambda x: x.permute([1, 0] + list(range(2, len(x.shape))))
@@ -163,7 +114,7 @@ class RSSM(nn.Module):
             (state, state),
         )
 
-        # (batch, time, stoch, discrete_num) -> (batch, time, stoch, discrete_num)
+        # (time, batch, stoch, discrete_num) -> (batch, time, stoch, discrete_num)
         post = {k: swap(v) for k, v in post.items()}
         prior = {k: swap(v) for k, v in prior.items()}
         return post, prior
@@ -208,8 +159,7 @@ class RSSM(nn.Module):
         return dist
 
     def obs_step(self, prev_state, prev_action, embed, is_first, sample=True):
-        # if shared is True, prior and post both use same networks(inp_layers, _img_out_layers, _ims_stat_layer)
-        # otherwise, post use different network(_obs_out_layers) with prior[deter] and embed as inputs
+        # post use different network(_obs_out_layers) with prior[deter] and embed as inputs
         prev_action *= (1.0 / torch.clip(torch.abs(prev_action), min=1.0)).detach()
         if torch.sum(is_first) > 0:
             is_first = is_first[:, None]
@@ -220,25 +170,19 @@ class RSSM(nn.Module):
                     is_first,
                     is_first.shape + (1,) * (len(val.shape) - len(is_first.shape)),
                 )
-                val = val * (1.0 - is_first_r) + init_state[key] * is_first_r
+                prev_state[key] = val * (1.0 - is_first_r) + init_state[key] * is_first_r
 
         prior = self.img_step(prev_state, prev_action, None, sample)
-        if self._shared:
-            post = self.img_step(prev_state, prev_action, embed, sample)
+        x = torch.cat([prior["deter"], embed], -1)
+        # (batch_size, prior_deter + embed) -> (batch_size, hidden)
+        x = self._obs_out_layers(x)
+        # (batch_size, hidden) -> (batch_size, stoch, discrete_num)
+        stats = self._suff_stats_layer("obs", x)
+        if sample:
+            stoch = self.get_dist(stats).sample()
         else:
-            if self._temp_post:
-                x = torch.cat([prior["deter"], embed], -1)
-            else:
-                x = embed
-            # (batch_size, prior_deter + embed) -> (batch_size, hidden)
-            x = self._obs_out_layers(x)
-            # (batch_size, hidden) -> (batch_size, stoch, discrete_num)
-            stats = self._suff_stats_layer("obs", x)
-            if sample:
-                stoch = self.get_dist(stats).sample()
-            else:
-                stoch = self.get_dist(stats).mode()
-            post = {"stoch": stoch, "deter": prior["deter"], **stats}
+            stoch = self.get_dist(stats).mode()
+        post = {"stoch": stoch, "deter": prior["deter"], **stats}
         return post, prior
 
     # this is used for making future image
@@ -246,20 +190,12 @@ class RSSM(nn.Module):
         # (batch, stoch, discrete_num)
         prev_action *= (1.0 / torch.clip(torch.abs(prev_action), min=1.0)).detach()
         prev_stoch = prev_state["stoch"]
-        if self._discrete:
-            # Flatten onehot variables
-            shape = list(prev_stoch.shape[:-2]) + [self._stoch * self._discrete]
-            # (batch, stoch, discrete_num) -> (batch, stoch * discrete_num)
-            prev_stoch = prev_stoch.reshape(shape)
-        if self._shared:
-            if embed is None:
-                shape = list(prev_action.shape[:-1]) + [self._embed]
-                embed = torch.zeros(shape)
-            # (batch, stoch * discrete_num) -> (batch, stoch * discrete_num + action, embed)
-            x = torch.cat([prev_stoch, prev_action, embed], -1)
-        else:
-            # Concat flattened onehot variables and action
-            x = torch.cat([prev_stoch, prev_action], -1)
+        # Flatten onehot variables
+        shape = list(prev_stoch.shape[:-2]) + [self._stoch * self._discrete]
+        # (batch, stoch, discrete_num) -> (batch, stoch * discrete_num)
+        prev_stoch = prev_stoch.reshape(shape)
+        # Concat flattened onehot variables and action
+        x = torch.cat([prev_stoch, prev_action], -1)
         # (batch, stoch * discrete_num + action, embed) -> (batch, hidden)
         x = self._inp_layers(x)
         for _ in range(self._rec_depth):  # rec depth is not correctly implemented
@@ -285,35 +221,14 @@ class RSSM(nn.Module):
         return dist.mode()
 
     def _suff_stats_layer(self, name, x):
-        if self._discrete:
-            if name == "ims":
-                x = self._ims_stat_layer(x)
-            elif name == "obs":
-                x = self._obs_stat_layer(x)
-            else:
-                raise NotImplementedError
-            logit = x.reshape(list(x.shape[:-1]) + [self._stoch, self._discrete])
-            return {"logit": logit}
+        if name == "ims":
+            x = self._ims_stat_layer(x)
+        elif name == "obs":
+            x = self._obs_stat_layer(x)
         else:
-            if name == "ims":
-                x = self._ims_stat_layer(x)
-            elif name == "obs":
-                x = self._obs_stat_layer(x)
-            else:
-                raise NotImplementedError
-            mean, std = torch.split(x, [self._stoch] * 2, -1)
-            mean = {
-                "none": lambda: mean,
-                "tanh5": lambda: 5.0 * torch.tanh(mean / 5.0),
-            }[self._mean_act]()
-            std = {
-                "softplus": lambda: torch.softplus(std),
-                "abs": lambda: torch.abs(std + 1),
-                "sigmoid": lambda: torch.sigmoid(std),
-                "sigmoid2": lambda: 2 * torch.sigmoid(std / 2),
-            }[self._std_act]()
-            std = std + self._min_std
-            return {"mean": mean, "std": std}
+            raise NotImplementedError
+        logit = x.reshape(list(x.shape[:-1]) + [self._stoch, self._discrete])
+        return {"logit": logit}
 
     def kl_loss(self, post, prior, free, dyn_scale, rep_scale):
         kld = torchd.kl.kl_divergence
@@ -537,191 +452,6 @@ class DenseHead(nn.Module):
         if self._dist == "twohot_symlog":
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
-
-class ValueHead(nn.Module):
-    def __init__(
-        self,
-        inp_dim,
-        target_units,
-        shape,
-        layers,
-        units,
-        act=nn.ELU,
-        norm=nn.LayerNorm,
-        dist="normal",
-        std=1.0,
-        outscale=1.0,
-        device="cuda",
-    ):
-        super(ValueHead, self).__init__()
-        self._shape = (shape,) if isinstance(shape, int) else shape
-        if len(self._shape) == 0:
-            self._shape = (1,)
-        self._target_units = target_units
-        self._layers = layers
-        self._units = units
-        self._act = act
-        self._norm = norm
-        self._dist = dist
-        self._std = std
-        self._device = device
-        layers = []
-        inp_dim += self._target_units
-        for index in range(self._layers):
-            layers.append(nn.Linear(inp_dim, self._units, bias=False))
-            layers.append(norm(self._units, eps=1e-03))
-            layers.append(act())
-            if index == 0:
-                inp_dim = self._units
-        self.layers = nn.Sequential(*layers)
-        self.layers.apply(tools.weight_init)
-
-        self.mean_layer = nn.Linear(inp_dim, np.prod(self._shape))
-        self.mean_layer.apply(tools.uniform_weight_init(outscale))
-
-        if self._std == "learned":
-            self.std_layer = nn.Linear(self._units, np.prod(self._shape))
-            self.std_layer.apply(tools.uniform_weight_init(outscale))
-
-    def __call__(self, features, embeddings, dtype=None):
-        x = features
-        x = torch.cat([x, embeddings], -1)
-        out = self.layers(x)
-        mean = self.mean_layer(out)
-        if self._std == "learned":
-            std = self.std_layer(out)
-        else:
-            std = self._std
-        if self._dist == "normal":
-            return tools.ContDist(
-                torchd.independent.Independent(
-                    torchd.normal.Normal(mean, std), len(self._shape)
-                )
-            )
-        if self._dist == "huber":
-            return tools.ContDist(
-                torchd.independent.Independent(
-                    tools.UnnormalizedHuber(mean, std, 1.0), len(self._shape)
-                )
-            )
-        if self._dist == "binary":
-            return tools.Bernoulli(
-                torchd.independent.Independent(
-                    torchd.bernoulli.Bernoulli(logits=1/(torch.pow(torch.e, -mean) + 1)), len(self._shape)
-                )
-            )
-        if self._dist == "twohot_symlog":
-            return tools.TwoHotDistSymlog(logits=mean, device=self._device)
-        raise NotImplementedError(self._dist)
-
-
-class ActionHead(nn.Module):
-    def __init__(
-        self,
-        inp_dim,
-        target_units,
-        size,
-        layers,
-        units,
-        act=nn.ELU,
-        norm=nn.LayerNorm,
-        dist="trunc_normal",
-        init_std=0.0,
-        min_std=0.1,
-        max_std=1.0,
-        temp=0.1,
-        outscale=1.0,
-        unimix_ratio=0.01,
-    ):
-        super(ActionHead, self).__init__()
-        self._size = size
-        self._target_units = target_units
-        self._layers = layers
-        self._units = units
-        self._dist = dist
-        self._act = act
-        self._norm = norm
-        self._min_std = min_std
-        self._max_std = max_std
-        self._init_std = init_std
-        self._unimix_ratio = unimix_ratio
-        self._temp = temp() if callable(temp) else temp
-
-        inp_dim += self._target_units
-        pre_layers = []
-        for index in range(self._layers):
-            pre_layers.append(nn.Linear(inp_dim, self._units, bias=False))
-            pre_layers.append(norm(self._units, eps=1e-03))
-            pre_layers.append(act())
-            if index == 0:
-                inp_dim = self._units
-        self._pre_layers = nn.Sequential(*pre_layers)
-        self._pre_layers.apply(tools.weight_init)
-
-        if self._dist in ["tanh_normal", "tanh_normal_5", "normal", "trunc_normal"]:
-            self._dist_layer = nn.Linear(self._units, 2 * self._size)
-            self._dist_layer.apply(tools.uniform_weight_init(outscale))
-
-        elif self._dist in ["normal_1", "onehot", "onehot_gumbel"]:
-            self._dist_layer = nn.Linear(self._units, self._size)
-            self._dist_layer.apply(tools.uniform_weight_init(outscale))
-
-    def __call__(self, features, embeddings, dtype=None):
-        x = features
-        x = torch.cat([x, embeddings], -1)
-        x = self._pre_layers(x)
-        if self._dist == "tanh_normal":
-            x = self._dist_layer(x)
-            mean, std = torch.split(x, 2, -1)
-            mean = torch.tanh(mean)
-            std = F.softplus(std + self._init_std) + self._min_std
-            dist = torchd.normal.Normal(mean, std)
-            dist = torchd.transformed_distribution.TransformedDistribution(
-                dist, tools.TanhBijector()
-            )
-            dist = torchd.independent.Independent(dist, 1)
-            dist = tools.SampleDist(dist)
-        elif self._dist == "tanh_normal_5":
-            x = self._dist_layer(x)
-            mean, std = torch.split(x, 2, -1)
-            mean = 5 * torch.tanh(mean / 5)
-            std = F.softplus(std + 5) + 5
-            dist = torchd.normal.Normal(mean, std)
-            dist = torchd.transformed_distribution.TransformedDistribution(
-                dist, tools.TanhBijector()
-            )
-            dist = torchd.independent.Independent(dist, 1)
-            dist = tools.SampleDist(dist)
-        elif self._dist == "normal":
-            x = self._dist_layer(x)
-            mean, std = torch.split(x, [self._size] * 2, -1)
-            std = (self._max_std - self._min_std) * torch.sigmoid(
-                std + 2.0
-            ) + self._min_std
-            dist = torchd.normal.Normal(torch.tanh(mean), std)
-            dist = tools.ContDist(torchd.independent.Independent(dist, 1))
-        elif self._dist == "normal_1":
-            x = self._dist_layer(x)
-            dist = torchd.normal.Normal(mean, 1)
-            dist = tools.ContDist(torchd.independent.Independent(dist, 1))
-        elif self._dist == "trunc_normal":
-            x = self._dist_layer(x)
-            mean, std = torch.split(x, [self._size] * 2, -1)
-            mean = torch.tanh(mean)
-            std = 2 * torch.sigmoid(std / 2) + self._min_std
-            dist = tools.SafeTruncatedNormal(mean, std, -1, 1)
-            dist = tools.ContDist(torchd.independent.Independent(dist, 1))
-        elif self._dist == "onehot":
-            x = self._dist_layer(x)
-            dist = tools.OneHotDist(x, unimix_ratio=self._unimix_ratio)
-        elif self._dist == "onehot_gumble":
-            x = self._dist_layer(x)
-            temp = self._temp
-            dist = tools.ContDist(torchd.gumbel.Gumbel(x, 1 / temp))
-        else:
-            raise NotImplementedError(self._dist)
-        return dist
-
 
 class GRUCell(nn.Module):
     def __init__(self, inp_size, size, norm=False, act=torch.tanh, update_bias=-1):

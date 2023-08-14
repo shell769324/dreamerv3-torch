@@ -1,11 +1,10 @@
 import argparse
-import collections
+import envs.crafter as crafter
 import wandb
 import functools
 import os
 import pathlib
 import sys
-import warnings
 from envs.crafter import targets
 
 os.environ["MUJOCO_GL"] = "egl"
@@ -15,7 +14,6 @@ import ruamel.yaml as yaml
 
 sys.path.append(str(pathlib.Path(__file__).parent))
 
-import exploration as expl
 import models
 import tools
 import envs.wrappers as wrappers
@@ -61,12 +59,6 @@ class Dreamer(nn.Module):
         if config.compile:
             self._wm = torch.compile(self._wm)
             self._task_behavior = torch.compile(self._task_behavior)
-        reward = lambda f, s, a: self._wm.heads["reward"](f).mean
-        self._expl_behavior = dict(
-            greedy=lambda: self._task_behavior,
-            random=lambda: expl.Random(config),
-            plan2explore=lambda: expl.Plan2Explore(config, self._wm, reward),
-        )[config.expl_behavior]().to(self._config.device)
 
     def __call__(self, obs, reset, state=None, reward=None, training=True):
         step = self._step
@@ -132,7 +124,6 @@ class Dreamer(nn.Module):
                     self._metrics[step_name].append(obs["target_steps"][i])
                     self._metrics[success_name] += 1
 
-
         policy_output, state = self._policy(obs, state, training)
 
         if training:
@@ -160,22 +151,15 @@ class Dreamer(nn.Module):
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
+        _, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
+        actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
-            actor = self._task_behavior.actor(stoch, deter, target_array)
             action = actor.mode()
-        elif self._should_expl(self._step):
-            actor = self._expl_behavior.actor(stoch, deter, target_array)
-            action = actor.sample()
         else:
-            actor = self._task_behavior.actor(stoch, deter, target_array)
             action = actor.sample()
         logprob = actor.log_prob(action)
         latent = {k: v.detach() for k, v in latent.items()}
         action = action.detach()
-        if self._config.actor_dist == "onehot_gumble":
-            action = torch.one_hot(
-                torch.argmax(action, dim=-1), self._config.num_actions
-            )
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
@@ -185,12 +169,8 @@ class Dreamer(nn.Module):
         amount = self._config.expl_amount if training else self._config.eval_noise
         if amount == 0:
             return action
-        if "onehot" in self._config.actor_dist:
-            probs = amount / self._config.num_actions + (1 - amount) * action
-            return tools.OneHotDist(probs=probs).sample()
-        else:
-            return torch.clip(torchd.normal.Normal(action, amount).sample(), -1, 1)
-        raise NotImplementedError(self._config.action_noise)
+        probs = amount / self._config.num_actions + (1 - amount) * action
+        return tools.OneHotDist(probs=probs).sample()
 
     def _train(self, data):
         metrics = {}
@@ -198,11 +178,7 @@ class Dreamer(nn.Module):
         metrics.update(mets)
         start = post
         # start['deter'] (16, 64, 512)
-        reward = lambda sto, det, s, a, t: self._wm.heads["reward"](sto, det, t).mode()
-        metrics.update(self._task_behavior._train(start, reward, data=data)[-1])
-        if self._config.expl_behavior != "greedy":
-            mets = self._expl_behavior.train(start, context, data)[-1]
-            metrics.update({"expl_" + key: value for key, value in mets.items()})
+        metrics.update(self._task_behavior._train(start, data=data)[-1])
         for name, value in metrics.items():
             if not name in self._metrics.keys():
                 self._metrics[name] = [value]
@@ -224,41 +200,10 @@ def make_env(config, logger, mode, train_eps, eval_eps):
     # crafter_reward
     # [crafter, reward]
     suite, task = config.task.split("_", 1)
-    if suite == "dmc":
-        import envs.dmc as dmc
-
-        env = dmc.DeepMindControl(task, config.action_repeat, config.size)
-        env = wrappers.NormalizeActions(env)
-    elif suite == "atari":
-        import envs.atari as atari
-
-        env = atari.Atari(
-            task,
-            config.action_repeat,
-            config.size,
-            gray=config.grayscale,
-            noops=config.noops,
-            lives=config.lives,
-            sticky=config.stickey,
-            actions=config.actions,
-            resize=config.resize,
-        )
-        env = wrappers.OneHotAction(env)
-    elif suite == "dmlab":
-        import envs.dmlab as dmlab
-
-        env = dmlab.DeepMindLabyrinth(
-            task, mode if "train" in mode else "test", config.action_repeat
-        )
-        env = wrappers.OneHotAction(env)
-    elif suite == "crafter":
-        import envs.crafter as crafter
-        env = crafter.Crafter(
-            task, outdir="./stats"
-        )
-        env = wrappers.OneHotAction(env)
-    else:
-        raise NotImplementedError(suite)
+    env = crafter.Crafter(
+        task, outdir="./stats"
+    )
+    env = wrappers.OneHotAction(env)
     env = wrappers.TimeLimit(env, config.time_limit)
     env = wrappers.SelectAction(env, key="action")
     if (mode == "train") or (mode == "eval"):
