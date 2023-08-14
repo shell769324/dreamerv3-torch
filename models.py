@@ -160,7 +160,8 @@ class WorldModel(nn.Module):
                         feat = self.dynamics.get_feat(post)
                         feat = feat if grad_head else feat.detach()
                         pred = head(feat)
-                    print(name, pred.mean().shape, data[name].shape)
+                    if name == "where":
+                        print(name, pred.mean.shape, data[name].shape)
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
