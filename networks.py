@@ -446,7 +446,7 @@ class DenseHead(nn.Module):
         if self._dist == "binary":
             return tools.Bernoulli(
                 torchd.independent.Independent(
-                    torchd.bernoulli.Bernoulli(logits=mean), self._shape if len(self._shape) >= 2 else len(self._shape)
+                    torchd.bernoulli.Bernoulli(logits=mean), len(self._shape)
                 )
             )
         if self._dist == "twohot_symlog":

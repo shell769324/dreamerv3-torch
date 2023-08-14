@@ -78,7 +78,7 @@ class WorldModel(nn.Module):
         )
         self.heads["where"] = networks.DenseHead(
             feat_size,  # pytorch version
-            (len(targets), 4),
+            (len(targets) * 4,),
             config.where_layers,
             config.units,
             config.act,
@@ -162,7 +162,7 @@ class WorldModel(nn.Module):
                         pred = head(feat)
                     if name == "where":
                         print(name, pred.mean.shape, data[name].shape)
-                    like = pred.log_prob(data[name])
+                    like = pred.log_prob(data[name].reshape())
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
