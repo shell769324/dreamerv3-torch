@@ -72,7 +72,7 @@ class Crafter():
     return min_dist
 
   def compute_where(self, player_pos, info):
-      where = np.zeros(len(targets), 4, dtype=np.uint8)
+      where = np.zeros((len(targets), 4), dtype=np.uint8)
       for index, t in enumerate(targets):
           for i in range(0, player_pos[0] + 1):
               for j in range(0, player_pos[1] + 1):
