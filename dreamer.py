@@ -163,7 +163,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        print(tools.TwoHotDistSymlog(logits=value_params).mode())
+        print(tools.TwoHotDistSymlog(logits=value_params).mode().item())
         exit(1)
         return policy_output, state, tools.TwoHotDistSymlog(logits=value_params, device=self._device).mode()
 
