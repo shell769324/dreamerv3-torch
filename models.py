@@ -357,7 +357,7 @@ class ImagBehavior(nn.Module):
             curr = acc[-1] * l + value[i + 1] * (1 - l)
             curr = reward[i] + discount[i] * curr
             acc = torch.cat([acc, curr.unsqueeze(0)], dim=0)
-        return acc.flip(0)
+        return acc[1:].flip(0)
 
 
     def _compute_target(
