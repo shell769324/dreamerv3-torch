@@ -36,8 +36,8 @@ class FeedForward(nn.Module):
 
     def forward(self, x):
         x, q2 = x
-        print("x linear", x.abs().mean())
-        print("q2", q2.abs().mean())
+        print("x linear", x.abs().mean().item())
+        print("q2", q2.abs().mean().item())
         return self.net(x) + x, self.net2(q2) + q2
 
 
@@ -62,8 +62,8 @@ class Attention(nn.Module):
         x, qoir = x
         q2 = rearrange(qoir, 'b n (h d) -> b h n d', h=self.heads)
         qkv = self.to_qkv(x).chunk(3, dim=-1)
-        print("x", x.abs().mean())
-        print("qoir", qoir.abs().mean())
+        print("x", x.abs().mean().item())
+        print("qoir", qoir.abs().mean().item())
         q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h=self.heads), qkv)
         dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
         # b h 1 d

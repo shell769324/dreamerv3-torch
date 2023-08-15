@@ -134,6 +134,7 @@ class WorldModel(nn.Module):
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
+        print("world model train")
         data = self.preprocess(data)
         conditional_metrics = {}
         with tools.RequiresGrad(self):
@@ -272,6 +273,7 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
 
+        print("image behavior train")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
