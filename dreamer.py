@@ -354,6 +354,13 @@ def main(config, defaults):
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
         agent._should_pretrain._once = False
 
+    print("stoch layer 1", agent._wm.heads["reward"].stoch_layer[0].weight.norm(dim=1, p=2))
+    print("stoch layer 2", agent._wm.heads["reward"].stoch_layer[2].weight.norm(dim=1, p=2))
+    print("deter layer 1", agent._wm.heads["reward"].deter_layer[0].weight.norm(dim=1, p=2))
+    print("deter layer 2", agent._wm.heads["reward"].deter_layer[2].weight.norm(dim=1, p=2))
+    print("net layer 1", agent._wm.heads["reward"].layers[1].fn.net[0].weight.norm(dim=1, p=2))
+    print("net2 layer 1", agent._wm.heads["reward"].layers[1].fn.net2[0].weight.norm(dim=1, p=2))
+    exit(1)
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
         while agent._step < config.steps:
