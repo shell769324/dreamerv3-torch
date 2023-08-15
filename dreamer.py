@@ -124,12 +124,12 @@ class Dreamer(nn.Module):
                     self._metrics[step_name].append(obs["target_steps"][i])
                     self._metrics[success_name] += 1
 
-        policy_output, state = self._policy(obs, state, training)
+        policy_output, state, value = self._policy(obs, state, training)
 
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
-        return policy_output, state
+        return policy_output, state, value
 
     def _policy(self, obs, state, training):
         if state is None:
