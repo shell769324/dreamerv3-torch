@@ -1,3 +1,4 @@
+import collections
 import argparse
 import envs.crafter as crafter
 import wandb
@@ -309,7 +310,8 @@ def main(config, defaults):
         directory = config.offline_traindir.format(**vars(config))
     else:
         directory = config.traindir
-    train_eps = tools.load_episodes(directory, limit=config.dataset_size)
+    # train_eps = tools.load_episodes(directory, limit=config.dataset_size)
+    train_eps = collections.OrderedDict()
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))
     else:
