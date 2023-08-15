@@ -347,19 +347,19 @@ def main(config, defaults):
 
     print("Simulate agent.")
     train_dataset = make_dataset(train_eps, config)
-    eval_dataset = make_dataset(eval_eps, config)
+    # eval_dataset = make_dataset(eval_eps, config)
     agent = Dreamer(config, logger, train_dataset).to(config.device)
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
         agent._should_pretrain._once = False
 
-    print("stoch layer 1", agent._wm.heads["reward"].stoch_layer[0].weight.norm(dim=1, p=2))
-    print("stoch layer 2", agent._wm.heads["reward"].stoch_layer[2].weight.norm(dim=1, p=2))
-    print("deter layer 1", agent._wm.heads["reward"].deter_layer[0].weight.norm(dim=1, p=2))
-    print("deter layer 2", agent._wm.heads["reward"].deter_layer[2].weight.norm(dim=1, p=2))
-    print("net layer 1", agent._wm.heads["reward"].layers[1].fn.net[0].weight.norm(dim=1, p=2))
-    print("net2 layer 1", agent._wm.heads["reward"].layers[1].fn.net2[0].weight.norm(dim=1, p=2))
+    print("stoch layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].stoch_layer[0].weight))
+    print("stoch layer 2", torch.linalg.matrix_norm(agent._wm.heads["reward"].stoch_layer[2].weight))
+    print("deter layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].deter_layer[0].weight))
+    print("deter layer 2", torch.linalg.matrix_norm(agent._wm.heads["reward"].deter_layer[2].weight))
+    print("net layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].layers[1].fn.net[0].weight))
+    print("net2 layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].layers[1].fn.net2[0].weight))
     exit(1)
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
