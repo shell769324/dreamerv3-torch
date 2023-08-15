@@ -354,7 +354,7 @@ def main(config, defaults):
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
         agent._should_pretrain._once = False
 
-    print("stoch layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].stoch_layer[0].weight))
+    print("stoch layer 1", agent._wm.heads["reward"].stoch_layer[0].weight.abs.mean)
     print("stoch layer 2", torch.linalg.matrix_norm(agent._wm.heads["reward"].stoch_layer[2].weight))
     print("deter layer 1", torch.linalg.matrix_norm(agent._wm.heads["reward"].deter_layer[0].weight))
     print("deter layer 2", torch.linalg.matrix_norm(agent._wm.heads["reward"].deter_layer[2].weight))
