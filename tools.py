@@ -160,7 +160,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         else:
             action = np.array(action)
         # Step envs.
-        results = env.step(action)
+        results = env.step(action[0])
         obs, reward, done, info = zip(*[p[:] for p in results])
         obs = list(obs)
         reward = list(reward)
