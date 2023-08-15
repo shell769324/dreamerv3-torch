@@ -326,7 +326,7 @@ class ImagBehavior(nn.Module):
 
     def _imagine(self, start, horizon, target_array):
         dynamics = self._world_model.dynamics
-        # start['deter'] (16, 64, 512)
+        # start['deter'] (18, 64, 3072) -> (1152, 3072)
         flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
         start = {k: flatten(v) for k, v in start.items()}
 
@@ -340,6 +340,7 @@ class ImagBehavior(nn.Module):
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
             return succ, stoch, deter, action, value, policy_param
 
+        # deters (15, 1152, 3072)
         succ, stoches, deters, actions, values, policy_params = tools.static_scan(
             step, [torch.arange(horizon)], (start, None, None, None, None, None)
         )
@@ -347,22 +348,30 @@ class ImagBehavior(nn.Module):
 
         return stoches, deters, states, actions, values, policy_params
 
+    def lambda_return(self, reward, value, discount, l):
+        # (15, 1152, 1)
+        acc = value[-1]
+        acc = acc.unsqueeze(0)
+        # outputs is originally (1, 1152, 1)
+        for i in range(len(value) - 2, -1, -1):
+            curr = acc[-1] * l + value[i + 1] * (1 - l)
+            curr = reward[i] + discount[i] * curr
+            acc = torch.cat([acc, curr.unsqueeze(0)], dim=0)
+        return torch.flip(acc, 0)
+
+
     def _compute_target(
         self, imag_state, reward, value
     ):
+        # reward r1 - r15 (r1 is the reward after taking the first action in the start state)
+        # discount g1 - g15 (g1 is the futured value after r1)
+        # value v1 - v15 (v1 is the value of the start state)
         inp = self._world_model.dynamics.get_feat(imag_state)
-        discount = self._config.find_discount * self._world_model.heads["cont"](inp).mean
+        discount = self._config.find_discount * self._world_model.heads["cont"](inp).mean.detach()
         # value(15, 960, ch)
         # action(15, 960, ch)
         # discount(15, 960, ch)
-        target = tools.lambda_return(
-            reward[1:],
-            value[:-1],
-            discount[1:],
-            bootstrap=value[-1],
-            lambda_=self._config.discount_lambda,
-            axis=0,
-        )
+        target = self.lambda_return(reward, value, discount, self._config.discount_lambda)
         weights = torch.cumprod(
             torch.cat([torch.ones_like(discount[:1]), discount[:-1]], 0), 0
         ).detach()
@@ -380,7 +389,6 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
         # Q-val for actor is not transformed using symlog
-        target = torch.stack(target, dim=1)
         actor_target = (
             policy.log_prob(imag_action)[:-1][:, :, None]
             * (target - value).detach()

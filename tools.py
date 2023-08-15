@@ -129,15 +129,15 @@ class Logger:
         self._writer.add_video(name, value, step, 16)
 
 
-def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metrics=None):
+def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True, metrics=None):
     # Initialize or unpack simulation state.
     if state is None:
         step, episode = 0, 0
-        done = np.ones(len(envs), np.bool_)
-        length = np.zeros(len(envs), np.int32)
-        obs = [None] * len(envs)
+        done = np.ones(1, np.bool_)
+        length = np.zeros(1, np.int32)
+        obs = [None]
         agent_state = None
-        reward = [0] * len(envs)
+        reward = [0]
     else:
         step, episode, done, length, obs, agent_state, reward = state
     while (steps and step < steps) or (episodes and episode < episodes):
@@ -145,23 +145,22 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metric
         if done.any():
             # the indices of the environment that is done (done = 1)
             indices = [index for (index, d) in enumerate(done) if d]
-            results = [envs[i].reset() for i in indices]
+            results = [env.reset() for i in indices]
             for index, result in zip(indices, results):
                 obs[index] = result
-            reward = [reward[i] * (1 - done[i]) for i in range(len(envs))]
+            reward = [reward[0] * (1 - done[0])]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        action, agent_state = agent(obs, done, agent_state, reward)
+        action, agent_state, value = agent(obs, done, agent_state, reward, training=training)
+        crafter.value = value
         if isinstance(action, dict):
             action = [
-                {k: np.array(action[k][i].detach().cpu()) for k in action}
-                for i in range(len(envs))
+                {k: np.array(action[k][0].detach().cpu()) for k in action}
             ]
         else:
             action = np.array(action)
-        assert len(action) == len(envs)
         # Step envs.
-        results = [e.step(a) for e, a in zip(envs, action)]
+        results = env.step(action)
         obs, reward, done, info = zip(*[p[:] for p in results])
         obs = list(obs)
         reward = list(reward)
@@ -180,7 +179,7 @@ def simulate(agent, envs, steps=0, episodes=0, state=None, training=True, metric
                 else:
                     metrics[failure_name] += 1
 
-    return (step - steps, episode - episodes, done, length, obs, agent_state, reward)
+    return step - steps, episode - episodes, done, length, obs, agent_state, reward
 
 
 def save_episodes(directory, episodes):
@@ -545,12 +544,6 @@ def lambda_return(reward, value, pcont, bootstrap, lambda_, axis):
     assert len(reward.shape) == len(value.shape), (reward.shape, value.shape)
     if isinstance(pcont, (int, float)):
         pcont = pcont * torch.ones_like(reward)
-    dims = list(range(len(reward.shape)))
-    dims = [axis] + dims[1:axis] + [0] + dims[axis + 1 :]
-    if axis != 0:
-        reward = reward.permute(dims)
-        value = value.permute(dims)
-        pcont = pcont.permute(dims)
     if bootstrap is None:
         bootstrap = torch.zeros_like(value[-1])
     next_values = torch.cat([value[1:], bootstrap[None]], 0)
@@ -562,8 +555,6 @@ def lambda_return(reward, value, pcont, bootstrap, lambda_, axis):
     returns = static_scan_for_lambda_return(
         lambda agg, cur0, cur1: cur0 + cur1 * lambda_ * agg, (inputs, pcont), bootstrap
     )
-    if axis != 0:
-        returns = returns.permute(dims)
     return returns
 
 

@@ -151,7 +151,7 @@ class Dreamer(nn.Module):
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
-        _, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
+        value_params, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -163,7 +163,9 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        return policy_output, state
+        print(tools.TwoHotDistSymlog(logits=value_params, device=self._device).mode())
+        exit(1)
+        return policy_output, state, tools.TwoHotDistSymlog(logits=value_params, device=self._device).mode()
 
     def _exploration(self, action, training):
         amount = self._config.expl_amount if training else self._config.eval_noise
@@ -200,10 +202,10 @@ def make_env(config, logger, mode, train_eps, eval_eps):
     # crafter_reward
     # [crafter, reward]
     suite, task = config.task.split("_", 1)
-    env = crafter.Crafter(
+    crafter_env = crafter.Crafter(
         task, outdir="./stats"
     )
-    env = wrappers.OneHotAction(env)
+    env = wrappers.OneHotAction(crafter_env)
     env = wrappers.TimeLimit(env, config.time_limit)
     env = wrappers.SelectAction(env, key="action")
     if (mode == "train") or (mode == "eval"):
@@ -219,7 +221,7 @@ def make_env(config, logger, mode, train_eps, eval_eps):
         ]
         env = wrappers.CollectDataset(env, mode, train_eps, callbacks=callbacks)
     env = wrappers.RewardObs(env)
-    return env
+    return env, crafter_env
 
 
 class ProcessEpisodeWrap:
@@ -316,9 +318,9 @@ def main(config, defaults):
         directory = config.evaldir
     eval_eps = tools.load_episodes(directory, limit=1)
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps)
-    train_envs = [make("train") for _ in range(config.envs)]
-    eval_envs = [make("eval") for _ in range(config.envs)]
-    acts = train_envs[0].action_space
+    train_env, train_crafter = make("train")
+    eval_env, eval_crafter = make("eval")
+    acts = train_env.action_space
     config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
 
     if not config.offline_traindir:
@@ -337,12 +339,12 @@ def main(config, defaults):
                 1,
             )
 
-        def random_agent(o, d, s, r):
+        def random_agent(o, d, s, r, training=True):
             action = random_actor.sample()
             logprob = random_actor.log_prob(action)
-            return {"action": action, "logprob": logprob}, None
+            return {"action": action, "logprob": logprob}, None, None
 
-        tools.simulate(random_agent, train_envs, prefill)
+        tools.simulate(random_agent, train_env, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
@@ -357,18 +359,17 @@ def main(config, defaults):
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
         while agent._step < config.steps:
+            print("Start training.")
+            state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
+            torch.save(agent.state_dict(), logdir / "latest_model.pt")
             print("Start evaluation.")
-            eval_policy = functools.partial(agent, training=False)
-            tools.simulate(eval_policy, eval_envs, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
+            tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
             })
-            print("Start training.")
-            state = tools.simulate(agent, train_envs, config.eval_every, state=state, metrics=agent._metrics)
-            torch.save(agent.state_dict(), logdir / "latest_model.pt")
-    for env in train_envs + eval_envs:
+    for env in [train_env, eval_env]:
         try:
             env.close()
         except Exception:
