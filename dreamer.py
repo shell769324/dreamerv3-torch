@@ -130,6 +130,7 @@ class Dreamer(nn.Module):
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
+        exit(1)
         return policy_output, state, value
 
     def _policy(self, obs, state, training):
@@ -310,13 +311,14 @@ def main(config, defaults):
         directory = config.offline_traindir.format(**vars(config))
     else:
         directory = config.traindir
-    # train_eps = tools.load_episodes(directory, limit=config.dataset_size)
-    train_eps = collections.OrderedDict()
+    train_eps = tools.load_episodes(directory, limit=config.dataset_size)
+    # train_eps = collections.OrderedDict()
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))
     else:
         directory = config.evaldir
-    eval_eps = tools.load_episodes(directory, limit=1)
+    #eval_eps = tools.load_episodes(directory, limit=1)
+    eval_eps = collections.OrderedDict()
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
@@ -349,7 +351,7 @@ def main(config, defaults):
 
     print("Simulate agent.")
     train_dataset = make_dataset(train_eps, config)
-    # eval_dataset = make_dataset(eval_eps, config)
+    eval_dataset = make_dataset(eval_eps, config)
     agent = Dreamer(config, logger, train_dataset).to(config.device)
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
@@ -377,7 +379,6 @@ def main(config, defaults):
     print("attention 1 qkv", agent._task_behavior.a2c.layers[2].fn.to_qkv.weight.abs().mean())
     print("net layer 2, 1", agent._task_behavior.a2c.layers[3].fn.net[0].weight.abs().mean())
     print("net2 layer 2, 2", agent._task_behavior.a2c.layers[3].fn.net2[0].weight.abs().mean())
-    exit(1)
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
         while agent._step < config.steps:
