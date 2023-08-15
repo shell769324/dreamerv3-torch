@@ -273,7 +273,7 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
 
-        print("image behavior train")
+        print("\n\n\n\nimage behavior train")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
