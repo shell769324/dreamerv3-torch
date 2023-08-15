@@ -303,7 +303,6 @@ class ImagBehavior(nn.Module):
                     value_mode
                 )
                 metrics.update(mets)
-                target = torch.stack(target, dim=1)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
