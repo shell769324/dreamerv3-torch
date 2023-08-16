@@ -336,7 +336,7 @@ class OneHotDist(torchd.one_hot_categorical.OneHotCategorical):
 
 
 class TwoHotDistSymlog:
-    def __init__(self, logits=None, low=-10.0, high=10.0, device="cuda"):
+    def __init__(self, logits=None, low=-20.0, high=20.0, device="cuda"):
         self.logits = logits
         self.probs = torch.softmax(logits, -1)
         self.buckets = torch.linspace(low, high, steps=255).to(device)
