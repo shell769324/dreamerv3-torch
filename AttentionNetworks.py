@@ -39,7 +39,7 @@ class FeedForward(nn.Module):
         print("x linear", x.abs().mean().item())
         print("q2", q2.abs().mean().item())
         x, q = self.net(x) + x, self.net2(q2) + q2
-        print("attention", x.abs().mean(), q.abs.mean())
+        print("linear", x.abs().mean(), q.abs.mean())
         return x, q
 
 
