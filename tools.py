@@ -605,6 +605,7 @@ class Optimizer:
                 print("mean_layer", torch.nn.utils.clip_grad_norm_(v.mean_layer.parameters(), self._clip).item())
                 print("mean_layer shape", v.mean_layer.weight.shape)
                 print("mean_layer avg", v.mean_layer.weight.detach().abs().mean().item())
+                print("mean_layer shape", v.mean_layer.weight)
                 for param in v.mean_layer.parameters():
                     print("mean param shape", param.grad.shape)
             else:
