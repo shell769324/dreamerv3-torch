@@ -599,10 +599,10 @@ class Optimizer:
         norms = {}
         for k, v in self._sub.items():
             if k == "reward":
-                print("stoch", torch.nn.utils.clip_grad_norm_(v.stoch_layer.parameters(), self._clip).item())
-                print("deter", torch.nn.utils.clip_grad_norm_(v.deter_layer.parameters(), self._clip).item())
-                print("layers", torch.nn.utils.clip_grad_norm_(v.layers.parameters(), self._clip).item())
-                print("mean_layer", torch.nn.utils.clip_grad_norm_(v.mean_layer.parameters(), self._clip).item())
+                print("stoch", torch.nn.utils.clip_grad_norm_(v.stoch_layer.parameters(), self._clip, error_if_nonfinite=True).item())
+                print("deter", torch.nn.utils.clip_grad_norm_(v.deter_layer.parameters(), self._clip, error_if_nonfinite=True).item())
+                print("layers", torch.nn.utils.clip_grad_norm_(v.layers.parameters(), self._clip, error_if_nonfinite=True).item())
+                print("mean_layer", torch.nn.utils.clip_grad_norm_(v.mean_layer.parameters(), self._clip, error_if_nonfinite=True).item())
                 print("mean_layer shape", v.mean_layer.weight.shape)
                 print("mean_layer avg", v.mean_layer.weight.detach().abs().mean().item())
                 print("mean_layer weight", v.mean_layer.weight)
