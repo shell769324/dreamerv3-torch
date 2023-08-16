@@ -605,15 +605,8 @@ class Optimizer:
                 print("mean_layer", torch.nn.utils.clip_grad_norm_(v.mean_layer.parameters(), self._clip).item())
                 print("mean_layer shape", v.mean_layer.weight.shape)
                 print("mean_layer avg", v.mean_layer.weight.detach().abs().mean().item())
-                grads = []
-                flag = True
                 for param in v.mean_layer.parameters():
-                    if flag:
-                        print("mean param shape", param.grad.shape)
-                        flag = False
-                    grads.append(param.grad.view(-1))
-                grads = torch.cat(grads)
-                print(grads)
+                    print("mean param shape", param.grad.shape)
             else:
                 norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
