@@ -606,7 +606,11 @@ class Optimizer:
                 print("mean_layer shape", v.mean_layer.weight.shape)
                 print("mean_layer avg", v.mean_layer.weight.detach().abs().mean().item())
                 grads = []
+                flag = True
                 for param in v.mean_layer.parameters():
+                    if flag:
+                        print("mean param shape", param.grad.shape)
+                        flag = False
                     grads.append(param.grad.view(-1))
                 grads = torch.cat(grads)
                 print(grads)
