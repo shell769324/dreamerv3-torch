@@ -598,7 +598,13 @@ class Optimizer:
         self._scaler.unscale_(self._opt)
         norms = {}
         for k, v in self._sub.items():
-            norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
+            if k == "reward":
+                print("stoch", torch.nn.utils.clip_grad_norm_(v.stoch_layer.parameters(), self._clip).item())
+                print("deter", torch.nn.utils.clip_grad_norm_(v.deter_layer.parameters(), self._clip).item())
+                print("layers", torch.nn.utils.clip_grad_norm_(v.layers.parameters(), self._clip).item())
+                print("mean_layer", torch.nn.utils.clip_grad_norm_(v.mean_layer.parameters(), self._clip).item())
+            else:
+                norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()
