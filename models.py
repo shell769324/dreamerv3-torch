@@ -168,7 +168,7 @@ class WorldModel(nn.Module):
                     print(name + " loss", losses[name].item())
 
                     if name == "reward":
-                        print(data[name].squeeze(-1).shape, pred.mean().squeeze(-1).shape)
+                        print("reward shape", data[name].squeeze(-1).shape, pred.mean().squeeze(-1).shape)
                         print("actual vs pred", data[name].squeeze(-1)[10:15, 20:40], pred.mean().squeeze(-1)[10:15, 20:40])
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
