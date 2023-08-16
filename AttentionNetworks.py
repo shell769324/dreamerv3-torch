@@ -135,7 +135,7 @@ class MixedHead(nn.Module):
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
-        out = out.squeeze(-2)
+        out = out.unsqueeze(original[0], original[1], -1)
 
         print("before mean", out[10:15])
         mean = self.mean_layer(out)
