@@ -165,6 +165,7 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    print("actual vs pred", data[name], pred.mean())
                     print(name + " loss", losses[name].item())
                     if name == "reward":
                         for i in range(len(targets)):
