@@ -38,7 +38,9 @@ class FeedForward(nn.Module):
         x, q2 = x
         print("x linear", x.abs().mean().item())
         print("q2", q2.abs().mean().item())
-        return self.net(x) + x, self.net2(q2) + q2
+        x, q = self.net(x) + x, self.net2(q2) + q2
+        print("attention", x.abs().mean(), q.abs.mean())
+        return x, q
 
 
 class Attention(nn.Module):
@@ -75,7 +77,9 @@ class Attention(nn.Module):
         qout = torch.matmul(attn2, v)
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
-        return self.to_out(out) + x, qout + qoir
+        x, q = self.to_out(out) + x, qout + qoir
+        print("attention", x.abs().mean(), q.abs.mean())
+        return x, q
 
 
 class MixedHead(nn.Module):
