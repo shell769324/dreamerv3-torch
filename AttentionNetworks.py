@@ -165,7 +165,7 @@ class MixedHead(nn.Module):
             )
         if self._dist == "twohot_symlog":
             res = tools.TwoHotDistSymlog(logits=mean, device=self._device)
-            print(res.mean())
+            print("res mean", res.mean().squeeze(-1))
             return res
         raise NotImplementedError(self._dist)
 
