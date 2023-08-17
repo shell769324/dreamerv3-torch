@@ -140,8 +140,8 @@ class MixedHead(nn.Module):
 
         print("before mean", out[0])
         mean = self.mean_layer(out)
-        print("after mean", mean[0][:, 122:131])
-        print("prob", torch.softmax(mean, -1)[0][:, 122:131])
+        print("after mean", mean[0][20:50, 122:131])
+        print("prob", torch.softmax(mean, -1)[0][20:50, 122:131])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
@@ -166,7 +166,7 @@ class MixedHead(nn.Module):
             )
         if self._dist == "twohot_symlog":
             res = tools.TwoHotDistSymlog(logits=mean, device=self._device)
-            print("res mean", res.mean().squeeze(-1))
+            print("res mean", res.mean().squeeze(-1)[0][20:50])
             return res
         raise NotImplementedError(self._dist)
 

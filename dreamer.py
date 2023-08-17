@@ -400,6 +400,7 @@ def main(config, defaults):
 
 
 if __name__ == "__main__":
+    torch.set_printoptions(linewidth=150)
     parser = argparse.ArgumentParser()
     parser.add_argument("--configs", nargs="+", required=True)
     args, remaining = parser.parse_known_args()
