@@ -16,7 +16,7 @@ class PreNorm(nn.Module):
 
     def forward(self, x, **kwargs):
         x, q2 = x
-        print("norm", self.norm.weight, self.norm.bias)
+        print("norm", self.norm.weight[100:200], self.norm.bias[100:200])
         return self.fn((self.norm(x), self.norm(q2)), **kwargs)
 
 
