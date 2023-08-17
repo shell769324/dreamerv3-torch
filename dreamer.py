@@ -358,27 +358,6 @@ def main(config, defaults):
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
         agent._should_pretrain._once = False
 
-    print("stoch layer 1", agent._wm.heads["reward"].stoch_layer[0].weight.abs().mean())
-    print("stoch layer 2", agent._wm.heads["reward"].stoch_layer[2].weight.abs().mean())
-    print("deter layer 1", agent._wm.heads["reward"].deter_layer[0].weight.abs().mean())
-    print("deter layer 2", agent._wm.heads["reward"].deter_layer[2].weight.abs().mean())
-    print("attention 1 qkv", agent._wm.heads["reward"].layers[0].fn.to_qkv.weight.abs().mean())
-    print("net layer 1, 1", agent._wm.heads["reward"].layers[1].fn.net[0].weight.abs().mean())
-    print("net2 layer 1, 1", agent._wm.heads["reward"].layers[1].fn.net2[0].weight.abs().mean())
-    print("attention 2 qkv", agent._wm.heads["reward"].layers[2].fn.to_qkv.weight.abs().mean())
-    print("net layer 2, 1", agent._wm.heads["reward"].layers[3].fn.net[0].weight.abs().mean())
-    print("net2 layer 2, 2", agent._wm.heads["reward"].layers[3].fn.net2[0].weight.abs().mean())
-    print("task behavior")
-    print("stoch layer 1", agent._task_behavior.a2c.stoch_layer[0].weight.abs().mean())
-    print("stoch layer 2", agent._task_behavior.a2c.stoch_layer[2].weight.abs().mean())
-    print("deter layer 1", agent._task_behavior.a2c.deter_layer[0].weight.abs().mean())
-    print("deter layer 2", agent._task_behavior.a2c.deter_layer[2].weight.abs().mean())
-    print("attention 1 qkv", agent._task_behavior.a2c.layers[0].fn.to_qkv.weight.abs().mean())
-    print("net layer 1, 1", agent._task_behavior.a2c.layers[1].fn.net[0].weight.abs().mean())
-    print("net2 layer 1, 1", agent._task_behavior.a2c.layers[1].fn.net2[0].weight.abs().mean())
-    print("attention 1 qkv", agent._task_behavior.a2c.layers[2].fn.to_qkv.weight.abs().mean())
-    print("net layer 2, 1", agent._task_behavior.a2c.layers[3].fn.net[0].weight.abs().mean())
-    print("net2 layer 2, 2", agent._task_behavior.a2c.layers[3].fn.net2[0].weight.abs().mean())
     state = None
     with wandb.init(project='mastering crafter with world models', config=defaults, id="vjmgpunm", resume=True):
         while agent._step < config.steps:

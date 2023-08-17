@@ -169,7 +169,9 @@ class WorldModel(nn.Module):
 
                     if name == "reward":
                         print("reward shape", data[name].squeeze(-1).shape, pred.mean().squeeze(-1).shape)
-                        print("actual vs pred", data[name].squeeze(-1)[:, 20:50], pred.mean().squeeze(-1)[:, 20:50])
+                        print("actual vs pred")
+                        print(data[name].squeeze(-1)[:, 20:50])
+                        print(pred.mean().squeeze(-1)[:, 20:50])
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
