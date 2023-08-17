@@ -140,7 +140,7 @@ class MixedHead(nn.Module):
 
         print("before mean", out[0])
         mean = self.mean_layer(out)
-        print("after mean", mean[0][:, 112:137])
+        print("after mean", mean[0][:, 122:131])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
