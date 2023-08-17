@@ -37,10 +37,9 @@ class FeedForward(nn.Module):
     def forward(self, x):
         x, q2 = x
         x, q = self.net(x) + x, self.net2(q2) + q2
-        print("linear", x.abs().mean().item(), q.abs().mean().item(), self.net2(q2).abs().mean().item(), q2.abs().mean().item())
+        print("linear", self.net2(q2).abs().median().item(), q2.abs().median().item())
         for i in [0, 2]:
-            print("linear weights", self.net[i].weight.abs().mean().item(), self.net[i].bias.abs().mean().item(),
-                  self.net2[i].weight.abs().mean().item(), self.net2[i].bias.abs().mean().item())
+            print("linear weights", self.net2[i].weight.abs().median().item(), self.net2[i].bias.abs().median().item())
         return x, q
 
 
