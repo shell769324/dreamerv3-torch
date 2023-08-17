@@ -138,9 +138,9 @@ class MixedHead(nn.Module):
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
 
-        print("before mean", out)
+        print("before mean", out[0])
         mean = self.mean_layer(out)
-        print("after mean", mean)
+        print("after mean", mean[0])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
