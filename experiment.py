@@ -2,7 +2,7 @@ from tools import TwoHotDistSymlog
 import torch
 
 logits = [-0.0] * 10
-logits = torch.tensor(logits)
+logits = torch.tensor(logits).to("cuda")
 logits.requires_grad = True
 opt = torch.optim.AdamW([logits])
 dist = TwoHotDistSymlog(logits, device="cuda", buckets=10, low=-3, high=3)
