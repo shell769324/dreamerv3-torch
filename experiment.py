@@ -6,7 +6,7 @@ torch.set_printoptions(linewidth=180)
 logits = [-0.0] * 10
 logits = torch.tensor(logits).to("cuda")
 logits.requires_grad = True
-opt = torch.optim.AdamW([logits], lr=3e-5)
+opt = torch.optim.AdamW([logits], lr=3e-3)
 dist = TwoHotDistSymlog(logits, device="cuda", buckets=10, low=-3, high=3)
 
 for i in range(10000):
