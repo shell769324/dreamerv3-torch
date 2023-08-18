@@ -336,11 +336,11 @@ class OneHotDist(torchd.one_hot_categorical.OneHotCategorical):
 
 
 class TwoHotDistSymlog:
-    def __init__(self, logits=None, low=-20.0, high=20.0, device="cuda"):
+    def __init__(self, logits=None, low=-20.0, high=20.0, device="cuda", buckets=255):
         self.logits = logits
         self.probs = torch.softmax(logits, -1)
-        self.buckets = torch.linspace(low, high, steps=255).to(device)
-        self.width = (self.buckets[-1] - self.buckets[0]) / 255
+        self.buckets = torch.linspace(low, high, steps=buckets).to(device)
+        self.width = (self.buckets[-1] - self.buckets[0]) / buckets
 
     def mean(self):
         _mean = self.probs * self.buckets
