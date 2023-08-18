@@ -125,7 +125,7 @@ class MixedHead(nn.Module):
         self.mean_layer.apply(tools.weight_init)
 
         if self._std == "learned":
-            self.std_layer = nn.Linear(self._units, np.prod(self._shape))
+            self.std_layer = nn.Linear(attention_dim, np.prod(self._shape))
             self.std_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
