@@ -1,6 +1,8 @@
 from tools import TwoHotDistSymlog
 import torch
 
+torch.set_printoptions(linewidth=180)
+
 logits = [-0.0] * 10
 logits = torch.tensor(logits).to("cuda")
 logits.requires_grad = True
@@ -19,4 +21,5 @@ for i in range(200):
     loss = -dist.log_prob(ground).mean()
     loss.backward()
     opt.step()
-    print(logits)
+    if i % 10 == 0:
+        print(logits)
