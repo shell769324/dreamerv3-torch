@@ -150,11 +150,7 @@ class MixedHead(nn.Module):
         else:
             std = self._std
         if self._dist == "normal":
-            return tools.ContDist(
-                torchd.independent.Independent(
-                    torchd.normal.Normal(mean, std), len(self._shape)
-                )
-            )
+            return tools.Normal(mean, std)
         if self._dist == "huber":
             return tools.ContDist(
                 torchd.independent.Independent(
@@ -181,7 +177,6 @@ class A2C(nn.Module):
         embed_dim,
         attention_dim,
         num_action,
-        shape,
         layer_count,
         unimix_ratio=0.01,
         heads=8
@@ -201,7 +196,6 @@ class A2C(nn.Module):
         self.deter_layer.apply(tools.weight_init)
         self.attention_dim = attention_dim
         self.layers = []
-        self.shape = shape
         for index in range(layer_count):
             self.layers.append(PreNorm(attention_dim, Attention(attention_dim, heads=heads)))
             self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
@@ -209,7 +203,7 @@ class A2C(nn.Module):
         self.layers.apply(tools.weight_init)
         self._out_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
                                         nn.GELU(),
-                                        nn.Linear(attention_dim, num_action + shape[0], bias=True))
+                                        nn.Linear(attention_dim, num_action + 2, bias=True))
         self._out_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
@@ -227,6 +221,7 @@ class A2C(nn.Module):
         else:
             out = out.reshape(original[0], original[1], -1)
         x = self._out_layer(out)
-        values = x[..., 0:self.shape[0]]
-        actions = x[..., self.shape[0]:]
-        return values, actions
+        means = x[..., 0:1]
+        std = x[..., 1:2]
+        actions = x[..., 2:]
+        return means, std, actions

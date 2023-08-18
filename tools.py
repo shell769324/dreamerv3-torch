@@ -335,6 +335,24 @@ class OneHotDist(torchd.one_hot_categorical.OneHotCategorical):
         return sample
 
 
+class Normal:
+    def __init__(self, mean, std, shape=1):
+        self.dist = ContDist(
+            torchd.independent.Independent(
+                torchd.normal.Normal(mean, std), shape
+            )
+        )
+
+    def mean(self):
+        return self.dist.mean()
+
+    def mode(self):
+        return self.dist.mode()
+
+    def log_prob(self, x):
+        return self.dist.log_prob(x)
+
+
 class TwoHotDistSymlog:
     def __init__(self, logits=None, low=-20.0, high=20.0, device="cuda", buckets=255):
         self.logits = logits

@@ -56,8 +56,7 @@ defaults:
   cnn_depth: 32
   encoder_kernels: [4, 4, 4, 4]
   decoder_kernels: [4, 4, 4, 4]
-  value_head: 'twohot_symlog'
-  reward_head: 'twohot_symlog'
+  reward_head: 'normal'
   dyn_scale: '0.5'
   rep_scale: '0.1'
   kl_free: '1.0'

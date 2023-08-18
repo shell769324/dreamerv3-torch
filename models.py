@@ -91,10 +91,11 @@ class WorldModel(nn.Module):
             config.dyn_deter,
             config.embed_dim,
             config.attention_dim,
-            (255,),
+            [],
             config.reward_layers,
             dist=config.reward_head,
             device=config.device,
+            std="learned"
         )
         self.heads["cont"] = networks.DenseHead(
             feat_size,  # pytorch version
@@ -258,7 +259,6 @@ class ImagBehavior(nn.Module):
             config.embed_dim,
             config.attention_dim,
             config.num_actions,
-            (255,),
             config.actor_layers,
             unimix_ratio=config.action_unimix_ratio,
         )
@@ -286,10 +286,10 @@ class ImagBehavior(nn.Module):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                 target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
-                imag_stoch, imag_deter, imag_state, imag_action, value_params, policy_params = self._imagine(
+                imag_stoch, imag_deter, imag_state, imag_action, means, std, policy_params = self._imagine(
                     start, self._config.imag_horizon, target_array,
                 )
-                value = tools.TwoHotDistSymlog(logits=value_params, device=self._device)
+                value = tools.Normal(means, std)
                 target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
                 reward = self._world_model.heads["reward"](imag_stoch, imag_deter, target_array_expanded).mode()
                 policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
@@ -301,7 +301,7 @@ class ImagBehavior(nn.Module):
                     imag_state, reward, value_mode
                 )
 
-                value = tools.TwoHotDistSymlog(logits=value_params[:-1], device=self._device)
+                value = tools.Normal(means[:-1], std[:-1])
                 value_mode = value.mode().detach()
                 actor_loss, mets = self._compute_actor_loss(
                     imag_action,
@@ -340,22 +340,22 @@ class ImagBehavior(nn.Module):
         start = {k: flatten(v) for k, v in start.items()}
 
         def step(prev, _):
-            state, _, _, _, _, _ = prev
+            state, _, _, _, _, _, _ = prev
             stoch, deter = dynamics.get_sep(state)
             stoch, deter = stoch.detach(), deter.detach()
-            value, policy_param = self.a2c(stoch, deter, target_array)
+            mean, std, policy_param = self.a2c(stoch, deter, target_array)
             policy = tools.OneHotDist(policy_param, unimix_ratio=self._config.action_unimix_ratio)
             action = policy.sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
-            return succ, stoch, deter, action, value, policy_param
+            return succ, stoch, deter, action, mean, std, policy_param
 
         # deters (15, 1152, 3072)
-        succ, stoches, deters, actions, values, policy_params = tools.static_scan(
-            step, [torch.arange(horizon)], (start, None, None, None, None, None)
+        succ, stoches, deters, actions, means, std, policy_params = tools.static_scan(
+            step, [torch.arange(horizon)], (start, None, None, None, None, None, None)
         )
         states = {k: torch.cat([start[k][None], v[:-1]], 0) for k, v in succ.items()}
 
-        return stoches, deters, states, actions, values, policy_params
+        return stoches, deters, states, actions, means, std, policy_params
 
     def lambda_return(self, reward, value, discount, l):
         # (15, 1152, 1)
