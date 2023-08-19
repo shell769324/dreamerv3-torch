@@ -170,8 +170,7 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
-                        print(torch.tensor([self._config.regularize_threshold]).to("cuda"), -pred.mean().mean())
-                        losses[name] += torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -pred.mean().mean()) * self._config.regularization
+                        losses[name] += torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -pred.mean().mean()) * torch.tensor([self._config.regularization])
                         metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
