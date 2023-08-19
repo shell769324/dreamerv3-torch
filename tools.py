@@ -610,6 +610,7 @@ class Optimizer:
         }[opt]()
         self._scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
         self._sub = sub
+
     def temp(self, k, v):
         def paramer(param):
             if param is not None and param.grad is not None:
@@ -617,7 +618,7 @@ class Optimizer:
                     return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 3 // 8])
                 return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 3 // 8])
             return ""
-        if k == "reward" or k == "a2c":
+        if k == "a2c":
             for param in v.stoch_layer.parameters():
                 print("stoch", paramer(param))
             for param in v.deter_layer.parameters():
