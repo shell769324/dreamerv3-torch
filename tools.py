@@ -625,6 +625,16 @@ class Optimizer:
                 for param in v.parameters():
                     if param.grad is not None:
                         print("param grad", param.grad.shape, param.grad)
+                print("stoch", v.stoch_layer.parameters().shape, "\n", v.stoch_layer.parameters().grad)
+                print("deter", v.deter_layer.parameters().shape, "\n", v.deter_layer.parameters().grad)
+                for i, l in enumerate(v.layers()):
+                    if i % 2 == 0:
+                        print("Attention")
+                    else:
+                        print("Feed forward")
+                    for param in l.parameters():
+                        if param.grad is not None:
+                            print(param.grad.shape, param.grad)
             else:
                 norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
