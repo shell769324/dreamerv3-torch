@@ -299,7 +299,7 @@ class ImagBehavior(nn.Module):
                     imag_state, reward, value_mode
                 )
 
-                value_mode = value_mode[:-1].mode().detach()
+                value_mode = value_mode[:-1].detach()
                 actor_loss, mets = self._compute_actor_loss(
                     imag_action,
                     target,
