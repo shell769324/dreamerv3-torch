@@ -623,7 +623,6 @@ class Optimizer:
         self._opt.zero_grad()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
-            print(k, v.item())
         return metrics
 
     def _apply_weight_decay(self, varibs):
