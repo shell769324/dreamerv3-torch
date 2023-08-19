@@ -30,6 +30,7 @@ class Crafter():
     self._row_side = self._env._local_view._grid[0] // 2
     self._col_side = self._env._local_view._grid[1] // 2
     self.value = 0
+    self.reward = 0
     if outdir:
       self._env = crafter.Recorder(
           self._env, outdir,
@@ -103,7 +104,7 @@ class Crafter():
         'semantic': self._crafter_env._sem_view(),
     }
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-    augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value)
+    augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward)
     return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=self.compute_where(self._crafter_env._player.pos, info))
 
   def step(self, action):
@@ -143,7 +144,7 @@ class Crafter():
             reward -= 0.5
         self._last_min_dist = min_dist
 
-    augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value)
+    augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward)
 
     return self._obs(
         image, reward, info, augmented=augmented,

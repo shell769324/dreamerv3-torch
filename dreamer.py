@@ -125,12 +125,12 @@ class Dreamer(nn.Module):
                     self._metrics[step_name].append(obs["target_steps"][i])
                     self._metrics[success_name] += 1
 
-        policy_output, state, value = self._policy(obs, state, training)
+        policy_output, state, value, reward = self._policy(obs, state, training)
 
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
-        return policy_output, state, value
+        return policy_output, state, value, reward
 
     def _policy(self, obs, state, training):
         if state is None:
@@ -152,6 +152,7 @@ class Dreamer(nn.Module):
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
+        reward_prediction = self._wm.heads["reward"](stoch, deter, target_array)
         means, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
@@ -164,7 +165,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        return policy_output, state, tools.Normal(means).mode().reshape(-1).item()
+        return policy_output, state, tools.Normal(means).mode().reshape(-1).item(), reward_prediction.mode().reshape(-1).item()
 
     def _exploration(self, action, training):
         amount = self._config.expl_amount if training else self._config.eval_noise
@@ -341,7 +342,7 @@ def main(config, defaults):
         def random_agent(o, d, s, r, training=True):
             action = random_actor.sample()
             logprob = random_actor.log_prob(action)
-            return {"action": action, "logprob": logprob}, None, 0
+            return {"action": action, "logprob": logprob}, None, 0, 0
 
         tools.simulate(random_agent, train_env, train_crafter, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
@@ -356,7 +357,7 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="qq8efr7i", resume=True):
         while agent._step < config.steps:
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
