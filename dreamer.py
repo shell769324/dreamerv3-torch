@@ -343,7 +343,7 @@ def main(config, defaults):
             logprob = random_actor.log_prob(action)
             return {"action": action, "logprob": logprob}, None, None
 
-        tools.simulate(random_agent, train_env, prefill)
+        tools.simulate(random_agent, train_env, train_crafter, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
