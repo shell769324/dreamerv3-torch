@@ -74,7 +74,7 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
         x, q = self.to_out(out) + x, qout + qoir
-        print("feed forward", x.abs().mean().item(), q.abs().mean().item())
+        print("attention", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
@@ -136,12 +136,15 @@ class MixedHead(nn.Module):
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
+        print("mixed out", out.abs().mean().item())
 
         mean = self.mean_layer(out)
+        print("mixed mean", mean.abs().mean().item())
         if self._std == "learned":
             std = self.std_layer(out)
         else:
             std = self._std
+        print("mixed std", std.abs().mean().item())
         if self._dist == "normal":
             return tools.Normal(mean, std)
         if self._dist == "huber":
@@ -216,4 +219,8 @@ class A2C(nn.Module):
         means = x[..., 0:1]
         std = x[..., 1:2]
         actions = x[..., 2:]
+
+        print("a2c mean", means.abs().mean().item())
+        print("a2c std", std.abs().mean().item())
+
         return means, std, actions
