@@ -151,8 +151,9 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
             reward = [reward[0] * (1 - done[0])]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        action, agent_state, value, reward = agent(obs, done, agent_state, reward, training=training)
+        action, agent_state, value, pred_reward = agent(obs, done, agent_state, reward, training=training)
         crafter.value = value
+        crafter.reward = pred_reward
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][0].detach().cpu()) for k in action}
