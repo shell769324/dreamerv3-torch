@@ -308,7 +308,7 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -means.mean()) * self._config.regularization
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -means.mean()) * torch.tensor([self._config.regularization])
 
         metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
