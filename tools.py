@@ -633,6 +633,11 @@ class Optimizer:
             if k == "reward":
                 for param in v.mean_layer.parameters():
                     print("mean", paramer(param))
+            else:
+                for param in v._action_layer.parameters():
+                    print("action", paramer(param))
+                for param in v._value_layer.parameters():
+                    print("value", paramer(param))
 
     def __call__(self, loss, params, retain_graph=False):
         assert len(loss.shape) == 0, loss.shape
