@@ -341,7 +341,7 @@ def main(config, defaults):
         def random_agent(o, d, s, r, training=True):
             action = random_actor.sample()
             logprob = random_actor.log_prob(action)
-            return {"action": action, "logprob": logprob}, None, None
+            return {"action": action, "logprob": logprob}, None, torch.Tensor([0.0]).to("cuda")
 
         tools.simulate(random_agent, train_env, train_crafter, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
