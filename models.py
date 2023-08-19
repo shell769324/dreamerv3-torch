@@ -130,7 +130,6 @@ class WorldModel(nn.Module):
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
     def _train(self, data):
-        print("\n\n world model")
         # action (batch_size, batch_length, act_dim)
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
@@ -273,7 +272,6 @@ class ImagBehavior(nn.Module):
         data=None
     ):
         metrics = {}
-        print("\n\n image behavior")
 
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
