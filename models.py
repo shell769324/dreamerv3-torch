@@ -313,6 +313,7 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (1,)
                 value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + (torch.maximum(means[:-1].abs(), threshold).mean(dim=-1, keepdim=True) * weights[:-1]).mean() * coeff
 
+        metrics.update(tools.tensorstats(policy_params, "action_logits"))
         metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
         metrics.update(tools.tensorstats(target, "target"))
