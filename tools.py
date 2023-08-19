@@ -615,8 +615,8 @@ class Optimizer:
         def paramer(param):
             if param is not None and param.grad is not None:
                 if len(param.shape) == 1:
-                    return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 3 // 8])
-                return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 3 // 8])
+                    return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 5 // 16])
+                return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 5 // 16])
             return ""
         if k == "a2c":
             for param in v.stoch_layer.parameters():
@@ -649,6 +649,7 @@ class Optimizer:
         for k, v in self._sub.items():
             self.temp(k, v)
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
+            print(k, norms[k])
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()
