@@ -76,6 +76,7 @@ class Crafter():
 
   def compute_where(self, player_pos, info):
       where = np.zeros((len(targets), 4), dtype=np.uint8)
+      print("actual semantic", info['semantic'])
       for index, t in enumerate(targets):
           for i in range(0, player_pos[0] + 1):
               for j in range(0, player_pos[1] + 1):
