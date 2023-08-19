@@ -152,7 +152,6 @@ class Dreamer(nn.Module):
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
-        print(stoch.shape, deter.shape, target_array.shape)
         reward_prediction = self._wm.heads["reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
         means, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
