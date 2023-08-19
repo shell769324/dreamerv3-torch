@@ -165,6 +165,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
+        print("returned", reward_prediction.mode().reshape(-1).item())
         return policy_output, state, tools.Normal(means).mode().reshape(-1).item(), reward_prediction.mode().reshape(-1).item()
 
     def _exploration(self, action, training):
