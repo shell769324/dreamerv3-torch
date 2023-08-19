@@ -37,7 +37,6 @@ class FeedForward(nn.Module):
     def forward(self, x):
         x, q2 = x
         x, q = self.net(x) + x, self.net2(q2) + q2
-        print("feed forward", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
@@ -74,7 +73,6 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
         x, q = self.to_out(out) + x, qout + qoir
-        print("attention", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
@@ -136,17 +134,14 @@ class MixedHead(nn.Module):
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
-        print("mixed out", out.abs().mean().item())
 
         mean = self.mean_layer(out)
-        print("mixed mean", mean.abs().mean().item())
         if self._std == "learned":
             std = self.std_layer(out)
         else:
             std = self._std
-        print("mixed std", std.abs().mean().item())
         if self._dist == "normal":
-            return tools.Normal(mean, std)
+            return tools.Normal(mean)
         if self._dist == "huber":
             return tools.ContDist(
                 torchd.independent.Independent(
@@ -198,7 +193,7 @@ class A2C(nn.Module):
         self.layers.apply(tools.weight_init)
         self._out_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
                                         nn.GELU(),
-                                        nn.Linear(attention_dim, num_action + 2, bias=True))
+                                        nn.Linear(attention_dim, num_action + 1, bias=True))
         self._out_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
@@ -217,10 +212,6 @@ class A2C(nn.Module):
             out = out.reshape(original[0], original[1], -1)
         x = self._out_layer(out)
         means = x[..., 0:1]
-        std = x[..., 1:2]
-        actions = x[..., 2:]
+        actions = x[..., 1:]
 
-        print("a2c mean", means.abs().mean().item())
-        print("a2c std", std.abs().mean().item())
-
-        return means, std, actions
+        return means, actions

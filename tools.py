@@ -336,7 +336,8 @@ class OneHotDist(torchd.one_hot_categorical.OneHotCategorical):
 
 
 class Normal:
-    def __init__(self, mean, std, shape=1):
+    def __init__(self, mean, shape=1):
+        std = torch.ones_like(mean.shape).to("cuda")
         self.dist = ContDist(
             torchd.independent.Independent(
                 torchd.normal.Normal(mean, std), shape
@@ -616,25 +617,6 @@ class Optimizer:
         self._scaler.unscale_(self._opt)
         norms = {}
         for k, v in self._sub.items():
-            if k == "reward":
-                for param in v.stoch_layer.parameters():
-                    print("stoch", param.shape, "\n", param.grad)
-                for param in v.deter_layer.parameters():
-                    print("deter", param.shape, "\n", param.grad)
-                i = 0
-                for l in v.layers:
-                    if i % 2 == 0:
-                        print("Attention")
-                    else:
-                        print("Feed forward")
-                    i += 1
-                    for param in l.parameters():
-                        if param.grad is not None:
-                            print(param.grad.shape, param.grad)
-                for param in v.mean_layer.parameters():
-                    print("mean", param.shape, "\n", param.grad)
-                for param in v.std_layer.parameters():
-                    print("std", param.shape, "\n", param.grad)
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
         self._scaler.update()

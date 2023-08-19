@@ -153,7 +153,7 @@ class Dreamer(nn.Module):
         for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
-        means, std, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
+        means, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -165,7 +165,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        return policy_output, state, tools.Normal(means, std).mode().reshape(-1).item()
+        return policy_output, state, tools.Normal(means).mode().reshape(-1).item()
 
     def _exploration(self, action, training):
         amount = self._config.expl_amount if training else self._config.eval_noise
