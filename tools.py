@@ -620,8 +620,8 @@ class Optimizer:
         def paramer(param):
             if param is not None and param.grad is not None:
                 if len(param.shape) == 1:
-                    return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] // 2])
-                return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] // 2])
+                    return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 3 // 8])
+                return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 3 // 8])
             return ""
         for k, v in self._sub.items():
             if k == "reward" or k == "a2c":
