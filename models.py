@@ -154,14 +154,11 @@ class WorldModel(nn.Module):
                 losses = {}
                 likes = {}
                 for name, head in self.heads.items():
-                    grad_head = name in self._config.grad_heads
                     if name == "reward":
                         stoch, deter = self.dynamics.get_sep(post)
-                        stoch, deter = (stoch, deter) if grad_head else (stoch.detach(), deter.detach())
                         pred = head(stoch, deter, data["target"])
                     else:
                         feat = self.dynamics.get_feat(post)
-                        feat = feat if grad_head else feat.detach()
                         pred = head(feat)
                     like = pred.log_prob(data[name])
 
@@ -170,10 +167,17 @@ class WorldModel(nn.Module):
 
                     if name == "reward":
                         for i in range(len(targets)):
-                            conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
-                                torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
+                            conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
+                                torch.nanmean((pred.mean() - data[name]).abs()[data["target"] == i])
+                            )
                         losses[name] += torch.maximum(pred.logits.abs(), threshold).mean() * coeff
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
+                    if name == "where":
+                        diff = (pred.mean() - data[name]).type(torch.DoubleTensor)
+                        for i in range(len(targets)):
+                            conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
+                                torch.nanmean(diff[..., i * 4:i * 4 + 4])
+                            )
 
                 model_loss = sum(losses.values()) + kl_loss
 
