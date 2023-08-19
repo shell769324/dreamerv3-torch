@@ -37,6 +37,7 @@ class FeedForward(nn.Module):
     def forward(self, x):
         x, q2 = x
         x, q = self.net(x) + x, self.net2(q2) + q2
+        print("feed forward", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
@@ -73,6 +74,7 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
         x, q = self.to_out(out) + x, qout + qoir
+        print("feed forward", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
