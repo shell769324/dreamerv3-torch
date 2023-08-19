@@ -20,6 +20,17 @@ defaults:
   expl_gifs: False
   resume: False
 
+  # Environment
+  task: 'dmc_walker_walk'
+  size: [64, 64]
+  envs: 1
+  action_repeat: 2
+  time_limit: 1000
+  grayscale: False
+  prefill: 2500
+  eval_noise: 0.0
+  reward_EMA: True
+
   # Model
   dyn_cell: 'gru_layer_norm'
   dyn_hidden: 512
