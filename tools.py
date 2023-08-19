@@ -624,7 +624,7 @@ class Optimizer:
                 print("mean_layer avg", v.mean_layer.weight.detach().abs().mean().item())
                 for param in v.parameters():
                     if param.grad is not None:
-                        print("param grad", param.grad)
+                        print("param grad", param.grad.shape, param.grad)
             else:
                 norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
