@@ -307,6 +307,7 @@ class ImagBehavior(nn.Module):
                     policy,
                     value_mode
                 )
+                actor_loss += (torch.maximum(policy_params.abs(), threshold).mean(dim=-1, keepdim=True) * weights).mean() * coeff
                 metrics.update(mets)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
