@@ -137,6 +137,8 @@ class WorldModel(nn.Module):
         data = self.preprocess(data)
         conditional_metrics = {}
         metrics = {}
+        threshold = torch.tensor([self._config.regularize_threshold]).to("cuda")
+        coeff = torch.tensor([self._config.regularization]).to("cuda")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
@@ -170,7 +172,7 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
-                        losses[name] += torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -pred.mean().mean()) * torch.tensor([self._config.regularization])
+                        losses[name] += torch.max(threshold, -pred.mean().mean()) * coeff
                         metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
@@ -275,6 +277,8 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
 
+        threshold = torch.tensor([self._config.regularize_threshold]).to("cuda")
+        coeff = torch.tensor([self._config.regularization]).to("cuda")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
@@ -308,7 +312,7 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -means.mean()) * torch.tensor([self._config.regularization])
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(threshold, -means.mean()) * coeff
 
         metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
