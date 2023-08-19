@@ -618,7 +618,7 @@ class Optimizer:
         self._scaler.unscale_(self._opt)
         norms = {}
         def paramer(param):
-            if param is not None:
+            if param is not None and param.grad is not None:
                 if len(param.shape) == 1:
                     return param.grad
                 return str(param.shape) + "," + str(param.grad[len(param) // 2])
