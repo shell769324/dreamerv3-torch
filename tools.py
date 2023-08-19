@@ -621,7 +621,7 @@ class Optimizer:
             if param is not None:
                 if len(param.shape) == 1:
                     return param.grad
-                return str(param.shape) + "," + str(param[len(param) / 2].grad)
+                return str(param.shape) + "," + str(param[len(param) // 2].grad)
             return ""
         for k, v in self._sub.items():
             if k == "reward" or k == "a2c":
