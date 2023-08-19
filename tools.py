@@ -617,7 +617,25 @@ class Optimizer:
         self._scaler.scale(loss).backward()
         self._scaler.unscale_(self._opt)
         norms = {}
+        def paramer(param):
+            if param is not None:
+                if len(param.shape) == 1:
+                    return param.grad
+                return param[len(param) / 2].grad
+            return ""
         for k, v in self._sub.items():
+            if k == "reward" or k == "a2c":
+                for param in v.stoch_layer.parameters():
+                    print("stoch", param.shape, paramer(param))
+                for param in v.deter_layer.parameters():
+                    print("deter", param.shape, paramer(param))
+                for i, layer in enumerate(v.layers):
+                    if i == 0:
+                        print("Attention")
+                    else:
+                        print("Feed forward")
+                    for param in layer.parameters():
+                        print(param.shape, paramer(param))
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
         self._scaler.update()
