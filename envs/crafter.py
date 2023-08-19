@@ -77,22 +77,27 @@ class Crafter():
   def compute_where(self, player_pos, info):
       where = np.zeros((len(targets), 4), dtype=np.uint8)
       print("actual semantic", info['semantic'])
+      print("original where", where)
       for index, t in enumerate(targets):
           for i in range(0, player_pos[0] + 1):
               for j in range(0, player_pos[1] + 1):
                   if self._id_to_item[info['semantic'][i][j]] == t:
+                      print(index, i, j, t)
                       where[index][0] = 1
           for i in range(player_pos[0], self._size[0]):
               for j in range(0, player_pos[1] + 1):
                   if self._id_to_item[info['semantic'][i][j]] == t:
+                      print(index, i, j, t)
                       where[index][1] = 1
           for i in range(0, player_pos[0] + 1):
               for j in range(player_pos[1], self._size[1]):
                   if self._id_to_item[info['semantic'][i][j]] == t:
+                      print(index, i, j, t)
                       where[index][2] = 1
           for i in range(player_pos[0], self._size[0]):
               for j in range(player_pos[1], self._size[1]):
                   if self._id_to_item[info['semantic'][i][j]] == t:
+                      print(index, i, j, t)
                       where[index][3] = 1
       return where.reshape(-1)
 
