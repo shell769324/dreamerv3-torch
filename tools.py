@@ -621,11 +621,13 @@ class Optimizer:
                     print("stoch", param.shape, "\n", param.grad)
                 for param in v.deter_layer.parameters():
                     print("deter", param.shape, "\n", param.grad)
-                for i, l in enumerate(v.layers()):
+                i = 0
+                for l in v.layers():
                     if i % 2 == 0:
                         print("Attention")
                     else:
                         print("Feed forward")
+                    i += 1
                     for param in l.parameters():
                         if param.grad is not None:
                             print(param.grad.shape, param.grad)
