@@ -76,6 +76,10 @@ class Crafter():
 
   def compute_where(self, player_pos, info):
       where = np.zeros((len(targets), 4), dtype=np.uint8)
+
+      def condition(i1, i2, t):
+          return 0 <= i1 < len(info['semantic']) and 0 <= i2 < len(info['semantic'][0]) and self._id_to_item[info['semantic'][i1][i2]] == t
+
       for index, t in enumerate(targets):
           lower_row = player_pos[0] - self._row_side
           lower_col = player_pos[1] - self._col_side
@@ -83,19 +87,19 @@ class Crafter():
           high_col = player_pos[1] + self._col_side + 1
           for i in range(lower_row, player_pos[0] + 1):
               for j in range(lower_col, player_pos[1] + 1):
-                  if self._id_to_item[info['semantic'][i][j]] == t:
+                  if condition(i, j, t):
                       where[index][0] = 1
           for i in range(player_pos[0], high_row):
               for j in range(lower_col, player_pos[1] + 1):
-                  if self._id_to_item[info['semantic'][i][j]] == t:
+                  if condition(i, j, t):
                       where[index][1] = 1
           for i in range(lower_row, player_pos[0] + 1):
               for j in range(player_pos[1], high_col):
-                  if self._id_to_item[info['semantic'][i][j]] == t:
+                  if condition(i, j, t):
                       where[index][2] = 1
           for i in range(player_pos[0], high_row):
               for j in range(player_pos[1], high_col):
-                  if self._id_to_item[info['semantic'][i][j]] == t:
+                  if condition(i, j, t):
                       where[index][3] = 1
       return where.reshape(-1)
 
