@@ -20,17 +20,6 @@ defaults:
   expl_gifs: False
   resume: False
 
-  # Environment
-  task: 'dmc_walker_walk'
-  size: [64, 64]
-  envs: 1
-  action_repeat: 2
-  time_limit: 1000
-  grayscale: False
-  prefill: 2500
-  eval_noise: 0.0
-  reward_EMA: True
-
   # Model
   dyn_cell: 'gru_layer_norm'
   dyn_hidden: 512
@@ -56,7 +45,7 @@ defaults:
   cnn_depth: 32
   encoder_kernels: [4, 4, 4, 4]
   decoder_kernels: [4, 4, 4, 4]
-  reward_head: 'normal'
+  reward_head: 'twohot_symlog'
   dyn_scale: '0.5'
   rep_scale: '0.1'
   kl_free: '1.0'
@@ -96,7 +85,7 @@ defaults:
   imag_gradient: 'dynamics'
   imag_gradient_mix: '0.0'
   imag_sample: True
-  actor_dist: 'normal'
+  actor_dist: 'twohot_symlog'
   actor_entropy: '3e-4'
   actor_state_entropy: 0.0
   actor_init_std: 1.0
@@ -111,6 +100,9 @@ defaults:
   value_weight_decay: 0.01
   actor_weight_decay: 0.01
   future_entropy: False
+
+  regularization: 0.1
+  regularize_threshold: 20
 
   # Exploration
   expl_behavior: 'greedy'

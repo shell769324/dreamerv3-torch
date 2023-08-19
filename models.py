@@ -91,7 +91,7 @@ class WorldModel(nn.Module):
             config.dyn_deter,
             config.embed_dim,
             config.attention_dim,
-            [],
+            (255,),
             config.reward_layers,
             dist=config.reward_head,
             device=config.device,
@@ -136,6 +136,7 @@ class WorldModel(nn.Module):
         # discount (batch_size, batch_length)
         data = self.preprocess(data)
         conditional_metrics = {}
+        metrics = {}
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
@@ -169,11 +170,12 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
+                        losses[name] += torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -pred.mean().mean()) * self._config.regularization
+                        metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
 
-            metrics = self._model_opt(model_loss, self._regular_parameters)
-
+            metrics.update(self._model_opt(model_loss, self._regular_parameters))
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
@@ -280,7 +282,7 @@ class ImagBehavior(nn.Module):
                 imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
                     start, self._config.imag_horizon, target_array,
                 )
-                value = tools.Normal(means)
+                value = tools.TwoHotDistSymlog(logits=means)
                 target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
                 reward = self._world_model.heads["reward"](imag_stoch, imag_deter, target_array_expanded).mode()
                 policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
@@ -292,8 +294,7 @@ class ImagBehavior(nn.Module):
                     imag_state, reward, value_mode
                 )
 
-                value = tools.Normal(means[:-1])
-                value_mode = value.mode().detach()
+                value_mode = value[:-1].mode().detach()
                 actor_loss, mets = self._compute_actor_loss(
                     imag_action,
                     target,
@@ -307,8 +308,9 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None])
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(torch.tensor([self._config.regularize_threshold]).to("cuda"), -means.mean()) * self._config.regularization
 
+        metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
         metrics.update(tools.tensorstats(target, "target"))
         metrics.update(tools.tensorstats(reward, "imag_reward"))

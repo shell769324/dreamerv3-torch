@@ -191,9 +191,12 @@ class A2C(nn.Module):
             self.layers.append(PreNorm(attention_dim, FeedForward(attention_dim, attention_dim * 2)))
         self.layers = nn.Sequential(*self.layers)
         self.layers.apply(tools.weight_init)
-        self._out_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
+        self._action_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
                                         nn.GELU(),
-                                        nn.Linear(attention_dim, num_action + 1, bias=True))
+                                        nn.Linear(attention_dim, num_action, bias=True))
+        self._value_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
+                                        nn.GELU(),
+                                        nn.Linear(attention_dim, 255, bias=True))
         self._out_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
@@ -210,8 +213,7 @@ class A2C(nn.Module):
             out = out.reshape(original[0], -1)
         else:
             out = out.reshape(original[0], original[1], -1)
-        x = self._out_layer(out)
-        means = x[..., 0:1]
-        actions = x[..., 1:]
+        actions = self._action_layer(out)
+        values = self._value_layer(out)
 
-        return means, actions
+        return values, actions
