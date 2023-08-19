@@ -137,8 +137,8 @@ class WorldModel(nn.Module):
         data = self.preprocess(data)
         conditional_metrics = {}
         metrics = {}
-        threshold = torch.tensor([self._config.regularize_threshold]).to("cuda")
-        coeff = torch.tensor([self._config.regularization]).to("cuda")
+        threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
+        coeff = torch.tensor(self._config.regularization).to("cuda")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
@@ -278,8 +278,8 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
 
-        threshold = torch.tensor([self._config.regularize_threshold]).to("cuda")
-        coeff = torch.tensor([self._config.regularization]).to("cuda")
+        threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
+        coeff = torch.tensor(self._config.regularization).to("cuda")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
