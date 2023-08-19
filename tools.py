@@ -337,7 +337,7 @@ class OneHotDist(torchd.one_hot_categorical.OneHotCategorical):
 
 class Normal:
     def __init__(self, mean, shape=1):
-        std = torch.ones_like(mean.shape).to("cuda")
+        std = torch.ones_like(mean).to("cuda")
         self.dist = ContDist(
             torchd.independent.Independent(
                 torchd.normal.Normal(mean, std), shape
