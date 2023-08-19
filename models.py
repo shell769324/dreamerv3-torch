@@ -135,7 +135,6 @@ class WorldModel(nn.Module):
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
-        print("world model train")
         data = self.preprocess(data)
         conditional_metrics = {}
         with tools.RequiresGrad(self):
@@ -166,13 +165,8 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                    print(name + " loss", losses[name].item())
 
                     if name == "reward":
-                        print("reward shape", data[name].squeeze(-1).shape, pred.mean().squeeze(-1).shape)
-                        print("actual vs pred")
-                        print(data[name].squeeze(-1)[:, 20:50])
-                        print(pred.mean().squeeze(-1)[:, 20:50])
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
@@ -280,7 +274,6 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
 
-        print("\n\n\n\nimage behavior train")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))

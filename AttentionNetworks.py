@@ -16,7 +16,6 @@ class PreNorm(nn.Module):
 
     def forward(self, x, **kwargs):
         x, q2 = x
-        print("norm", self.norm.weight[100:200], self.norm.bias[100:200])
         return self.fn((self.norm(x), self.norm(q2)), **kwargs)
 
 
@@ -38,9 +37,6 @@ class FeedForward(nn.Module):
     def forward(self, x):
         x, q2 = x
         x, q = self.net(x) + x, self.net2(q2) + q2
-        print("linear", self.net2(q2).abs().median().item(), q2.abs().median().item())
-        for i in [0, 2]:
-            print("linear weights", self.net2[i].weight.abs().median().item(), self.net2[i].bias.abs().median().item())
         return x, q
 
 
@@ -77,7 +73,6 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
         x, q = self.to_out(out) + x, qout + qoir
-        print("attention", x.abs().mean().item(), q.abs().mean().item())
         return x, q
 
 
@@ -137,14 +132,10 @@ class MixedHead(nn.Module):
         token2 = self.deter_layer(deter).unsqueeze(-2)
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
-        print("before layers", feature.abs().mean())
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
         out = out.reshape(original[0], original[1], -1)
 
-        print("before mean", out[0])
         mean = self.mean_layer(out)
-        print("after mean", mean[0][20:50, 122:131])
-        print("prob", torch.softmax(mean, -1)[0][20:50, 122:131])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
@@ -165,7 +156,6 @@ class MixedHead(nn.Module):
             )
         if self._dist == "twohot_symlog":
             res = tools.TwoHotDistSymlog(logits=mean, device=self._device)
-            print("res mean", res.mean().squeeze(-1)[0][20:50])
             return res
         raise NotImplementedError(self._dist)
 
