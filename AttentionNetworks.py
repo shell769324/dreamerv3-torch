@@ -197,7 +197,8 @@ class A2C(nn.Module):
         self._value_layer = nn.Sequential(nn.Linear(attention_dim, attention_dim, bias=True),
                                         nn.GELU(),
                                         nn.Linear(attention_dim, 255, bias=True))
-        self._out_layer.apply(tools.weight_init)
+        self._value_layer.apply(tools.weight_init)
+        self._action_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
         original = deter.shape
