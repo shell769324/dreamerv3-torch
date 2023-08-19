@@ -140,6 +140,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         reward = [0]
     else:
         step, episode, done, length, obs, agent_state, reward = state
+    print("start")
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
         if done.any():
@@ -152,6 +153,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
         action, agent_state, value = agent(obs, done, agent_state, reward, training=training)
+        print("here")
         crafter.value = value
         if isinstance(action, dict):
             action = [
