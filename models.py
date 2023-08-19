@@ -173,7 +173,8 @@ class WorldModel(nn.Module):
                         losses[name] += torch.maximum(pred.logits.abs(), threshold).mean() * coeff
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
-                        diff = pred.mean() - data[name]
+                        diff = (pred.mode() - data[name]).double()
+
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
                                 torch.nanmean(diff[..., i * 4:i * 4 + 4])
