@@ -622,7 +622,7 @@ class Optimizer:
                 for param in v.deter_layer.parameters():
                     print("deter", param.shape, "\n", param.grad)
                 i = 0
-                for l in v.layers():
+                for l in v.layers:
                     if i % 2 == 0:
                         print("Attention")
                     else:
