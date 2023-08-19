@@ -298,8 +298,8 @@ class ImagBehavior(nn.Module):
                 target, weights = self._compute_target(
                     imag_state, reward, value_mode
                 )
-
-                value_mode = value_mode[:-1].detach()
+                value = tools.TwoHotDistSymlog(logits=means[:-1])
+                value_mode = value.mode().detach()
                 actor_loss, mets = self._compute_actor_loss(
                     imag_action,
                     target,
