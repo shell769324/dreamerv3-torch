@@ -216,6 +216,5 @@ class A2C(nn.Module):
             out = out.reshape(original[0], original[1], -1)
         actions = self._action_layer(out)
         values = self._value_layer(out)
-        print("a2c", actions[0], values[0])
 
         return values, actions
