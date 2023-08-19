@@ -104,7 +104,6 @@ class Crafter():
         'semantic': self._crafter_env._sem_view(),
     }
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-    print("reward", self.reward)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward)
     return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=self.compute_where(self._crafter_env._player.pos, info))
 
