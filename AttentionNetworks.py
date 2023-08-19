@@ -136,7 +136,6 @@ class MixedHead(nn.Module):
         out = out.reshape(original[0], original[1], -1)
 
         mean = self.mean_layer(out)
-        print("mean value", mean[0])
         if self._std == "learned":
             std = self.std_layer(out)
         else:
