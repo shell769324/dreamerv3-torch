@@ -172,7 +172,7 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
-                        losses[name] += torch.max(threshold, -pred.mean().mean()) * coeff
+                        losses[name] += torch.maximum(threshold, -pred.mean().mean()) * coeff
                         metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
@@ -312,7 +312,7 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.max(threshold, -means.mean()) * coeff
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.maximum(threshold, -means.mean()) * coeff
 
         metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
