@@ -276,7 +276,7 @@ class ImagBehavior(nn.Module):
         data=None
     ):
         metrics = {}
-
+        print("I'm a divisor \n\n\n\n")
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
         with tools.RequiresGrad(self):
