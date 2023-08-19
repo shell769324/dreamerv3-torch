@@ -636,6 +636,9 @@ class Optimizer:
                         print("Feed forward")
                     for param in layer.parameters():
                         print(paramer(param))
+                if k == "reward":
+                    for param in v.mean_layer.parameters():
+                        print("mean", paramer(param))
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
         self._scaler.update()
