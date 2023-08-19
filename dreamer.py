@@ -130,7 +130,6 @@ class Dreamer(nn.Module):
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
-        exit(1)
         return policy_output, state, value
 
     def _policy(self, obs, state, training):
