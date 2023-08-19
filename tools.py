@@ -617,8 +617,10 @@ class Optimizer:
         norms = {}
         for k, v in self._sub.items():
             if k == "reward":
-                print("stoch", v.stoch_layer.parameters().shape, "\n", v.stoch_layer.parameters().grad)
-                print("deter", v.deter_layer.parameters().shape, "\n", v.deter_layer.parameters().grad)
+                for param in v.stoch_layer.parameters():
+                    print("stoch", param.shape, "\n", param.grad)
+                for param in v.deter_layer.parameters():
+                    print("deter", param.shape, "\n", param.grad)
                 for i, l in enumerate(v.layers()):
                     if i % 2 == 0:
                         print("Attention")
