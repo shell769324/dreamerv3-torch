@@ -172,8 +172,8 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
-                        losses[name] += torch.maximum(threshold, -pred.mean().mean()) * coeff
-                        metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
+                        losses[name] += torch.maximum(threshold, -pred.logits.mean()) * coeff
+                        metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
 
@@ -277,7 +277,6 @@ class ImagBehavior(nn.Module):
     ):
         metrics = {}
         print("I'm a divisor \n\n\n\n")
-        exit(1)
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
         with tools.RequiresGrad(self):
@@ -313,7 +312,7 @@ class ImagBehavior(nn.Module):
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.maximum(threshold, -means.mean()) * coeff
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + torch.maximum(threshold, weights[:-1] * -means[:-1, :, None] / torch.sum(weights[:-1])) * coeff
 
         metrics.update(tools.tensorstats(means, "value_logits"))
         metrics.update(tools.tensorstats(value.mode(), "value"))
