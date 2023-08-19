@@ -172,6 +172,7 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_prob"] = to_np(
                                 torch.nanmean(torch.pow(torch.e, like)[data["target"] == i]))
+                        print(losses[name], torch.maximum(threshold, -pred.mean().mean()) * coeff)
                         losses[name] += torch.maximum(threshold, -pred.mean().mean()) * coeff
                         metrics.update(tools.tensorstats(pred.mean(), "reward_logits"))
 
