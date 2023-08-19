@@ -104,8 +104,9 @@ class Crafter():
         'semantic': self._crafter_env._sem_view(),
     }
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-    augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward)
-    return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=self.compute_where(self._crafter_env._player.pos, info))
+    where_array = self.compute_where(self._crafter_env._player.pos, info)
+    augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward, where_array)
+    return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=where_array)
 
   def step(self, action):
     if len(action.shape) >= 1:
@@ -143,14 +144,14 @@ class Crafter():
         elif self._last_min_dist < min_dist:
             reward -= 0.5
         self._last_min_dist = min_dist
-
-    augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward)
+    where_array = self.compute_where(player_pos, info)
+    augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward, where_array)
 
     return self._obs(
         image, reward, info, augmented=augmented,
         is_last=self._done,
         is_terminal=info['discount'] == 0, target_reached=target_reached, target_steps=target_steps,
-        prev_target=prev_target, where=self.compute_where(player_pos, info)), reward, self._done, info
+        prev_target=prev_target, where=where_array), reward, self._done, info
 
   def _obs(
       self, image, reward, info,
