@@ -90,7 +90,7 @@ defaults:
   opt: 'adamw'
 
   # Behavior.
-  find_discount: 0.75
+  find_discount: 0.95
   discount_lambda: 0.95
   imag_horizon: 15
   imag_gradient: 'dynamics'
