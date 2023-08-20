@@ -204,18 +204,26 @@ class A2C(nn.Module):
         original = deter.shape
         stoch = stoch.reshape(-1, stoch.shape[-1])
         deter = deter.reshape(-1, deter.shape[-1])
+        print("stoch value", stoch.abs().max(), stoch.abs().mean())
+        print("deter value", deter.abs().max(), deter.abs().mean())
         targets_array = targets_array.reshape(-1)
         token1 = self.stoch_layer(stoch).unsqueeze(-2)
         token2 = self.deter_layer(deter).unsqueeze(-2)
+
+        print("stoch token value", token1.abs().max(), token1.abs().mean())
+        print("deter token value", token2.abs().max(), token2.abs().mean())
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
+        print("out value", out.abs().max(), out.abs().mean())
         if len(original) == 2:
             out = out.reshape(original[0], -1)
         else:
             out = out.reshape(original[0], original[1], -1)
         actions = self._action_layer(out)
         values = self._value_layer(out)
-        # print("a2c", actions, values[..., 100:160])
+        print("action", actions.abs().max(), actions.abs().mean())
+        print("values", values.abs().max(), values.abs().mean())
+        exit(1)
 
         return values, actions
