@@ -400,7 +400,7 @@ class ConvDecoder(nn.Module):
         print("decoder linear", x.abs().mean(), x.max(), x.min())
         x = x.reshape([-1, 4, 4, self._embed_size // 16])
         x = x.permute(0, 3, 1, 2)
-        x = self.layers(x)
+        # x = self.layers(x)
         for l in self.layers:
             x = l(x)
             print("conv", x.min(), x.max(), x.mean())
