@@ -612,38 +612,44 @@ class Optimizer:
         self._sub = sub
 
     def temp(self, k, v):
-        def paramer(param):
+        def param_grad(param):
             if param is not None and param.grad is not None:
                 if len(param.shape) == 1:
                     return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 5 // 16])
                 return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 5 // 16])
             return ""
+        def paramer(param):
+            if param is not None and param.grad is not None:
+                if len(param.shape) == 1:
+                    return str(param.shape) + ", " + str(param[param.shape[0] // 4:param.shape[0] * 5 // 16])
+                return str(param.shape) + "," + str(param[len(param) // 2, param.shape[1] // 4:param.shape[1] * 5 // 16])
+            return ""
         if k == "a2ca":
             for param in v.stoch_layer.parameters():
-                print("stoch", paramer(param))
+                print("stoch", param_grad(param))
             for param in v.deter_layer.parameters():
-                print("deter", paramer(param))
+                print("deter", param_grad(param))
             for i, layer in enumerate(v.layers):
                 if i == 0:
                     print("Attention")
                 else:
                     print("Feed forward")
                 for param in layer.parameters():
-                    print(paramer(param))
+                    print(param_grad(param))
             if k == "reward":
                 for param in v.mean_layer.parameters():
-                    print("mean", paramer(param))
+                    print("mean", param_grad(param))
             else:
                 for param in v._action_layer.parameters():
-                    print("action", paramer(param))
+                    print("action", param_grad(param))
                 for param in v._value_layer.parameters():
-                    print("value", paramer(param))
+                    print("value", param_grad(param))
         if k == "image":
             for param in v._linear_layer.parameters():
-                print("image linear", paramer(param))
+                print("image linear", param_grad(param))
             for layer in v.layers:
                 for param in layer.parameters():
-                    print("decoder", paramer(param))
+                    print("decoder", param_grad(param), "\n original", paramer(param))
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
