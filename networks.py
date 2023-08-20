@@ -301,6 +301,31 @@ class ConvEncoder(nn.Module):
         return x.reshape(shape)
 
 
+class ConvTranspose2d(nn.Module):
+    def __init__(self, inp_dim,
+                    depth,
+                    kernel,
+                    stride,
+                    padding,
+                    output_padding,
+                    bias=True):
+        super(ConvTranspose2d, self).__init__()
+        self.conv = nn.ConvTranspose2d(
+                    inp_dim,
+                    depth,
+                    kernel,
+                    stride,
+                    padding=padding,
+                    output_padding=output_padding,
+                    bias=bias,
+                )
+
+    def forward(self, x):
+        x = self.conv.forward(x)
+        print("conv", x.min(), x.max(), x.mean())
+        return x
+
+
 class ConvDecoder(nn.Module):
     def __init__(
         self,
@@ -345,13 +370,13 @@ class ConvDecoder(nn.Module):
             pad_h, outpad_h = self.calc_same_pad(k=kernel, s=2, d=1)
             pad_w, outpad_w = self.calc_same_pad(k=kernel, s=2, d=1)
             layers.append(
-                nn.ConvTranspose2d(
+                ConvTranspose2d(
                     inp_dim,
                     depth,
                     kernel,
                     2,
-                    padding=(pad_h, pad_w),
-                    output_padding=(outpad_h, outpad_w),
+                    (pad_h, pad_w),
+                    (outpad_h, outpad_w),
                     bias=bias,
                 )
             )
