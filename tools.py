@@ -652,7 +652,7 @@ class Optimizer:
                 clipped = torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip)
                 print("image layer norm", clipped)
                 if not (-10 <= clipped < 10):
-                    print(layer)
+                    print(layer.weight, layer.bias)
                 # for param in layer.parameters():
                 #    print("decoder", param_grad(param), "\n original", paramer(param))
 
