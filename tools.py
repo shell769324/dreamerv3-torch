@@ -643,7 +643,7 @@ class Optimizer:
                 print("image linear", paramer(param))
             for layer in v.layers:
                 for param in layer.parameters():
-                    print(paramer(param))
+                    print("decoder", paramer(param))
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
