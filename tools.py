@@ -649,9 +649,10 @@ class Optimizer:
             # for param in v._linear_layer.parameters():
             #     print("image linear", param_grad(param))
             for layer in v.layers:
-                print("image layer norm", torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip))
-                if layer == v.layers[-1]:
-                    print(layer.parameters())
+                clipped = torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip)
+                print("image layer norm", clipped)
+                if not (-10 <= clipped < 10):
+                    print(layer)
                 # for param in layer.parameters():
                 #    print("decoder", param_grad(param), "\n original", paramer(param))
 
