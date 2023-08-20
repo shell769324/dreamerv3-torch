@@ -370,13 +370,13 @@ class ConvDecoder(nn.Module):
             pad_h, outpad_h = self.calc_same_pad(k=kernel, s=2, d=1)
             pad_w, outpad_w = self.calc_same_pad(k=kernel, s=2, d=1)
             layers.append(
-                ConvTranspose2d(
+                nn.ConvTranspose2d(
                     inp_dim,
                     depth,
                     kernel,
                     2,
-                    (pad_h, pad_w),
-                    (outpad_h, outpad_w),
+                    padding=(pad_h, pad_w),
+                    output_padding=(outpad_h, outpad_w),
                     bias=bias,
                 )
             )
@@ -401,6 +401,9 @@ class ConvDecoder(nn.Module):
         x = x.reshape([-1, 4, 4, self._embed_size // 16])
         x = x.permute(0, 3, 1, 2)
         x = self.layers(x)
+        for l in self.layers:
+            x = l(x)
+            print("conv", x.min(), x.max(), x.mean())
         print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
         mean = x.reshape(features.shape[:-1] + self._shape)
         mean = mean.permute(0, 1, 3, 4, 2)
