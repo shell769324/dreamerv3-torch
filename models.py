@@ -157,9 +157,12 @@ class WorldModel(nn.Module):
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
-                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "image":
-                        print("likelihood", like)
+                        print("likelihood", like[..., 2:])
+                        losses[name] = -torch.mean(like[..., 2:]) * self._scales.get(name, 1.0)
+                    else:
+
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
