@@ -109,15 +109,9 @@ class WorldModel(nn.Module):
         for name in config.grad_heads:
             assert name in self.heads, name
 
-        self._regular_parameters = list(self.heads["image"].parameters()) + list(self.encoder.parameters()) + \
-                                   list(self.heads["cont"].parameters()) + list(self.dynamics.parameters()) + \
-                                   list(self.heads["where"].parameters())
-
         self._model_opt = tools.Optimizer(
             "world_model",
-            [{'params': self._regular_parameters}, {'params': self.heads["reward"].parameters(),
-                                                    'lr': config.transformer_lr,
-                                                    'weight_decay': config.transformer_weight_decay}],
+            self.parameters(),
             config.model_lr,
             config.opt_eps,
             config.grad_clip,
@@ -173,8 +167,7 @@ class WorldModel(nn.Module):
                         losses[name] += torch.maximum(pred.logits.abs(), threshold).mean() * coeff
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
-                        diff = (pred.mode() - data[name]).double()
-
+                        diff = (pred.mode() - data[name]).abs().double()
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
                                 torch.nanmean(diff[..., i * 4:i * 4 + 4])
@@ -182,7 +175,7 @@ class WorldModel(nn.Module):
 
                 model_loss = sum(losses.values()) + kl_loss
 
-            metrics.update(self._model_opt(model_loss, self._regular_parameters))
+            metrics.update(self._model_opt(model_loss, self.parameters()))
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale

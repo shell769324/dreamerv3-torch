@@ -639,10 +639,9 @@ class Optimizer:
                 for param in v._value_layer.parameters():
                     print("value", paramer(param))
 
-    def __call__(self, loss, params, retain_graph=False):
+    def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
-        metrics = {}
-        metrics[f"{self._name}_loss"] = loss.detach().cpu().numpy()
+        metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
         self._scaler.scale(loss).backward()
         self._scaler.unscale_(self._opt)
         norms = {}

@@ -74,11 +74,11 @@ class Crafter():
                 min_dist = dist if min_dist is None else min(dist, min_dist)
     return min_dist
 
-  def compute_where(self, player_pos, info):
+  def compute_where(self, player_pos, sem):
       where = np.zeros((len(targets), 4), dtype=np.uint8)
 
       def condition(i1, i2, t):
-          return 0 <= i1 < len(info['semantic']) and 0 <= i2 < len(info['semantic'][0]) and self._id_to_item[info['semantic'][i1][i2]] == t
+          return 0 <= i1 < len(sem) and 0 <= i2 < len(sem[0]) and self._id_to_item[sem[i1][i2]] == t
 
       for index, t in enumerate(targets):
           lower_row = player_pos[0] - self._row_side
@@ -122,12 +122,18 @@ class Crafter():
     # don't do noop
     action += 1
     previous_pos = self._crafter_env._player.pos
+
+    where_array = self.compute_where(previous_pos, self._env._sem_view())
     image, reward, self._done, info = self._env.step(action)
     self._target_steps += 1
     #reward = np.float32(reward)
-    reward = np.float32(0)
     player_pos = info['player_pos']
     facing = info['player_facing']
+
+    reward = np.float32(0)
+    # Hit lava very negative reward
+    if self._env._world[player_pos][0] == 'lava':
+        reward -= 3
     faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
     target_reached = False
     target_steps = self._target_steps
@@ -152,7 +158,6 @@ class Crafter():
         elif self._last_min_dist < min_dist:
             reward -= 0.5
         self._last_min_dist = min_dist
-    where_array = self.compute_where(player_pos, info)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward, where_array)
 
     return self._obs(
