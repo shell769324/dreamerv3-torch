@@ -646,12 +646,12 @@ class Optimizer:
                     print("value", param_grad(param))
         if k == "image":
             print("linear norm", torch.nn.utils.clip_grad_norm_(v._linear_layer.parameters(), self._clip))
-            for param in v._linear_layer.parameters():
-                print("image linear", param_grad(param))
+            # for param in v._linear_layer.parameters():
+            #     print("image linear", param_grad(param))
             for layer in v.layers:
                 print("image layer norm", torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip))
-                for param in layer.parameters():
-                    print("decoder", param_grad(param), "\n original", paramer(param))
+                # for param in layer.parameters():
+                #    print("decoder", param_grad(param), "\n original", paramer(param))
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
