@@ -8,6 +8,7 @@ from torch import distributions as torchd
 
 import tools
 
+
 class PreNorm(nn.Module):
     def __init__(self, dim, fn):
         super().__init__()
@@ -37,8 +38,8 @@ class FeedForward(nn.Module):
     def forward(self, x):
         x, q2 = x
         x, q = self.net(x) + x, self.net2(q2) + q2
-        print("ff x", x.abs().max, x.abs().mean())
-        print("ff q", q.abs().max, q.abs().mean())
+        # print("ff x", x.abs().max, x.abs().mean())
+        # print("ff q", q.abs().max, q.abs().mean())
         return x, q
 
 
@@ -75,8 +76,8 @@ class Attention(nn.Module):
         out = rearrange(out, 'b h n d -> b n (h d)')
         qout = rearrange(qout, 'b h n d -> b n (h d)')
         x, q = self.to_out(out) + x, qout + qoir
-        print("at x", x.abs().max, x.abs().mean())
-        print("at q", q.abs().max, q.abs().mean())
+        # print("at x", x.abs().max, x.abs().mean())
+        # print("at q", q.abs().max, q.abs().mean())
         return x, q
 
 
@@ -204,28 +205,29 @@ class A2C(nn.Module):
         self._value_layer.apply(tools.weight_init)
         self._action_layer.apply(tools.weight_init)
 
+
     def __call__(self, stoch, deter, targets_array, dtype=None):
         original = deter.shape
         stoch = stoch.reshape(-1, stoch.shape[-1])
         deter = deter.reshape(-1, deter.shape[-1])
-        print("stoch value", stoch.abs().max(), stoch.abs().mean())
-        print("deter value", deter.abs().max(), deter.abs().mean())
+        # print("stoch value", stoch.abs().max(), stoch.abs().mean())
+        # print("deter value", deter.abs().max(), deter.abs().mean())
         targets_array = targets_array.reshape(-1)
         token1 = self.stoch_layer(stoch).unsqueeze(-2)
         token2 = self.deter_layer(deter).unsqueeze(-2)
 
-        print("stoch token value", token1.abs().max(), token1.abs().mean())
-        print("deter token value", token2.abs().max(), token2.abs().mean())
+        # print("stoch token value", token1.abs().max(), token1.abs().mean())
+        # print("deter token value", token2.abs().max(), token2.abs().mean())
         feature = torch.cat([token1, token2], dim=-2)
         # b h 1 d
         (_, out) = self.layers((feature, self.embedding(targets_array).unsqueeze(-2)))
-        print("out value", out.abs().max(), out.abs().mean())
+        # print("out value", out.abs().max(), out.abs().mean())
         if len(original) == 2:
             out = out.reshape(original[0], -1)
         else:
             out = out.reshape(original[0], original[1], -1)
         actions = self._action_layer(out)
         values = self._value_layer(out)
-        print("action", actions.abs().max(), actions.abs().mean())
-        print("values", values.abs().max(), values.abs().mean())
+        # print("action", actions.abs().max(), actions.abs().mean())
+        # print("values", values.abs().max(), values.abs().mean())
         return values, actions

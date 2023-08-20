@@ -618,7 +618,7 @@ class Optimizer:
                     return str(param.shape) + ", " + str(param.grad[param.shape[0] // 4:param.shape[0] * 5 // 16])
                 return str(param.shape) + "," + str(param.grad[len(param) // 2, param.shape[1] // 4:param.shape[1] * 5 // 16])
             return ""
-        if k == "a2c":
+        if k == "a2ca":
             for param in v.stoch_layer.parameters():
                 print("stoch", paramer(param))
             for param in v.deter_layer.parameters():
@@ -638,6 +638,12 @@ class Optimizer:
                     print("action", paramer(param))
                 for param in v._value_layer.parameters():
                     print("value", paramer(param))
+        if k == "image":
+            for param in v._linear_layer.parameters():
+                print("image linear", paramer(param))
+            for layer in v.layers:
+                for param in layer.parameters():
+                    print(paramer(param))
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
@@ -647,10 +653,8 @@ class Optimizer:
         norms = {}
         for k, v in self._sub.items():
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
-            if k == "a2c":
-                print("norm", norms[k])
-                self.temp(k, v)
-                exit(1)
+            print("norm", norms[k])
+            self.temp(k, v)
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()
