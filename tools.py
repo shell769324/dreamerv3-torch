@@ -649,9 +649,8 @@ class Optimizer:
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
             if k == "a2c":
                 print("norm", norms[k])
-                if not (-100 <= norms[k] <= 100):
-                    self.temp(k, v)
-                    exit(1)
+                self.temp(k, v)
+                exit(1)
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()

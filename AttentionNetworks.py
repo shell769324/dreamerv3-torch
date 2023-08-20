@@ -228,6 +228,4 @@ class A2C(nn.Module):
         values = self._value_layer(out)
         print("action", actions.abs().max(), actions.abs().mean())
         print("values", values.abs().max(), values.abs().mean())
-        exit(1)
-
         return values, actions
