@@ -653,9 +653,8 @@ class Optimizer:
                 print("image layer norm", clipped)
                 if not (-10 <= clipped < 10):
                     print(layer.weight, layer.bias)
-                    print(layer.parameters().grad)
-                # for param in layer.parameters():
-                #    print("decoder", param_grad(param), "\n original", paramer(param))
+                    for param in layer.parameters():
+                        print("decoder", param.grad)
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
