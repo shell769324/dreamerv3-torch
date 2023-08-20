@@ -158,6 +158,8 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    if name == "image":
+                        print(like)
                     if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
