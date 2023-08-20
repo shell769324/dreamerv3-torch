@@ -113,7 +113,7 @@ defaults:
   future_entropy: False
 
   regularization: 0.1
-  regularize_threshold: 15
+  regularize_threshold: 11
 
   # Exploration
   expl_behavior: 'greedy'
