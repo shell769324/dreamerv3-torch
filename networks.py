@@ -376,7 +376,7 @@ class ConvDecoder(nn.Module):
         x = x.reshape([-1, 4, 4, self._embed_size // 16])
         x = x.permute(0, 3, 1, 2)
         x = self.layers(x)
-        print("decoder post transpose cnn", x.abs().mean(), x.max(), x.min())
+        print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
         mean = x.reshape(features.shape[:-1] + self._shape)
         mean = mean.permute(0, 1, 3, 4, 2)
         return tools.SymlogDist(mean)
