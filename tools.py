@@ -654,7 +654,7 @@ class Optimizer:
                 if not (-10 <= clipped < 10):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
-                        print("decoder bad", param.grad.shape)
+                        print("decoder bad", param.grad.shape, param.weight)
                 else:
                     for param in layer.parameters():
                         print("decoder good", param.grad.shape)
