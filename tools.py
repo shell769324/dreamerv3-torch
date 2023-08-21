@@ -653,10 +653,10 @@ class Optimizer:
                 if not (-10 <= clipped < 10):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
-                        print("decoder bad", param.grad.shape, param.weight if hasattr(param, 'weight') else "")
+                        print("decoder bad", param.grad.shape, layer.weight.abs().max() if hasattr(layer, 'weight') else "")
                 else:
                     for param in layer.parameters():
-                        print("decoder good", param.grad.shape)
+                        print("decoder good", param.grad.shape, layer.weight.abs().max() if hasattr(layer, 'weight') else "")
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
