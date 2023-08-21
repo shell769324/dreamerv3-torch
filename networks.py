@@ -406,7 +406,7 @@ class ConvDecoder(nn.Module):
         for l in self.layers:
             x = l(x)
             print(l)
-            print(x.shape, x.min(), x.max(), x.mean())
+            print(x.shape, x.min(), x.max(), x.abs().mean())
             print("")
         print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
         mean = x.reshape(features.shape[:-1] + self._shape)
