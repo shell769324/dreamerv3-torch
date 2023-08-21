@@ -652,12 +652,12 @@ class Optimizer:
                 print("image layer norm", clipped)
                 if hasattr(layer, 'weight'):
                     print("weight", layer.weight.abs().max().item())
-                elif hasattr(layer, 'bias'):
+                if hasattr(layer, 'bias'):
                     print("bias", layer.bias.abs().max().item())
                 if not (-100 <= clipped < 100):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
-                        print("decoder bad", param.grad.shape)
+                        print("decoder bad", param.grad.shape, )
                 else:
                     for param in layer.parameters():
                         print("decoder good", param.grad.shape)
