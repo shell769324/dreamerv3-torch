@@ -653,7 +653,7 @@ class Optimizer:
                 if hasattr(layer, 'weight'):
                     print("weight", layer.weight.abs().max().item())
                 if hasattr(layer, 'bias') and layer.bias is not None:
-                    print("bias", layer.bias.abs().max().item())
+                    print("bias", layer.bias)
                 if not (-100 <= clipped < 100):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
