@@ -651,12 +651,13 @@ class Optimizer:
             for layer in v.layers:
                 clipped = torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip)
                 print("image layer norm", clipped)
-                for param in layer.parameters():
-                    print("decoder shape only", param.grad.shape)
                 if not (-10 <= clipped < 10):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
-                        print("decoder", param.grad.shape, param.grad)
+                        print("decoder bad", param.grad.shape)
+                else:
+                    for param in layer.parameters():
+                        print("decoder good", param.grad.shape)
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
