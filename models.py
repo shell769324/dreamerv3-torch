@@ -159,10 +159,12 @@ class WorldModel(nn.Module):
                     likes[name] = like
                     if name == "image":
                         print("likelihood", like[..., 2:])
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                        losses[name].backward()
-                        print(name, losses[name])
-                        print("mode grad", torch._mode.grad)
+                        loss = -torch.mean(like) * self._scales.get(name, 1.0)
+                        # losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                        # losses[name].backward()
+                        loss.backward()
+                        print(name, loss)
+                        print("mode grad", pred._mode.grad)
                     else:
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
