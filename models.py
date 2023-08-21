@@ -162,7 +162,7 @@ class WorldModel(nn.Module):
                         loss = -torch.mean(like) * self._scales.get(name, 1.0)
                         # losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         # losses[name].backward()
-                        loss.backward()
+                        self._model_opt._scaler.scale(loss).backward()
                         print(name, loss)
                         print("mode grad", pred._mode)
                     else:
