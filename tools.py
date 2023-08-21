@@ -661,6 +661,7 @@ class Optimizer:
                 else:
                     for param in layer.parameters():
                         print("decoder good", param.grad.shape)
+                print("")
 
     def __call__(self, loss, params):
         assert len(loss.shape) == 0, loss.shape
