@@ -648,12 +648,13 @@ class Optimizer:
             # for param in v._linear_layer.parameters():
             #     print("image linear", param_grad(param))
             for layer in v.layers:
-                clipped = torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip)
-                print("image layer norm", clipped)
                 if hasattr(layer, 'weight'):
                     print("weight", layer.weight.abs().max().item())
                 if hasattr(layer, 'bias') and layer.bias is not None:
                     print("bias", layer.bias, layer.bias.grad)
+
+                clipped = torch.nn.utils.clip_grad_norm_(layer.parameters(), self._clip)
+                print("image layer norm", clipped)
                 if not (-100 <= clipped < 100):
                     # print(layer.weight, layer.bias)
                     for param in layer.parameters():
