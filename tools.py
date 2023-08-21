@@ -645,7 +645,6 @@ class Optimizer:
                 for param in v._value_layer.parameters():
                     print("value", param_grad(param))
         if k == "image":
-            print("linear norm", torch.nn.utils.clip_grad_norm_(v._linear_layer.parameters(), self._clip))
             # for param in v._linear_layer.parameters():
             #     print("image linear", param_grad(param))
             for layer in v.layers:
