@@ -410,7 +410,7 @@ class ConvDecoder(nn.Module):
             print(x.shape, x.min(), x.max(), x.abs().mean())
             print("")
             """
-        print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
+        # print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
         mean = x.reshape(features.shape[:-1] + self._shape)
         mean = mean.permute(0, 1, 3, 4, 2)
         return tools.SymlogDist(mean)
