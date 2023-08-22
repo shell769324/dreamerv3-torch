@@ -42,9 +42,8 @@ class RequiresGrad:
             m.requires_grad_(requires_grad=True)
 
     def __exit__(self, *args):
-        a = 1
-        # for m in self._models:
-        #    m.requires_grad_(requires_grad=False)
+        for m in self._models:
+            m.requires_grad_(requires_grad=False)
 
 
 class TimeRecording:

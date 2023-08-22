@@ -184,8 +184,8 @@ class WorldModel(nn.Module):
                             )
 
                 model_loss = sum(losses.values()) + kl_loss
-            metrics.update(self._model_opt(model_loss, self.parameters()))
-            print(saved_mode.grad)
+                metrics.update(self._model_opt(model_loss, self.parameters()))
+                print(saved_mode.grad)
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
