@@ -165,7 +165,7 @@ class WorldModel(nn.Module):
                         # self._model_opt._scaler.scale(loss).backward()
                         # self._model_opt(loss)
                         self._model_opt._scaler.scale(loss).backward()
-                        self._model_opt._scaler.unscale_(self._opt)
+                        self._model_opt._scaler.unscale_(self._model_opt._opt)
                         self._model_opt.temp("image", self.heads["image"])
                         # print(name, loss)
                         print("mode grad", pred._mode.shape, pred._mode, pred._mode.sum())
