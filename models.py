@@ -164,8 +164,8 @@ class WorldModel(nn.Module):
                         # losses[name].backward()
                         self._model_opt._scaler.scale(loss).backward()
                         # print(name, loss)
-                        print("mode grad", pred._mode, pred._mode.shape)
-                        # self._model_opt.temp("image", self.heads["image"])
+                        print("mode grad", pred._mode.shape, pred._mode, pred._mode.sum())
+                        self._model_opt.temp("image", self.heads["image"])
                     else:
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
