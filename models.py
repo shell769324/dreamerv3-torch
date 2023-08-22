@@ -133,6 +133,7 @@ class WorldModel(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
+        saved_pred = None
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
@@ -158,6 +159,7 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     if name == "image":
+                        saved_pred = pred
                         print("likelihood", like[..., 2:])
                         # loss = -torch.mean(like) * self._scales.get(name, 1.0)
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
@@ -185,6 +187,7 @@ class WorldModel(nn.Module):
                 model_loss = sum(losses.values()) + kl_loss
 
             metrics.update(self._model_opt(model_loss, self.parameters()))
+            print(saved_pred._mode.grad)
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
