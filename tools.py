@@ -664,11 +664,10 @@ class Optimizer:
                         print("decoder good", param.grad.shape)
                 print("")
 
-    def __call__(self, loss, params):
+    def __call__(self, loss):
         assert len(loss.shape) == 0, loss.shape
         metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
         self._scaler.scale(loss).backward()
-        return metrics
         self._scaler.unscale_(self._opt)
         norms = {}
         for k, v in self._sub.items():

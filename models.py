@@ -184,7 +184,7 @@ class WorldModel(nn.Module):
                             )
 
                 model_loss = sum(losses.values()) + kl_loss
-                metrics.update(self._model_opt(model_loss, self.parameters()))
+                metrics.update(self._model_opt(model_loss))
                 print(saved_mode.grad)
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
@@ -335,7 +335,7 @@ class ImagBehavior(nn.Module):
         )
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
-            metrics.update(self._a2c_opt(actor_loss + value_loss, self.a2c.parameters()))
+            metrics.update(self._a2c_opt(actor_loss + value_loss))
         metrics["value_loss"] = value_loss.detach().cpu().numpy()
         metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
