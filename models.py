@@ -196,7 +196,6 @@ class WorldModel(nn.Module):
                 postent=self.dynamics.get_dist(post).entropy(),
             )
         post = {k: v.detach() for k, v in post.items()}
-        exit(1)
         return post, context, metrics
 
     def preprocess(self, obs):
