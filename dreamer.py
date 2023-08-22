@@ -354,8 +354,6 @@ def main(config, defaults):
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
-        agent._wm._model_opt.load_state_dict(torch.load(logdir / "model_opt.pt"))
-        agent._task_behavior._a2c_opt.load_state_dict(torch.load(logdir / "a2c_opt.pt"))
         agent._should_pretrain._once = False
 
     state = None
@@ -365,8 +363,6 @@ def main(config, defaults):
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
             torch.save(agent.state_dict(), logdir / "latest_model.pt")
-            torch.save(agent._wm._model_opt.state_dict(), logdir / "model_opt.pt")
-            torch.save(agent._task_behavior._a2c_opt.state_dict(), logdir / "a2c_opt.pt")
             print("Start evaluation.")
             tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
