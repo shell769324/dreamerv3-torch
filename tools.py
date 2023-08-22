@@ -668,13 +668,13 @@ class Optimizer:
         assert len(loss.shape) == 0, loss.shape
         metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
         self._scaler.scale(loss).backward()
+        return metrics
         self._scaler.unscale_(self._opt)
         norms = {}
         for k, v in self._sub.items():
             self.temp(k, v)
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
             print("norm", k, norms[k])
-        return metrics
         self._scaler.step(self._opt)
         self._scaler.update()
         # self._opt.step()
