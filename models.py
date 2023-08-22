@@ -157,22 +157,7 @@ class WorldModel(nn.Module):
                     like = pred.log_prob(data[name])
 
                     likes[name] = like
-                    if name == "image":
-                        saved_mode = pred._mode
-                        loss = -torch.mean(like) * self._scales.get(name, 1.0)
-                        # losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                        # losses[name].backward()
-                        # self._model_opt._scaler.scale(loss).backward()
-                        # self._model_opt(loss)
-                        #self._model_opt._scaler.scale(loss).backward()
-                        # self._model_opt._scaler.unscale_(self._model_opt._opt)
-                        loss.backward()
-                        self._model_opt.temp("image", self.heads["image"])
-                        # print(name, loss)
-                        print("mode grad", pred._mode.shape, pred._mode, pred._mode.sum())
-                        # self._model_opt.temp("image", self.heads["image"])
-                    else:
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
                         for i in range(len(targets)):
                             conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
@@ -189,7 +174,6 @@ class WorldModel(nn.Module):
 
                 model_loss = sum(losses.values()) + kl_loss
                 metrics.update(self._model_opt(model_loss))
-                print(saved_mode.grad)
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
