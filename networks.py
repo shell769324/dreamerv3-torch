@@ -396,18 +396,20 @@ class ConvDecoder(nn.Module):
         return pad, outpad
 
     def __call__(self, features, dtype=None):
-        print("in features", features.shape)
+        # print("in features", features.shape)
         x = self._linear_layer(features)
-        print("x features", x.shape)
-        print("decoder linear", x.abs().mean(), x.max(), x.min())
+        # print("x features", x.shape)
+        # print("decoder linear", x.abs().mean(), x.max(), x.min())
         x = x.reshape([-1, 4, 4, self._embed_size // 16])
         x = x.permute(0, 3, 1, 2)
-        # x = self.layers(x)
+        x = self.layers(x)
+        """
         for l in self.layers:
             x = l(x)
             print(l)
             print(x.shape, x.min(), x.max(), x.abs().mean())
             print("")
+            """
         print("decoder post transpose cnn", x.shape, x.abs().mean(), x.max(), x.min())
         mean = x.reshape(features.shape[:-1] + self._shape)
         mean = mean.permute(0, 1, 3, 4, 2)
