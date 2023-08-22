@@ -159,13 +159,12 @@ class WorldModel(nn.Module):
                     likes[name] = like
                     if name == "image":
                         saved_mode = pred._mode
-                        print("likelihood", like[..., 2:])
-                        # loss = -torch.mean(like) * self._scales.get(name, 1.0)
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                        loss = -torch.mean(like) * self._scales.get(name, 1.0)
+                        # losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         # losses[name].backward()
-                        # self._model_opt._scaler.scale(loss).backward()
+                        self._model_opt._scaler.scale(loss).backward()
                         # print(name, loss)
-                        # print("mode grad", pred._mode, pred._mode.shape)
+                        print("mode grad", pred._mode, pred._mode.shape)
                         # self._model_opt.temp("image", self.heads["image"])
                     else:
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
