@@ -673,9 +673,9 @@ class Optimizer:
         norms = {}
         for k, v in self._sub.items():
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
-        self._scaler.step(self._opt)
-        self._scaler.update()
-        # self._opt.step()
+        # self._scaler.step(self._opt)
+        # self._scaler.update()
+        self._opt.step()
         self._opt.zero_grad()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
