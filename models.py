@@ -185,7 +185,7 @@ class WorldModel(nn.Module):
                             )
 
                 model_loss = sum(losses.values()) + kl_loss
-
+            print(saved_pred._mode.grad)
             metrics.update(self._model_opt(model_loss, self.parameters()))
             print(saved_pred._mode.grad)
         metrics.update({f"{name}_loss": to_np(loss) for name, loss in losses.items()})
