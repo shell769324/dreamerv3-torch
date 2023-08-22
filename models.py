@@ -133,7 +133,6 @@ class WorldModel(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
-        saved_pred = None
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 embed = self.encoder(data)
