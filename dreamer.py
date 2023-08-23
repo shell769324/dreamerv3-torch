@@ -359,7 +359,8 @@ def main(config, defaults):
     state = None
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
-        wandb.watch(agent, log='all', log_freq=1)
+        wandb.watch(agent._wm, log='all', log_freq=1)
+        wandb.watch(agent._task_behavior, log='all', log_freq=1)
         while agent._step < config.steps:
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
