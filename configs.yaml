@@ -148,3 +148,4 @@ crafter:
   embed_dim: 512
   attention_dim: 512
   target_units: 512
+  is_debug: False
