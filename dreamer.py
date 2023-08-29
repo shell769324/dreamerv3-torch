@@ -359,7 +359,9 @@ def main(config, defaults):
     state = None
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
+        agent._wm.heads["reward"].requires_grad_(requires_grad=True)
         wandb.watch(agent._wm.heads["reward"], log='parameters', log_freq=1)
+        agent._wm.heads["reward"].requires_grad_(requires_grad=False)
         while agent._step < config.steps:
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
