@@ -128,7 +128,7 @@ class MixedHead(nn.Module):
             self.std_layer = nn.Linear(attention_dim, np.prod(self._shape))
             self.std_layer.apply(tools.weight_init)
 
-    def __call__(self, stoch, deter, targets_array, dtype=None):
+    def forward(self, stoch, deter, targets_array, dtype=None):
         original = deter.shape
         stoch = stoch.reshape(-1, stoch.shape[-1])
         deter = deter.reshape(-1, deter.shape[-1])
@@ -163,6 +163,9 @@ class MixedHead(nn.Module):
             res = tools.TwoHotDistSymlog(logits=mean, device=self._device)
             return res
         raise NotImplementedError(self._dist)
+
+    def __call__(self, stoch, deter, targets_array, dtype=None):
+        return self.forward(stoch, deter, targets_array, dtype=dtype)
 
 class A2C(nn.Module):
     def __init__(
@@ -205,8 +208,7 @@ class A2C(nn.Module):
         self._value_layer.apply(tools.weight_init)
         self._action_layer.apply(tools.weight_init)
 
-
-    def __call__(self, stoch, deter, targets_array, dtype=None):
+    def forward(self, stoch, deter, targets_array, dtype=None):
         original = deter.shape
         stoch = stoch.reshape(-1, stoch.shape[-1])
         deter = deter.reshape(-1, deter.shape[-1])
@@ -231,3 +233,6 @@ class A2C(nn.Module):
         # print("action", actions.abs().max(), actions.abs().mean())
         # print("values", values.abs().max(), values.abs().mean())
         return values, actions
+
+    def __call__(self, stoch, deter, targets_array, dtype=None):
+        return self.forward(stoch, deter, targets_array, dtype)
