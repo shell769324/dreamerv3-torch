@@ -360,11 +360,14 @@ def main(config, defaults):
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
         agent._wm.heads["reward"].requires_grad_(requires_grad=True)
+        agent._wm.heads["image"].requires_grad_(requires_grad=True)
         agent._task_behavior.a2c.requires_grad_(requires_grad=True)
-        wandb.watch(agent._wm.heads["reward"], log_freq=5, log="all")
-        wandb.watch(agent._task_behavior.a2c, log_freq=5, log="all")
+        wandb.watch(agent._wm.heads["reward"], log_freq=10, log="all")
+        wandb.watch(agent._wm.heads["image"], log_freq=10, log="all")
+        wandb.watch(agent._task_behavior.a2c, log_freq=10, log="all")
         agent._wm.heads["reward"].requires_grad_(requires_grad=False)
         agent._task_behavior.a2c.requires_grad_(requires_grad=False)
+        agent._wm.heads["image"].requires_grad_(requires_grad=False)
 
         while agent._step < config.steps:
             print("Start training.")
