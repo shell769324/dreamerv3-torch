@@ -164,9 +164,6 @@ class MixedHead(nn.Module):
             return res
         raise NotImplementedError(self._dist)
 
-    def __call__(self, stoch, deter, targets_array, dtype=None):
-        return self.forward(stoch, deter, targets_array, dtype=dtype)
-
 class A2C(nn.Module):
     def __init__(
         self,
@@ -233,6 +230,3 @@ class A2C(nn.Module):
         # print("action", actions.abs().max(), actions.abs().mean())
         # print("values", values.abs().max(), values.abs().mean())
         return values, actions
-
-    def __call__(self, stoch, deter, targets_array, dtype=None):
-        return self.forward(stoch, deter, targets_array, dtype)
