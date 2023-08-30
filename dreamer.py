@@ -362,6 +362,7 @@ def main(config, defaults):
         agent._wm.heads["reward"].requires_grad_(requires_grad=True)
         wandb.run._torch.add_log_parameters_hook(agent._wm.heads["reward"], prefix="reward")
         agent._wm.heads["reward"].requires_grad_(requires_grad=False)
+        print("wandb hooks", agent._wm.heads["reward"]._wandb_hook_names)
         while agent._step < config.steps:
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
