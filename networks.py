@@ -291,7 +291,7 @@ class ConvEncoder(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.layers.apply(tools.weight_init)
 
-    def __call__(self, obs):
+    def forward(self, obs):
         x = obs["image"].reshape((-1,) + tuple(obs["image"].shape[-3:]))
         x = x.permute(0, 3, 1, 2)
         x = self.layers(x)
@@ -395,7 +395,7 @@ class ConvDecoder(nn.Module):
         outpad = pad * 2 - val
         return pad, outpad
 
-    def __call__(self, features, dtype=None):
+    def forward(self, features, dtype=None):
         # print("in features", features.shape)
         x = self._linear_layer(features)
         # print("x features", x.shape)
@@ -459,7 +459,7 @@ class DenseHead(nn.Module):
             self.std_layer = nn.Linear(self._units, np.prod(self._shape))
             self.std_layer.apply(tools.uniform_weight_init(outscale))
 
-    def __call__(self, features, dtype=None):
+    def forward(self, features, dtype=None):
         x = features
         out = self.layers(x)
         mean = self.mean_layer(out)
