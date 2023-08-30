@@ -359,15 +359,19 @@ def main(config, defaults):
     state = None
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
-        agent._wm.heads["reward"].requires_grad_(requires_grad=True)
-        agent._wm.heads["image"].requires_grad_(requires_grad=True)
-        agent._task_behavior.a2c.requires_grad_(requires_grad=True)
-        wandb.watch(agent._wm.heads["reward"], log_freq=10, log="all")
-        wandb.watch(agent._wm.heads["image"], log_freq=10, log="all")
-        wandb.watch(agent._task_behavior.a2c, log_freq=10, log="all")
-        agent._wm.heads["reward"].requires_grad_(requires_grad=False)
-        agent._task_behavior.a2c.requires_grad_(requires_grad=False)
-        agent._wm.heads["image"].requires_grad_(requires_grad=False)
+        for model, name in [(agent._wm.heads["reward"], "reward"), (agent._wm.heads["image"], "image"), (agent._task_behavior.a2c, "a2c")]:
+            model.requires_grad_(requires_grad=True)
+            wandb.run._torch.add_log_parameters_hook(
+                model,
+                prefix=name,
+                log_freq=10,
+            )
+            wandb.run._torch.add_log_gradients_hook(
+                model,
+                prefix=name,
+                log_freq=10,
+            )
+            model.requires_grad_(requires_grad=False)
 
         while agent._step < config.steps:
             print("Start training.")
