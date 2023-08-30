@@ -362,11 +362,12 @@ def main(config, defaults):
         agent._wm.heads["reward"].requires_grad_(requires_grad=True)
         wandb.run._torch.add_log_parameters_hook(agent._wm.heads["reward"], prefix="reward")
         agent._wm.heads["reward"].requires_grad_(requires_grad=False)
-        print("wandb hooks", agent._wm.heads["reward"]._wandb_hook_names)
-        print("forward hooks", agent._wm.heads["reward"]._forward_hooks)
+
         agent._wm.heads["reward"].register_forward_hook(
             lambda mod, inp, outp: print("aaaaaaa\n\n\n")
         )
+        print("wandb hooks", agent._wm.heads["reward"]._wandb_hook_names)
+        print("forward hooks", agent._wm.heads["reward"]._forward_hooks)
         while agent._step < config.steps:
             print("Start training.")
             state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
