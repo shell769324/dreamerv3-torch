@@ -256,8 +256,6 @@ class ProcessEpisodeWrap:
                     wandb.log({
                         f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
                     }, step=logger.step)
-            # use dataset_size as log step for a condition of envs > 1
-            log_step = total * config.action_repeat
         elif mode == "eval":
             # keep only last item for saving memory
             while len(cache) > 1:
@@ -359,17 +357,17 @@ def main(config, defaults):
     state = None
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
-        for model, name in [(agent._wm.heads["reward"], "reward"), (agent._wm.heads["image"], "image"), (agent._task_behavior.a2c, "a2c")]:
+        for model, name in [(agent._wm.heads["reward"], "reward."), (agent._wm.heads["image"], "image."), (agent._task_behavior.a2c, "a2c.")]:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
                 model,
                 prefix=name,
-                log_freq=20,
+                log_freq=100,
             )
             wandb.run._torch.add_log_gradients_hook(
                 model,
                 prefix=name,
-                log_freq=20,
+                log_freq=100,
             )
             model.requires_grad_(requires_grad=False)
 

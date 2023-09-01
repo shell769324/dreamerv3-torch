@@ -160,16 +160,32 @@ class WorldModel(nn.Module):
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                     if name == "reward":
                         for i in range(len(targets)):
-                            conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
-                                torch.nanmean((pred.mean() - data[name]).abs()[data["target"] == i])
+                            diff = (pred.mean() - data[name]).abs()
+                            conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
+                                torch.nanmean(diff[(data["target"] == i) & ((data[name] - 0.5).abs() < 1e-4)])
                             )
-                        losses[name] += torch.maximum(pred.logits.abs(), threshold).mean() * coeff
+                            conditional_metrics[targets[i] + "_" + name + "_farther_diff"] = to_np(
+                                torch.nanmean(diff[(data["target"] == i) & ((data[name] + 0.5).abs() < 1e-4)])
+                            )
+                            conditional_metrics[targets[i] + "_" + name + "_hit_diff"] = to_np(
+                                torch.nanmean(diff[(data["target"] == i) & ((data[name] - 1).abs() < 1e-4)])
+                            )
+                            conditional_metrics[targets[i] + "_" + name + "_stable_diff"] = to_np(
+                                torch.nanmean(diff[(data["target"] == i) & (data[name].abs() < 1e-4)])
+                            )
+                        reward_suppressor = torch.maximum(pred.logits.abs(), threshold).mean() * coeff
+                        losses[name] += reward_suppressor
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
                         diff = (pred.mode() - data[name]).abs().double()
                         for i in range(len(targets)):
-                            conditional_metrics[targets[i] + "_" + name + "_diff"] = to_np(
-                                torch.nanmean(diff[..., i * 4:i * 4 + 4])
+                            gt_slice = data[name][..., i * 4:i * 4 + 4]
+                            actual_slice = diff[..., i * 4:i * 4 + 4]
+                            conditional_metrics[targets[i] + "_" + name + "_absent_diff"] = to_np(
+                                torch.nanmean(actual_slice[gt_slice == 0])
+                            )
+                            conditional_metrics[targets[i] + "_" + name + "_present_diff"] = to_np(
+                                torch.nanmean(actual_slice[gt_slice == 1])
                             )
 
                 model_loss = sum(losses.values()) + kl_loss
@@ -180,6 +196,7 @@ class WorldModel(nn.Module):
         metrics["rep_scale"] = rep_scale
         metrics["dyn_loss"] = to_np(dyn_loss)
         metrics["rep_loss"] = to_np(rep_loss)
+        metrics["reward_suppressor"] = to_np(reward_suppressor)
         metrics["kl"] = to_np(torch.mean(kl_value))
         metrics = {**metrics, **conditional_metrics}
         with torch.cuda.amp.autocast(self._use_amp):
@@ -272,7 +289,7 @@ class ImagBehavior(nn.Module):
         data=None
     ):
         metrics = {}
-        threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
+        threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
@@ -303,12 +320,14 @@ class ImagBehavior(nn.Module):
                     policy,
                     value_mode
                 )
-                actor_loss += (torch.maximum(policy_params.abs(), threshold).mean(dim=-1, keepdim=True) * weights).mean() * coeff
+                actor_suppressor = (torch.maximum(policy_params.abs(), threshold).mean(dim=-1, keepdim=True) * weights).mean() * coeff
+                actor_loss += actor_suppressor
                 metrics.update(mets)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + (torch.maximum(means[:-1].abs(), threshold).mean(dim=-1, keepdim=True) * weights[:-1]).mean() * coeff
+                value_suppressor = (torch.maximum(means[:-1].abs(), threshold).mean(dim=-1, keepdim=True) * weights[:-1]).mean() * coeff
+                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + value_suppressor
 
         metrics.update(tools.tensorstats(policy_params, "action_logits"))
         metrics.update(tools.tensorstats(means, "value_logits"))
@@ -325,6 +344,8 @@ class ImagBehavior(nn.Module):
             metrics.update(self._a2c_opt(actor_loss + value_loss))
         metrics["value_loss"] = value_loss.detach().cpu().numpy()
         metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
+        metrics["value_suppressor"] = value_suppressor.detach().cpu().numpy()
+        metrics["actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array):
