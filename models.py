@@ -174,7 +174,8 @@ class WorldModel(nn.Module):
                             conditional_metrics[targets[i] + "_" + name + "_stable_diff"] = to_np(
                                 torch.nanmean(diff[(unsqueezed_targets == i) & (data[name].abs() < 1e-4)])
                             )
-                        reward_suppressor = torch.maximum(pred.logits.abs(), threshold).mean() * coeff
+                        reward_logits = pred.logits.abs()
+                        reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         losses[name] += reward_suppressor
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
@@ -321,13 +322,21 @@ class ImagBehavior(nn.Module):
                     policy,
                     value_mode
                 )
-                actor_suppressor = (torch.maximum(policy_params.abs(), threshold).mean(dim=-1, keepdim=True) * weights).mean() * coeff
+                policy_abs = policy_params.abs()
+                policy_abs[policy_abs <= threshold] = 0
+                policy_abs[policy_abs > 0] -= threshold
+                policy_abs = policy_abs * weights
+                actor_suppressor = policy_abs[policy_abs > 0].mean() * coeff
                 actor_loss += actor_suppressor
                 metrics.update(mets)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
                 # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_suppressor = (torch.maximum(means[:-1].abs(), threshold).mean(dim=-1, keepdim=True) * weights[:-1]).mean() * coeff
+                value_abs = means[:-1].abs()
+                value_abs[value_abs <= threshold] = 0
+                value_abs[value_abs > 0] -= threshold
+                value_abs = value_abs * weights[:-1]
+                value_suppressor = value_abs[value_abs > 0].mean() * coeff
                 value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + value_suppressor
 
         metrics.update(tools.tensorstats(policy_params, "action_logits"))
