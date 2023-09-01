@@ -355,14 +355,17 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    # with wandb.init(project='mastering crafter with world models', config=defaults, id="hrrmfo14", resume=True):
-    with wandb.init(project='mastering crafter with world models', config=defaults):
-        for model, name in [(agent._wm.heads["reward"], "reward."), (agent._wm.heads["image"], "image."), (agent._task_behavior.a2c, "a2c.")]:
+    watched = [(agent._wm.heads["reward"], "reward.", 3000),
+               (agent._wm.heads["image"], "image.", 1000),
+               (agent._task_behavior.a2c, "a2c.", 10000)]
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="u64xvstx", resume=True):
+    # with wandb.init(project='mastering crafter with world models', config=defaults):
+        for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
                 model,
                 prefix=name,
-                log_freq=1000,
+                log_freq=param_freq,
             )
             wandb.run._torch.add_log_gradients_hook(
                 model,
