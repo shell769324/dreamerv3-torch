@@ -161,6 +161,7 @@ class WorldModel(nn.Module):
                     if name == "reward":
                         for i in range(len(targets)):
                             diff = (pred.mean() - data[name]).abs()
+                            print(data["target"].shape, data[name].shape)
                             conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
                                 torch.nanmean(diff[(data["target"] == i) & ((data[name] - 0.5).abs() < 1e-4)])
                             )
