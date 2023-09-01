@@ -362,12 +362,12 @@ def main(config, defaults):
             wandb.run._torch.add_log_parameters_hook(
                 model,
                 prefix=name,
-                log_freq=100,
+                log_freq=1000,
             )
             wandb.run._torch.add_log_gradients_hook(
                 model,
                 prefix=name,
-                log_freq=100,
+                log_freq=1000,
             )
             model.requires_grad_(requires_grad=False)
 
