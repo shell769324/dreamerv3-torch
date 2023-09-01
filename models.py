@@ -158,21 +158,22 @@ class WorldModel(nn.Module):
 
                     likes[name] = like
                     losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                    unsqueezed_targets = data["target"].unsqueeze(-1)
                     if name == "reward":
                         for i in range(len(targets)):
                             diff = (pred.mean() - data[name]).abs()
                             print(data["target"].shape, data[name].shape, diff.shape)
                             conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
-                                torch.nanmean(diff[(data["target"] == i) & ((data[name] - 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.5).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_farther_diff"] = to_np(
-                                torch.nanmean(diff[(data["target"] == i) & ((data[name] + 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.5).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_hit_diff"] = to_np(
-                                torch.nanmean(diff[(data["target"] == i) & ((data[name] - 1).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 1).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_stable_diff"] = to_np(
-                                torch.nanmean(diff[(data["target"] == i) & (data[name].abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & (data[name].abs() < 1e-4)])
                             )
                         reward_suppressor = torch.maximum(pred.logits.abs(), threshold).mean() * coeff
                         losses[name] += reward_suppressor
