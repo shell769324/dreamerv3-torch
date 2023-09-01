@@ -355,8 +355,8 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    # with wandb.init(project='mastering crafter with world models', config=defaults, id="ltoj1ktl", resume=True):
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="hrrmfo14", resume=True):
+    # with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name in [(agent._wm.heads["reward"], "reward."), (agent._wm.heads["image"], "image."), (agent._task_behavior.a2c, "a2c.")]:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
