@@ -608,7 +608,7 @@ class Optimizer:
             "momentum": lambda: torch.optim.SGD(parameters, lr=lr, momentum=0.9),
             'adamw': lambda: torch.optim.AdamW(parameters, lr=lr, eps=eps)
         }[opt]()
-        self._scaler = torch.cuda.amp.GradScaler(enabled=use_amp)
+        self._scaler = torch.cuda.amp.GradScaler(enabled=use_amp, init_scale=1000)
         self._sub = sub
 
     def temp(self, k, v):
@@ -665,8 +665,6 @@ class Optimizer:
                 print("")
 
     def __call__(self, loss):
-        if self._scaler.get_scale() > 1000:
-            self._scaler.update(new_scale=1000.0)
         assert len(loss.shape) == 0, loss.shape
         metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
         self._scaler.scale(loss).backward()
@@ -676,6 +674,8 @@ class Optimizer:
             norms[k] = torch.nn.utils.clip_grad_norm_(v.parameters(), self._clip)
         self._scaler.step(self._opt)
         self._scaler.update()
+        if self._scaler.get_scale() > 1000:
+            self._scaler.update(new_scale=1000.0)
         # self._opt.step()
         self._opt.zero_grad()
         metrics[f"{self._name}_scale"] = self._scaler.get_scale()
