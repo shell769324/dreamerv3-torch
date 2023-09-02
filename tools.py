@@ -680,7 +680,7 @@ class Optimizer:
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
         if self._scaler.get_scale() > 1000:
-            self._scaler.update(new_scale=2000.0)
+            self._scaler.update(new_scale=1000.0)
         return metrics
 
     def _apply_weight_decay(self, varibs):
