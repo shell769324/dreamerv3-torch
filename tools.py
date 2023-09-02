@@ -676,6 +676,7 @@ class Optimizer:
         self._scaler.update()
         # self._opt.step()
         self._opt.zero_grad()
+        metrics[f"{self._name}_scale"] = self._scaler.get_scale()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
         return metrics

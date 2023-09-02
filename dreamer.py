@@ -105,7 +105,7 @@ class Dreamer(nn.Module):
                     metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
-                    if "logits" in name or "suppressor" in name or "loss" in name:
+                    if "suppressor" in name in name:
                         metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
@@ -360,8 +360,8 @@ def main(config, defaults):
     watched = [(agent._wm.heads["reward"], "reward.", 3000),
                (agent._wm.heads["image"], "image.", 1000),
                (agent._task_behavior.a2c, "a2c.", 10000)]
-    # with wandb.init(project='mastering crafter with world models', config=defaults, id="u64xvstx", resume=True):
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="p1qih0i9", resume=True):
+    # with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
