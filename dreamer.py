@@ -106,7 +106,7 @@ class Dreamer(nn.Module):
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                     if "logits" in name or "suppressor" in name or "loss" in name:
-                        metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values.reshape(-1)))
+                        metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
