@@ -356,8 +356,6 @@ class ImagBehavior(nn.Module):
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
             metrics.update(self._a2c_opt(actor_loss + value_loss))
-        print(actor_loss, value_loss)
-        exit(1)
         metrics["value_loss"] = value_loss.detach().cpu().numpy()
         metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
         metrics["value_suppressor"] = value_suppressor.detach().cpu().numpy()
