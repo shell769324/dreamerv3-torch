@@ -665,6 +665,8 @@ class Optimizer:
                 print("")
 
     def __call__(self, loss):
+        if self._scaler.get_scale() > 1000:
+            self._scaler.update(new_scale=1000.0)
         assert len(loss.shape) == 0, loss.shape
         metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
         self._scaler.scale(loss).backward()
@@ -679,8 +681,6 @@ class Optimizer:
         metrics[f"{self._name}_scale"] = self._scaler.get_scale()
         for k, v in norms.items():
             metrics[f"{k}_grad_norm"] = v.item()
-        if self._scaler.get_scale() > 1000:
-            self._scaler.update(new_scale=1000.0)
         return metrics
 
     def _apply_weight_decay(self, varibs):
