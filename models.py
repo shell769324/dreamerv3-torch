@@ -349,7 +349,7 @@ class ImagBehavior(nn.Module):
                 torch.argmax(imag_action, dim=-1).float(), "imag_action"
             )
         )
-        print("separate", actor_loss, value_loss)
+        print("separate", actor_loss, value_loss, value_suppressor, actor_suppressor)
         print("together", actor_loss + value_loss)
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
