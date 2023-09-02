@@ -178,7 +178,6 @@ class WorldModel(nn.Module):
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         if not reward_suppressor.isnan().any():
                             losses[name] += reward_suppressor
-                            print("enter reward")
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
                         diff = (pred.mode() - data[name]).abs().double()
@@ -330,7 +329,6 @@ class ImagBehavior(nn.Module):
                 policy_abs = policy_abs * weights
                 actor_suppressor = policy_abs[policy_abs > 0].mean() * coeff
                 if not actor_suppressor.isnan().any():
-                    print("enter actor")
                     actor_loss += actor_suppressor
                 metrics.update(mets)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
@@ -343,7 +341,6 @@ class ImagBehavior(nn.Module):
                 value_suppressor = value_abs[value_abs > 0].mean() * coeff
                 value_loss = torch.mean(weights[:-1] * value_loss[:, :, None])
                 if not value_suppressor.isnan().any():
-                    print("enter value")
                     value_loss += value_suppressor
 
         metrics.update(tools.tensorstats(policy_params, "action_logits"))
@@ -359,6 +356,7 @@ class ImagBehavior(nn.Module):
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
             metrics.update(self._a2c_opt(actor_loss + value_loss))
+        print(actor_loss, value_loss)
         exit(1)
         metrics["value_loss"] = value_loss.detach().cpu().numpy()
         metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
