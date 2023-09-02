@@ -667,7 +667,6 @@ class Optimizer:
     def __call__(self, loss):
         assert len(loss.shape) == 0, loss.shape
         metrics = {f"{self._name}_loss": loss.detach().cpu().numpy()}
-        print("inside", self._name, loss.detach().cpu().numpy())
         self._scaler.scale(loss).backward()
         self._scaler.unscale_(self._opt)
         norms = {}
