@@ -176,7 +176,9 @@ class WorldModel(nn.Module):
                             )
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
-                        losses[name] += reward_suppressor
+                        if not reward_suppressor.isnan().any():
+                            losses[name] += reward_suppressor
+                            print("enter reward")
                         metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
                     if name == "where":
                         diff = (pred.mode() - data[name]).abs().double()
@@ -327,8 +329,9 @@ class ImagBehavior(nn.Module):
                 policy_abs[policy_abs > 0] -= threshold
                 policy_abs = policy_abs * weights
                 actor_suppressor = policy_abs[policy_abs > 0].mean() * coeff
-                print("actor_suppressor", actor_loss, actor_suppressor)
-                actor_loss += actor_suppressor
+                if not actor_suppressor.isnan().any():
+                    print("enter actor")
+                    actor_loss += actor_suppressor
                 metrics.update(mets)
                 # (time, batch, 1), (time, batch, 1) -> (time, batch)
                 value_loss = -value.log_prob(target.detach())
@@ -339,8 +342,9 @@ class ImagBehavior(nn.Module):
                 value_abs = value_abs * weights[:-1]
                 value_suppressor = value_abs[value_abs > 0].mean() * coeff
                 value_loss = torch.mean(weights[:-1] * value_loss[:, :, None])
-                print("value_suppressor", value_loss, value_suppressor)
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None]) + value_suppressor
+                if not value_suppressor.isnan().any():
+                    print("enter value")
+                    value_loss += value_suppressor
 
         metrics.update(tools.tensorstats(policy_params, "action_logits"))
         metrics.update(tools.tensorstats(means, "value_logits"))
@@ -352,7 +356,6 @@ class ImagBehavior(nn.Module):
                 torch.argmax(imag_action, dim=-1).float(), "imag_action"
             )
         )
-        print("together", actor_loss + value_loss)
         metrics["actor_ent"] = to_np(torch.mean(actor_ent))
         with tools.RequiresGrad(self):
             metrics.update(self._a2c_opt(actor_loss + value_loss))
