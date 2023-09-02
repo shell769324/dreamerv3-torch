@@ -112,7 +112,7 @@ defaults:
   actor_weight_decay: 0.01
   future_entropy: False
 
-  regularization: 0.2
+  regularization: 0.1
   regularize_threshold: 7
   a2c_regularize_threshold: 7
 
