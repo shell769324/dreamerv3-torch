@@ -105,14 +105,16 @@ class Dreamer(nn.Module):
                     metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
-                    if "suppressor" in name in name:
+                    if "suppressor" in name:
                         metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
+                    if "eval_reward" in name:
+                        print(name, values)
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
-                wandb.log({
-                    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
-                })
+                #wandb.log({
+                #    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
+                #})
                 wandb.log(metrics_dict, step=step)
                 self._metrics.clear()
         for i in range(len(obs["target_steps"])):
@@ -255,9 +257,9 @@ class ProcessEpisodeWrap:
                 wandb.log({"dataset_size": total}, step=logger.step)
                 if logger.step - cls.last_episode >= config.log_every:
                     cls.last_episode = logger.step
-                    wandb.log({
-                        f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
-                    }, step=logger.step)
+                    #wandb.log({
+                    #    f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+                    #}, step=logger.step)
         elif mode == "eval":
             # keep only last item for saving memory
             while len(cache) > 1:
@@ -278,9 +280,9 @@ class ProcessEpisodeWrap:
             score = sum(cls.eval_scores) / len(cls.eval_scores)
             length = sum(cls.eval_lengths) / len(cls.eval_lengths)
             episode_num = len(cls.eval_scores)
-            wandb.log({
-                f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
-            }, step=logger.step)
+            #wandb.log({
+            #    f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+            #}, step=logger.step)
             cls.eval_done = True
 
         print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
@@ -384,9 +386,9 @@ def main(config, defaults):
             tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
-            wandb.log({
-                "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
-            })
+            #wandb.log({
+            #    "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
+            #})
     for env in [train_env, eval_env]:
         try:
             env.close()
