@@ -10,7 +10,7 @@ defaults:
   steps: 1e6
   eval_every: 2e3
   eval_episode_num: 10
-  log_every: 2e2
+  log_every: 2e3
   emit_every: 50
   reset_every: 0
   device: 'cuda:0'
@@ -71,7 +71,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 18
+  batch_size: 22
   batch_length: 64
   train_ratio: 512
   pretrain: 100
