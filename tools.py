@@ -198,7 +198,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     metrics[reward_diff_name] = [reward_diff]
                 else:
                     metrics[reward_diff_name].append(reward_diff)
-                print(metrics[reward_diff_name])
+                print(reward_diff_name, len(metrics[reward_diff_name]))
 
 
 
