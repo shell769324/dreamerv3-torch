@@ -101,10 +101,12 @@ class Dreamer(nn.Module):
                             metrics_dict[name] = float(successes) / (failures + successes)
                     if total_successes != 0 or total_failures != 0:
                         metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
+                print("metrics", self._metrics.keys)
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                     if "suppressor" in name in name:
                         metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
+                print("metrics dict", metrics_dict.keys)
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
