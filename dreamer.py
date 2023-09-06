@@ -114,7 +114,7 @@ class Dreamer(nn.Module):
                     "train_comp": wandb.Video(video, caption="train_comp", fps=10)
                 })
                 wandb.log(metrics_dict, step=step)
-                self._metrics = {}
+                self._metrics.clear()
         for i in range(len(obs["target_steps"])):
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target"][i]]
