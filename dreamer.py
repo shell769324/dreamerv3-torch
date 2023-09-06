@@ -110,9 +110,9 @@ class Dreamer(nn.Module):
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
-                wandb.log({
-                    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
-                })
+                #wandb.log({
+                #    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
+                #})
                 wandb.log(metrics_dict, step=step)
                 self._metrics = {}
         for i in range(len(obs["target_steps"])):
@@ -255,9 +255,9 @@ class ProcessEpisodeWrap:
                 wandb.log({"dataset_size": total}, step=logger.step)
                 if logger.step - cls.last_episode >= config.log_every:
                     cls.last_episode = logger.step
-                    wandb.log({
-                        f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
-                    }, step=logger.step)
+                    # wandb.log({
+                    #     f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+                    # }, step=logger.step)
         elif mode == "eval":
             # keep only last item for saving memory
             while len(cache) > 1:
