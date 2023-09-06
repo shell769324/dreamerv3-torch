@@ -180,25 +180,23 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                 else:
                     metrics[failure_name] += 1
         for i, r in enumerate(reward):
-            target_name = targets[obs[i]["prev_target"]]
-            reward_diff = abs(r - pred_reward)
-            if abs(0.5 - r) < 1e-5:
-                reward_diff_name = "eval_reward_" + target_name + "_closer_diff"
-            elif abs(-0.5 - r) < 1e-5:
-                reward_diff_name = "eval_reward_" + target_name + "_farther_diff"
-            elif abs(-3 - r) < 1e-5:
-                reward_diff_name = "eval_reward_" + target_name + "_lava_diff"
-            elif abs(1 - r) < 1e-5:
-                reward_diff_name = "eval_reward_" + target_name + "_hit_diff"
-            elif abs(r) < 1e-5:
-                reward_diff_name = "eval_reward_" + target_name + "_stable_diff"
-            else:
-                print(reward, pred_reward)
-                continue
-            if reward_diff_name not in metrics.keys():
-                metrics[reward_diff_name] = [reward_diff]
-            else:
-                metrics[reward_diff_name].append(reward_diff)
+            if metrics is not None:
+                target_name = targets[obs[i]["prev_target"]]
+                reward_diff = abs(r - pred_reward)
+                if abs(0.5 - r) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "_closer_diff"
+                elif abs(-0.5 - r) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "_farther_diff"
+                elif r <= -2.9:
+                    reward_diff_name = "eval_reward_" + target_name + "_lava_diff"
+                elif abs(1 - r) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "_hit_diff"
+                else:
+                    reward_diff_name = "eval_reward_" + target_name + "_stable_diff"
+                if reward_diff_name not in metrics.keys():
+                    metrics[reward_diff_name] = [reward_diff]
+                else:
+                    metrics[reward_diff_name].append(reward_diff)
 
 
     return step - steps, episode - episodes, done, length, obs, agent_state, reward
