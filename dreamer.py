@@ -101,20 +101,20 @@ class Dreamer(nn.Module):
                             metrics_dict[name] = float(successes) / (failures + successes)
                     if total_successes != 0 or total_failures != 0:
                         metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
-                print("metrics", self._metrics.keys())
+                    metrics_dict["total_" + prefix + "_success"] = total_successes
+                    metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                     if "suppressor" in name in name:
                         metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
-                print("metrics dict", metrics_dict.keys())
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
-                #wandb.log({
-                #    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
-                #})
+                wandb.log({
+                    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
+                })
                 wandb.log(metrics_dict, step=step)
-                self._metrics.clear()
+                self._metrics = {}
         for i in range(len(obs["target_steps"])):
             if obs["target_reached"][i]:
                 target_name = targets[obs["prev_target"][i]]
@@ -255,9 +255,9 @@ class ProcessEpisodeWrap:
                 wandb.log({"dataset_size": total}, step=logger.step)
                 if logger.step - cls.last_episode >= config.log_every:
                     cls.last_episode = logger.step
-                    # wandb.log({
-                    #     f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
-                    # }, step=logger.step)
+                    wandb.log({
+                        f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
+                    }, step=logger.step)
         elif mode == "eval":
             # keep only last item for saving memory
             while len(cache) > 1:

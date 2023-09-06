@@ -179,7 +179,6 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     metrics[failure_name] = 1
                 else:
                     metrics[failure_name] += 1
-                print(metrics[failure_name])
         for i, r in enumerate(reward):
             if metrics is not None:
                 target_name = targets[obs[i]["prev_target"]]
@@ -198,8 +197,6 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     metrics[reward_diff_name] = [reward_diff]
                 else:
                     metrics[reward_diff_name].append(reward_diff)
-                print(reward_diff_name, len(metrics[reward_diff_name]))
-
 
 
     return step - steps, episode - episodes, done, length, obs, agent_state, reward
