@@ -101,8 +101,6 @@ class Dreamer(nn.Module):
                             metrics_dict[name] = float(successes) / (failures + successes)
                     if total_successes != 0 or total_failures != 0:
                         metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
-                    metrics_dict["total_" + prefix + "_success"] = total_successes
-                    metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                     if "suppressor" in name in name:
@@ -284,7 +282,7 @@ class ProcessEpisodeWrap:
             cls.eval_done = True
 
         print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
-        if wandb.run is not None:
+        if wandb.run is not None and score > -5:
             wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
 
 

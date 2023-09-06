@@ -179,6 +179,27 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     metrics[failure_name] = 1
                 else:
                     metrics[failure_name] += 1
+                reward_diff = abs(reward[0] - pred_reward)
+                if abs(0.5 - reward[0]) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "closer_diff"
+                elif abs(-0.5 - reward[0]) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "farther_diff"
+                elif abs(-3 - reward[0]) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "lava_diff"
+                elif abs(1 - reward[0]) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "hit_diff"
+                elif abs(reward[0]) < 1e-5:
+                    reward_diff_name = "eval_reward_" + target_name + "stable_diff"
+                else:
+                    print(reward, pred_reward)
+                    exit(1)
+                    continue
+                if reward_diff_name not in metrics.keys():
+                    metrics[reward_diff_name] = [reward_diff]
+                else:
+                    metrics[reward_diff_name].append(reward_diff)
+
+
 
     return step - steps, episode - episodes, done, length, obs, agent_state, reward
 
