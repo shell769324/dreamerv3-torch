@@ -108,7 +108,7 @@ class Dreamer(nn.Module):
                     if "suppressor" in name:
                         metrics_dict[name + "_nan_freq"] = np.isnan(values).sum() / float(len(values))
                     if "eval_reward" in name:
-                        print(name, values)
+                        print(name, len(values), float(np.nanmean(values)))
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
