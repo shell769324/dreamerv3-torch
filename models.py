@@ -163,10 +163,10 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             diff = (pred.mean() - data[name]).abs()
                             conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.1).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_farther_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.1).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_hit_diff"] = to_np(
                                 torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 1).abs() < 1e-4)])
