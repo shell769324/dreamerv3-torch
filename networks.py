@@ -625,3 +625,55 @@ class A2CHead(nn.Module):
         values = self._value_layer(x)
         return values, actions
 
+
+class EmbeddedDenseHead(nn.Module):
+    def __init__(
+        self,
+        stoch_size,
+        deter_size,
+        layers,
+        units,
+        act=nn.ELU,
+        norm=nn.LayerNorm,
+        dist="normal",
+        std=1.0,
+        outscale=1.0,
+        device="cuda",
+        embed_dim=512
+    ):
+        super(EmbeddedDenseHead, self).__init__()
+        if len(self._shape) == 0:
+            self._shape = (1,)
+        self._layers = layers
+        self._units = units
+        self._act = act
+        self._norm = norm
+        self._dist = dist
+        self._std = std
+        self._device = device
+
+        self.embedding = nn.Embedding(len(targets), embed_dim)
+        inp_dim = embed_dim + stoch_size + deter_size
+        layers = []
+        for index in range(self._layers):
+            layers.append(nn.Linear(inp_dim, self._units * (2 if index == 0 else 1), bias=False))
+            layers.append(norm(self._units, eps=1e-03))
+            layers.append(act())
+            if index == 0:
+                inp_dim = self._units * 2
+            if index == 1:
+                inp_dim = self._units
+        self.layers = nn.Sequential(*layers)
+        self.layers.apply(tools.weight_init)
+
+        self.mean_layer = nn.Linear(inp_dim, 255)
+        self.mean_layer.apply(tools.uniform_weight_init(outscale))
+
+    def forward(self, stoch, deter, targets_array, dtype=None):
+        targets_array = targets_array.reshape(-1)
+        targets_array = self.embedding(targets_array)
+        features = torch.cat([stoch, deter, targets_array], -1)
+        x = features
+        out = self.layers(x)
+        mean = self.mean_layer(out)
+        return tools.TwoHotDistSymlog(logits=mean, device=self._device)

@@ -77,7 +77,7 @@ defaults:
   pretrain: 100
   model_lr: 1e-4
   transformer_lr: 3e-5
-  ac_lr: 3e-5
+  ac_lr: 5e-5
   opt_eps: 1e-8
   grad_clip: 100
   ac_opt_eps: 1e-5
@@ -137,10 +137,10 @@ crafter:
   cnn_depth: 96
   actor_dist: 'onehot'
   units: 1024
-  reward_layers: 4
+  reward_layers: 5
   cont_layers: 4
   value_layers: 3
-  actor_layers: 4
+  actor_layers: 5
   where_layers: 4
   imag_gradient: 'reinforce'
   disag_units: 1024

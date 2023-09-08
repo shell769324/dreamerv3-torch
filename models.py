@@ -2,7 +2,6 @@ import torch
 from torch import nn
 import networks
 import tools
-from AttentionNetworks import MixedHead, A2C
 from envs.crafter import targets
 
 
@@ -86,9 +85,9 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
-        self.heads["reward"] = networks.DenseHead(
-            feat_size,  # pytorch version
-            [],
+        self.heads["reward"] = networks.EmbeddedDenseHead(
+            self._config.dyn_stoch * self._config.dyn_discrete,
+            config.dyn_deter,
             config.reward_layers,
             config.units,
             config.act,
@@ -269,10 +268,10 @@ class ImagBehavior(nn.Module):
         self.a2c = networks.A2CHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,  # pytorch version
-            config.embed_dim,
-            config.attention_dim,
             config.num_actions,
             config.actor_layers,
+            config.units,
+            embed_dim=config.embed_dim,
             unimix_ratio=config.action_unimix_ratio,
         )
         kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c})
