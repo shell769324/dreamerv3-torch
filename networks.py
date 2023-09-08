@@ -616,10 +616,8 @@ class A2CHead(nn.Module):
         self._action_layer.apply(tools.weight_init)
 
     def __call__(self, stoch, deter, targets_array, dtype=None):
-        targets_array = targets_array.reshape(-1)
         targets_array = self.embedding(targets_array)
 
-        print("a2c", targets_array.shape, stoch.shape, deter.shape)
         features = torch.cat([stoch, deter, targets_array], -1)
         x = features
         x = self._pre_layers(x)
@@ -670,9 +668,7 @@ class EmbeddedDenseHead(nn.Module):
         self.mean_layer.apply(tools.uniform_weight_init(outscale))
 
     def forward(self, stoch, deter, targets_array, dtype=None):
-        targets_array = targets_array.reshape(-1)
         targets_array = self.embedding(targets_array)
-        print("embedded", targets_array.shape, stoch.shape, deter.shape)
         features = torch.cat([stoch, deter, targets_array], -1)
         x = features
         out = self.layers(x)
