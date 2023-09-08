@@ -642,8 +642,6 @@ class EmbeddedDenseHead(nn.Module):
         embed_dim=512
     ):
         super(EmbeddedDenseHead, self).__init__()
-        if len(self._shape) == 0:
-            self._shape = (1,)
         self._layers = layers
         self._units = units
         self._act = act
