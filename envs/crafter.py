@@ -31,6 +31,7 @@ class Crafter():
     self._col_side = self._env._local_view._grid[1] // 2
     self.value = 0
     self.reward = 0
+    self.prev_info = None
     if outdir:
       self._env = crafter.Recorder(
           self._env, outdir,
@@ -114,6 +115,7 @@ class Crafter():
     self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
     where_array = self.compute_where(self._crafter_env._player.pos, info)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward, where_array)
+    self.prev_info = info
     return self._obs(image, 0.0, {}, is_first=True, augmented=augmented, where=where_array)
 
   def step(self, action):
@@ -139,6 +141,8 @@ class Crafter():
     target_steps = self._target_steps
     prev_target = self._target
     face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
+    if self.prev_info is None:
+        self.prev_info = info
 
     if face_in_bound and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target]:
         reward += 1
@@ -147,18 +151,22 @@ class Crafter():
         target_reached = True
         self._target_steps = 0
     else:
-        min_dist = self._get_dist(player_pos, info)
+        # For measuring distance, we should use previous image since objects may move
+        min_dist = self._get_dist(player_pos, self.prev_info)
         if self._last_min_dist is None:
             if min_dist is not None:
-                reward += 0.5
+                # Discovery bigger reward
+                reward += 0.2
         elif min_dist is None:
-            reward -= 0.5
+            # Lost track bigger penalty
+            reward -= 0.2
         elif self._last_min_dist > min_dist:
-            reward += 0.5
+            reward += 0.1
         elif self._last_min_dist < min_dist:
-            reward -= 0.5
-        self._last_min_dist = min_dist
+            reward -= 0.1
+        self._last_min_dist = self._get_dist(player_pos, info)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward, where_array)
+    self.prev_info = info
 
     return self._obs(
         image, reward, info, augmented=augmented,

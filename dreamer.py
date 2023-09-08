@@ -99,14 +99,14 @@ class Dreamer(nn.Module):
                         if successes != 0 or failures != 0:
                             name = prefix + "_" + target_name + "_success_rate"
                             metrics_dict[name] = float(successes) / (failures + successes)
+                        self._metrics.pop(success_name)
+                        self._metrics.pop(failure_name)
                     if total_successes != 0 or total_failures != 0:
                         metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
+                        metrics_dict["lava_death_rate"] = float(self._metrics.get("lava_count", 0)) / (total_failures + total_successes)
                     metrics_dict["total_" + prefix + "_success"] = total_successes
-                    metrics_dict["total_" + prefix + "_failure"] = total_failures
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
-                    if "eval_reward" in name:
-                        print(name, len(values), float(np.nanmean(values)))
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
@@ -360,8 +360,8 @@ def main(config, defaults):
     watched = [(agent._wm.heads["reward"], "reward.", 3000),
                (agent._wm.heads["image"], "image.", 1000),
                (agent._task_behavior.a2c, "a2c.", 10000)]
-    with wandb.init(project='mastering crafter with world models', config=defaults, id="p1qih0i9", resume=True):
-    # with wandb.init(project='mastering crafter with world models', config=defaults):
+    # with wandb.init(project='mastering crafter with world models', config=defaults, id="p1qih0i9", resume=True):
+    with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(

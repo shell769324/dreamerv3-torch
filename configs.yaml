@@ -71,7 +71,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 22
+  batch_size: 25
   batch_length: 64
   train_ratio: 512
   pretrain: 100
@@ -79,10 +79,10 @@ defaults:
   transformer_lr: 3e-5
   ac_lr: 3e-5
   opt_eps: 1e-8
-  grad_clip: 50
+  grad_clip: 100
   ac_opt_eps: 1e-5
-  value_grad_clip: 50
-  actor_grad_clip: 50
+  value_grad_clip: 100
+  actor_grad_clip: 100
   dataset_size: 1000000
   slow_value_target: True
   slow_target_update: 1
