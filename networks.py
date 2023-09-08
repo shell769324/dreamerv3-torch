@@ -597,7 +597,7 @@ class A2CHead(nn.Module):
         pre_layers = []
         for index in range(self._layers):
             pre_layers.append(nn.Linear(inp_dim, self._units * (2 if index == 0 else 1), bias=False))
-            pre_layers.append(norm(self._units, eps=1e-03))
+            pre_layers.append(norm(self._units * (2 if index == 0 else 1), eps=1e-03))
             pre_layers.append(act())
             if index == 0:
                 inp_dim = self._units * 2
@@ -655,7 +655,7 @@ class EmbeddedDenseHead(nn.Module):
         layers = []
         for index in range(self._layers):
             layers.append(nn.Linear(inp_dim, self._units * (2 if index == 0 else 1), bias=False))
-            layers.append(norm(self._units, eps=1e-03))
+            layers.append(norm(self._units * (2 if index == 0 else 1), eps=1e-03))
             layers.append(act())
             if index == 0:
                 inp_dim = self._units * 2
