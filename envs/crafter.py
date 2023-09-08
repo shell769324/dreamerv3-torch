@@ -65,13 +65,15 @@ class Crafter():
   def action_space(self):
     return gym.spaces.Discrete(5)
 
-  def _get_dist(self, player_pos, info):
+  def _get_dist(self, player_pos, info, center=None):
+    if center is None:
+        center = player_pos
     min_dist = None
     for i in range(-self._row_side, self._row_side + 1):
         for j in range(-self._col_side, self._col_side + 1):
-            x, y = player_pos[0] + i, player_pos[1] + j
+            x, y = center[0] + i, center[1] + j
             if 0 <= x < self._size[0] and 0 <= y < self._size[1] and self._id_to_item[info['semantic'][x][y]] == targets[self._target]:
-                dist = abs(i) + abs(j)
+                dist = abs(x - player_pos[0]) + abs(y - player_pos[1])
                 min_dist = dist if min_dist is None else min(dist, min_dist)
     return min_dist
 
@@ -152,7 +154,7 @@ class Crafter():
         self._target_steps = 0
     else:
         # For measuring distance, we should use previous image since objects may move
-        min_dist = self._get_dist(player_pos, self.prev_info)
+        min_dist = self._get_dist(player_pos, self.prev_info, center=previous_pos)
         if self._last_min_dist is None:
             if min_dist is not None:
                 # Discovery bigger reward
