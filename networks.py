@@ -5,6 +5,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import distributions as torchd
+from envs.crafter import targets
 
 import tools
 
@@ -558,3 +559,69 @@ class ChLayerNorm(nn.Module):
         x = self.norm(x)
         x = x.permute(0, 3, 1, 2)
         return x
+
+
+class A2CHead(nn.Module):
+    def __init__(
+        self,
+        stoch_size,
+        deter_size,
+        num_action,
+        layers,
+        units,
+        act=nn.ELU,
+        norm=nn.LayerNorm,
+        dist="trunc_normal",
+        init_std=0.0,
+        min_std=0.1,
+        max_std=1.0,
+        temp=0.1,
+        unimix_ratio=0.01,
+        embed_dim=512,
+    ):
+        super(A2CHead, self).__init__()
+        self._layers = layers
+        self._units = units
+        self._dist = dist
+        self._act = act
+        self._norm = norm
+        self._min_std = min_std
+        self._max_std = max_std
+        self._init_std = init_std
+        self._unimix_ratio = unimix_ratio
+        self._temp = temp() if callable(temp) else temp
+        self.embedding = nn.Embedding(len(targets), embed_dim)
+
+        inp_dim = embed_dim + stoch_size + deter_size
+
+        pre_layers = []
+        for index in range(self._layers):
+            pre_layers.append(nn.Linear(inp_dim, self._units * (2 if index == 0 else 1), bias=False))
+            pre_layers.append(norm(self._units, eps=1e-03))
+            pre_layers.append(act())
+            if index == 0:
+                inp_dim = self._units * 2
+            elif index == 1:
+                inp_dim = self._units
+        self._pre_layers = nn.Sequential(*pre_layers)
+        self._pre_layers.apply(tools.weight_init)
+
+        self._action_layer = nn.Sequential(nn.Linear(self._units, self._units, bias=True),
+                                           nn.GELU(),
+                                           nn.Linear(self._units, num_action, bias=True))
+        self._value_layer = nn.Sequential(nn.Linear(self._units, self._units, bias=True),
+                                          nn.GELU(),
+                                          nn.Linear(self._units, 255, bias=True))
+        self._value_layer.apply(tools.weight_init)
+        self._action_layer.apply(tools.weight_init)
+
+    def __call__(self, stoch, deter, targets_array, dtype=None):
+        targets_array = targets_array.reshape(-1)
+        targets_array = self.embedding(targets_array)
+        features = torch.cat([stoch, deter, targets_array], -1)
+        x = features
+        x = self._pre_layers(x)
+        actions = self._action_layer(x)
+        values = self._value_layer(x)
+        return values, actions
+

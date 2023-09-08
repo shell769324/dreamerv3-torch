@@ -86,14 +86,15 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
-        self.heads["reward"] = MixedHead(
-            config.dyn_stoch * config.dyn_discrete,
-            config.dyn_deter,
-            config.embed_dim,
-            config.attention_dim,
-            (255,),
+        self.heads["reward"] = networks.DenseHead(
+            feat_size,  # pytorch version
+            [],
             config.reward_layers,
+            config.units,
+            config.act,
+            config.norm,
             dist=config.reward_head,
+            outscale=0.0,
             device=config.device,
         )
         self.heads["cont"] = networks.DenseHead(
@@ -163,10 +164,10 @@ class WorldModel(nn.Module):
                         for i in range(len(targets)):
                             diff = (pred.mean() - data[name]).abs()
                             conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.1).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_farther_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.5).abs() < 1e-4)])
+                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.1).abs() < 1e-4)])
                             )
                             conditional_metrics[targets[i] + "_" + name + "_hit_diff"] = to_np(
                                 torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 1).abs() < 1e-4)])
@@ -265,7 +266,7 @@ class ImagBehavior(nn.Module):
         self._world_model = world_model
         self._reward = reward
         self._device = config.device
-        self.a2c = A2C(
+        self.a2c = networks.A2CHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,  # pytorch version
             config.embed_dim,

@@ -181,7 +181,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     metrics[failure_name] += 1
         for i, r in enumerate(reward):
             if metrics is not None:
-                if r <= -2.9:
+                if r <= -2:
                     lava_count = "lava_count"
                     if lava_count not in metrics.keys():
                         metrics[lava_count] = 1
@@ -190,9 +190,9 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     continue
                 target_name = targets[obs[i]["prev_target"]]
                 reward_diff = abs(r - pred_reward)
-                if abs(0.5 - r) < 1e-5:
+                if abs(0.1 - r) < 1e-5:
                     reward_diff_name = "eval_reward_" + target_name + "_closer_diff"
-                elif abs(-0.5 - r) < 1e-5:
+                elif abs(-0.1 - r) < 1e-5:
                     reward_diff_name = "eval_reward_" + target_name + "_farther_diff"
                 elif abs(1 - r) < 1e-5:
                     reward_diff_name = "eval_reward_" + target_name + "_hit_diff"
