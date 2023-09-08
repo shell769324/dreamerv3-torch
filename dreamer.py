@@ -103,7 +103,7 @@ class Dreamer(nn.Module):
                         self._metrics.pop(failure_name, None)
                     if total_successes != 0 or total_failures != 0:
                         metrics_dict["total_" + prefix + "_success_rate"] = float(total_successes) / (total_failures + total_successes)
-                        metrics_dict["lava_death_rate"] = float(self._metrics.get("lava_count", 0)) / (total_failures + total_successes)
+                        metrics_dict["lava_death_rate"] = float(self._metrics.get("lava_count", 0)) / total_failures
                     metrics_dict["total_" + prefix + "_success"] = total_successes
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
