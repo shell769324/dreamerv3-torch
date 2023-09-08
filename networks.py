@@ -620,6 +620,8 @@ class A2CHead(nn.Module):
 
 
         print("a2c", stoch.shape, deter.shape, targets_array.shape)
+        if len(stoch.shape) != len(targets_array.shape):
+            targets_array = targets_array.unsqueeze(-2)
         features = torch.cat([stoch, deter, targets_array], -1)
         x = features
         x = self._pre_layers(x)
@@ -672,6 +674,8 @@ class EmbeddedDenseHead(nn.Module):
     def forward(self, stoch, deter, targets_array, dtype=None):
         targets_array = self.embedding(targets_array)
         print("emb", stoch.shape, deter.shape, targets_array.shape)
+        if len(stoch.shape) != len(targets_array.shape):
+            targets_array = targets_array.unsqueeze(-2)
         features = torch.cat([stoch, deter, targets_array], -1)
         x = features
         out = self.layers(x)
