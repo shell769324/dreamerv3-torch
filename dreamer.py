@@ -360,8 +360,8 @@ def main(config, defaults):
     watched = [(agent._wm.heads["reward"], "reward.", 3000),
                (agent._wm.heads["image"], "image.", 1000),
                (agent._task_behavior.a2c, "a2c.", 10000)]
-    # with wandb.init(project='mastering crafter with world models', config=defaults, id="p1qih0i9", resume=True):
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    with wandb.init(project='mastering crafter with world models', config=defaults, id="nf5cv15k", resume=True):
+    # with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
