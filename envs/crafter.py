@@ -159,14 +159,14 @@ class Crafter():
         if self._last_min_dist is None:
             if min_dist is not None:
                 # Discovery bigger reward
-                reward += 0.2
+                reward += 0.5
         elif min_dist is None:
             # Lost track bigger penalty
-            reward -= 0.2
+            reward -= 0.5
         elif self._last_min_dist > delayed_min_dist:
-            reward += 0.1
+            reward += 0.5
         elif self._last_min_dist < delayed_min_dist:
-            reward -= 0.1
+            reward -= 0.5
         self._last_min_dist = self._get_dist(player_pos, info)
     augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward, where_array)
     self.prev_info = info
