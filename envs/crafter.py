@@ -192,7 +192,7 @@ class Crafter():
                                             where_array)
         self.prev_info = info
 
-        return self.navigate_obs(
+        return image, reward, self._done, self.navigate_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_reached=target_reached, target_reached_steps=target_reached_steps,
@@ -253,7 +253,7 @@ class Crafter():
         self.prev_info = info
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
                                             where_array)
-        return self.explore_obs(
+        return image, reward, self._done, self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_spot=target_spot, target_spot_steps=target_spot_steps,
