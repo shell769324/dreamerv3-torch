@@ -333,6 +333,7 @@ def main(config, defaults):
 
     train_dataset = make_dataset(train_eps, config)
     eval_dataset = make_dataset(eval_eps, config)
+    print(directory)
     navigate_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, directory / "navigate.json")
     explore_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, directory / "explore.json")
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
