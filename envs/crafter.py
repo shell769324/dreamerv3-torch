@@ -116,7 +116,7 @@ class Crafter():
         self._done = False
         image = self._env.reset()
         achievements = dict()
-        for achievement in target_mapping_temp:
+        for achievement in self._achievements:
             achievements[achievement] = 0
         info = {
             'semantic': self._crafter_env._sem_view(),
