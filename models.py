@@ -1,8 +1,11 @@
+import copy
+
 import torch
 from torch import nn
 import networks
 import tools
 from envs.crafter import targets
+import numpy as np
 
 
 def to_np(x):
@@ -28,11 +31,13 @@ class RewardEMA(object):
 
 
 class WorldModel(nn.Module):
-    def __init__(self, step, config):
+    def __init__(self, step, config, navigate_dataset, explore_dataset):
         super(WorldModel, self).__init__()
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
+        self.navigate_dataset = navigate_dataset
+        self.explore_dataset = explore_dataset
 
         self.encoder = networks.ConvEncoder(
             config.grayscale,
@@ -85,10 +90,21 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
-        self.heads["reward"] = networks.EmbeddedDenseHead(
+        self.heads["explore_reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,
-            config.reward_layers,
+            config.explore_reward_layers,
+            config.units,
+            config.act,
+            config.norm,
+            dist=config.reward_head,
+            outscale=0.0,
+            device=config.device,
+        )
+        self.heads["navigate_reward"] = networks.EmbeddedDenseHead(
+            self._config.dyn_stoch * self._config.dyn_discrete,
+            config.dyn_deter,
+            config.navigate_reward_layers,
             config.units,
             config.act,
             config.norm,
@@ -123,22 +139,33 @@ class WorldModel(nn.Module):
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
 
-    def _train(self, data):
+    def _train(self):
         # action (batch_size, batch_length, act_dim)
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
-        data = self.preprocess(data)
         conditional_metrics = {}
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
+        target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
+        target_dist = target_dist / np.sum(target_dist)
+        navigate_data = self.preprocess(self.navigate_dataset.sample(target_dist))
+        explore_data = self.preprocess(self.explore_dataset.sample(target_dist))
+        data = {k: torch.cat([v, explore_data[v]], dim=0) for k, v in navigate_data.items() if k in explore_data}
+
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
-                embed = self.encoder(data)
-                post, prior = self.dynamics.observe(
-                    embed, data["action"], data["is_first"]
+                navigate_embed = self.encoder(navigate_data)
+                explore_embed = self.encoder(explore_data)
+                navigate_post, navigate_prior = self.dynamics.observe(
+                    navigate_embed, navigate_data["action"], navigate_data["is_first"]
                 )
+                explore_post, explore_prior = self.dynamics.observe(
+                    explore_embed, explore_data["action"], explore_data["is_first"]
+                )
+                prior = {k: torch.cat([v, explore_prior[v]], dim=0) for k, v in navigate_prior.items() if k in explore_prior}
+                post = {k: torch.cat([v, explore_post[v]], dim=0) for k, v in navigate_post.items() if k in explore_post}
                 kl_free = tools.schedule(self._config.kl_free, self._step)
                 dyn_scale = tools.schedule(self._config.dyn_scale, self._step)
                 rep_scale = tools.schedule(self._config.rep_scale, self._step)
@@ -148,48 +175,25 @@ class WorldModel(nn.Module):
                 losses = {}
                 likes = {}
                 for name, head in self.heads.items():
-                    if name == "reward":
-                        stoch, deter = self.dynamics.get_sep(post)
-                        pred = head(stoch, deter, data["target"])
-                    else:
+                    if "reward" not in name:
                         feat = self.dynamics.get_feat(post)
                         pred = head(feat)
-                    like = pred.log_prob(data[name])
+                        like = pred.log_prob(data[name])
 
-                    likes[name] = like
-                    losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
-                    unsqueezed_targets = data["target"].unsqueeze(-1)
-                    if name == "reward":
-                        for i in range(len(targets)):
-                            diff = (pred.mean() - data[name]).abs()
-                            conditional_metrics[targets[i] + "_" + name + "_closer_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 0.5).abs() < 1e-4)])
-                            )
-                            conditional_metrics[targets[i] + "_" + name + "_farther_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] + 0.5).abs() < 1e-4)])
-                            )
-                            conditional_metrics[targets[i] + "_" + name + "_hit_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & ((data[name] - 1).abs() < 1e-4)])
-                            )
-                            conditional_metrics[targets[i] + "_" + name + "_stable_diff"] = to_np(
-                                torch.nanmean(diff[(unsqueezed_targets == i) & (data[name].abs() < 1e-4)])
-                            )
+                        likes[name] = like
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+
+                    if "reward" in name:
+                        (stoch, deter) = self.dynamics.get_sep(explore_post)
+                        pred = head(stoch, deter, data["target"])
+                        like = pred.log_prob(data[name])
+                        likes[name] = like
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         if not reward_suppressor.isnan().any():
                             losses[name] += reward_suppressor
-                        metrics.update(tools.tensorstats(pred.logits, "reward_logits"))
-                    if name == "where":
-                        diff = (pred.mode() - data[name]).abs().double()
-                        for i in range(len(targets)):
-                            gt_slice = data[name][..., i * 4:i * 4 + 4]
-                            actual_slice = diff[..., i * 4:i * 4 + 4]
-                            conditional_metrics[targets[i] + "_" + name + "_absent_diff"] = to_np(
-                                torch.nanmean(actual_slice[gt_slice == 0])
-                            )
-                            conditional_metrics[targets[i] + "_" + name + "_present_diff"] = to_np(
-                                torch.nanmean(actual_slice[gt_slice == 1])
-                            )
+                        metrics.update(tools.tensorstats(pred.logits, name + "_logits"))
 
                 model_loss = sum(losses.values()) + kl_loss
                 metrics.update(self._model_opt(model_loss))
@@ -209,14 +213,9 @@ class WorldModel(nn.Module):
             metrics["post_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(post).entropy())
             )
-            context = dict(
-                embed=embed,
-                feat=self.dynamics.get_feat(post),
-                kl=kl_value,
-                postent=self.dynamics.get_dist(post).entropy(),
-            )
-        post = {k: v.detach() for k, v in post.items()}
-        return post, context, metrics
+        navigate_post = {k: v.detach() for k, v in navigate_post.items()}
+        explore_post = {k: v.detach() for k, v in explore_post.items()}
+        return navigate_post, explore_post, navigate_data, explore_data, metrics
 
     def preprocess(self, obs):
         obs = obs.copy()
@@ -265,19 +264,28 @@ class ImagBehavior(nn.Module):
         self._world_model = world_model
         self._reward = reward
         self._device = config.device
-        self.a2c = networks.A2CHead(
+        self.a2c_navigate = networks.A2CHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,  # pytorch version
             config.num_actions,
-            config.actor_layers,
+            config.navigate_a2c_layers,
             config.units,
             embed_dim=config.embed_dim,
             unimix_ratio=config.action_unimix_ratio,
         )
-        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c})
+        self.a2c_explore = networks.A2CHead(
+            self._config.dyn_stoch * self._config.dyn_discrete,
+            config.dyn_deter,  # pytorch version
+            config.num_actions,
+            config.explore_a2c_layers,
+            config.units,
+            embed_dim=config.embed_dim,
+            unimix_ratio=config.action_unimix_ratio,
+        )
+        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c_navigate})
         self._a2c_opt = tools.Optimizer(
             "a2c",
-            [{'params': self.a2c.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
+            [{'params': self.a2c_navigate.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
             config.ac_lr,
             config.ac_opt_eps,
             config.actor_grad_clip,
@@ -288,78 +296,82 @@ class ImagBehavior(nn.Module):
 
     def _train(
         self,
-        start,
-        data=None
+        navigate_post,
+        explore_post,
+        navigate_data,
+        explore_data
     ):
         metrics = {}
         threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
-        with tools.RequiresGrad(self):
-            with torch.cuda.amp.autocast(self._use_amp):
-                flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
-                target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
-                imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
-                    start, self._config.imag_horizon, target_array,
-                )
-                value = tools.TwoHotDistSymlog(logits=means)
-                target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
-                reward = self._world_model.heads["reward"](imag_stoch, imag_deter, target_array_expanded).mode()
-                policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
-                actor_ent = policy.entropy()
-                state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
-                # this target is not scaled
-                value_mode = value.mode().detach()
-                target, weights = self._compute_target(
-                    imag_state, reward, value_mode
-                )
-                value = tools.TwoHotDistSymlog(logits=means[:-1])
-                value_mode = value.mode().detach()
-                actor_loss, mets = self._compute_actor_loss(
-                    imag_action,
-                    target,
-                    actor_ent,
-                    state_ent,
-                    weights,
-                    policy,
-                    value_mode
-                )
-                policy_abs = policy_params.abs()
-                policy_abs[policy_abs <= threshold] = 0
-                policy_abs[policy_abs > 0] -= threshold
-                policy_abs = policy_abs * weights
-                actor_suppressor = policy_abs[policy_abs > 0].mean() * coeff
-                if not actor_suppressor.isnan().any():
-                    actor_loss += actor_suppressor
-                metrics.update(mets)
-                # (time, batch, 1), (time, batch, 1) -> (time, batch)
-                value_loss = -value.log_prob(target.detach())
-                # (time, batch, 1), (time, batch, 1) -> (1,)
-                value_abs = means[:-1].abs()
-                value_abs[value_abs <= threshold] = 0
-                value_abs[value_abs > 0] -= threshold
-                value_abs = value_abs * weights[:-1]
-                value_suppressor = value_abs[value_abs > 0].mean() * coeff
-                value_loss = torch.mean(weights[:-1] * value_loss[:, :, None])
-                if not value_suppressor.isnan().any():
-                    value_loss += value_suppressor
+        iter = [("navigate", "navigate_reward", navigate_post, navigate_data), ("explore", "explore_reward", explore_post, explore_data)]
+        for prefix, head_name, post, data in iter:
+            with tools.RequiresGrad(self):
+                with torch.cuda.amp.autocast(self._use_amp):
+                    flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
+                    target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
+                    imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
+                        post, self._config.imag_horizon, target_array,
+                    )
+                    value = tools.TwoHotDistSymlog(logits=means)
+                    target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
+                    reward = self._world_model.heads[head_name](imag_stoch, imag_deter, target_array_expanded).mode()
+                    policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
+                    actor_ent = policy.entropy()
+                    state_ent = self._world_model.dynamics.get_dist(imag_state).entropy()
+                    # this target is not scaled
+                    value_mode = value.mode().detach()
+                    target, weights = self._compute_target(
+                        imag_state, reward, value_mode
+                    )
+                    value = tools.TwoHotDistSymlog(logits=means[:-1])
+                    value_mode = value.mode().detach()
+                    actor_loss, mets = self._compute_actor_loss(
+                        imag_action,
+                        target,
+                        actor_ent,
+                        state_ent,
+                        weights,
+                        policy,
+                        value_mode
+                    )
+                    policy_abs = policy_params.abs()
+                    policy_abs[policy_abs <= threshold] = 0
+                    policy_abs[policy_abs > 0] -= threshold
+                    policy_abs = policy_abs * weights
+                    actor_suppressor = policy_abs[policy_abs > 0].mean() * coeff
+                    if not actor_suppressor.isnan().any():
+                        actor_loss += actor_suppressor
+                    metrics.update(mets)
+                    # (time, batch, 1), (time, batch, 1) -> (time, batch)
+                    value_loss = -value.log_prob(target.detach())
+                    # (time, batch, 1), (time, batch, 1) -> (1,)
+                    value_abs = means[:-1].abs()
+                    value_abs[value_abs <= threshold] = 0
+                    value_abs[value_abs > 0] -= threshold
+                    value_abs = value_abs * weights[:-1]
+                    value_suppressor = value_abs[value_abs > 0].mean() * coeff
+                    value_loss = torch.mean(weights[:-1] * value_loss[:, :, None])
+                    if not value_suppressor.isnan().any():
+                        value_loss += value_suppressor
 
-        metrics.update(tools.tensorstats(policy_params, "action_logits"))
-        metrics.update(tools.tensorstats(means, "value_logits"))
-        metrics.update(tools.tensorstats(value.mode(), "value"))
-        metrics.update(tools.tensorstats(target, "target"))
-        metrics.update(tools.tensorstats(reward, "imag_reward"))
-        metrics.update(
-            tools.tensorstats(
-                torch.argmax(imag_action, dim=-1).float(), "imag_action"
+            metrics.update(tools.tensorstats(policy_params, prefix + "_action_logits"))
+            metrics.update(tools.tensorstats(means, prefix + "_value_logits"))
+            metrics.update(tools.tensorstats(value.mode(), prefix + "_value"))
+            metrics.update(tools.tensorstats(target, prefix + "_target"))
+            metrics.update(tools.tensorstats(reward, prefix + "_imag_reward"))
+            metrics.update(
+                tools.tensorstats(
+                    torch.argmax(imag_action, dim=-1).float(), prefix + "_imag_action"
+                )
             )
-        )
-        metrics["actor_ent"] = to_np(torch.mean(actor_ent))
-        with tools.RequiresGrad(self):
-            metrics.update(self._a2c_opt(actor_loss + value_loss))
-        metrics["value_loss"] = value_loss.detach().cpu().numpy()
-        metrics["actor_loss"] = actor_loss.detach().cpu().numpy()
-        metrics["value_suppressor"] = value_suppressor.detach().cpu().numpy()
-        metrics["actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
+            metrics[prefix + "_actor_ent"] = to_np(torch.mean(actor_ent))
+            with tools.RequiresGrad(self):
+                metrics.update(self._a2c_opt(actor_loss + value_loss))
+            metrics[prefix + "_value_loss"] = value_loss.detach().cpu().numpy()
+            metrics[prefix + "_actor_loss"] = actor_loss.detach().cpu().numpy()
+            metrics[prefix + "_value_suppressor"] = value_suppressor.detach().cpu().numpy()
+            metrics[prefix + "_actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array):
@@ -372,7 +384,7 @@ class ImagBehavior(nn.Module):
             state, _, _, _, _, _ = prev
             stoch, deter = dynamics.get_sep(state)
             stoch, deter = stoch.detach(), deter.detach()
-            mean, policy_param = self.a2c(stoch, deter, target_array)
+            mean, policy_param = self.a2c_navigate(stoch, deter, target_array)
             policy = tools.OneHotDist(policy_param, unimix_ratio=self._config.action_unimix_ratio)
             action = policy.sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)

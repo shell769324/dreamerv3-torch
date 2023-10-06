@@ -7,6 +7,7 @@ import os
 import pathlib
 import sys
 from envs.crafter import targets
+from tools import SliceDataset
 
 os.environ["MUJOCO_GL"] = "egl"
 
@@ -28,7 +29,7 @@ to_np = lambda x: x.detach().cpu().numpy()
 
 
 class Dreamer(nn.Module):
-    def __init__(self, config, logger, dataset):
+    def __init__(self, config, logger, dataset, navigate_dataset, explore_dataset):
         super(Dreamer, self).__init__()
         self._config = config
         self._logger = logger
@@ -53,7 +54,9 @@ class Dreamer(nn.Module):
             x, self._step
         )
         self._dataset = dataset
-        self._wm = models.WorldModel(self._step, config)
+        self.navigate_dataset = navigate_dataset
+        self.explore_dataset = explore_dataset
+        self._wm = models.WorldModel(self._step, config, self.navigate_dataset, self.explore_dataset)
         self._task_behavior = models.ImagBehavior(
             config, self._wm, config.behavior_stop_grad
         )
@@ -80,7 +83,7 @@ class Dreamer(nn.Module):
                 else self._should_train(step)
             )
             for _ in range(steps):
-                self._train(next(self._dataset))
+                self._train()
                 self._update_count += 1
                 self._metrics["update_count"] = self._update_count
 
@@ -155,7 +158,7 @@ class Dreamer(nn.Module):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         reward_prediction = self._wm.heads["reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
-        means, policy_params = self._task_behavior.a2c(stoch, deter, target_array)
+        means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -176,13 +179,12 @@ class Dreamer(nn.Module):
         probs = amount / self._config.num_actions + (1 - amount) * action
         return tools.OneHotDist(probs=probs).sample()
 
-    def _train(self, data):
+    def _train(self):
         metrics = {}
-        post, context, mets = self._wm._train(data)
+        navigate_post, explore_post, navigate_data, explore_data, mets = self._wm._train()
         metrics.update(mets)
-        start = post
         # start['deter'] (16, 64, 512)
-        metrics.update(self._task_behavior._train(start, data=data)[-1])
+        metrics.update(self._task_behavior._train(navigate_post, explore_post, navigate_data, explore_data)[-1])
         for name, value in metrics.items():
             if not name in self._metrics.keys():
                 self._metrics[name] = [value]
@@ -200,7 +202,7 @@ def make_dataset(episodes, config):
     return dataset
 
 
-def make_env(config, logger, mode, train_eps, eval_eps):
+def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset):
     # crafter_reward
     # [crafter, reward]
     suite, task = config.task.split("_", 1)
@@ -219,9 +221,13 @@ def make_env(config, logger, mode, train_eps, eval_eps):
                 mode,
                 train_eps,
                 eval_eps,
+                navigate_dataset,
+                explore_dataset
             )
         ]
-        env = wrappers.CollectDataset(env, mode, train_eps, callbacks=callbacks)
+        dir = dict(train=config.traindir, eval=config.evaldir)[mode]
+        eps = dict(train=train_eps, eval=eval_eps)[mode]
+        env = wrappers.CollectDataset(env, eps, navigate_dataset, explore_dataset, callbacks=callbacks, directory=dir)
     env = wrappers.RewardObs(env)
     return env, crafter_env
 
@@ -234,7 +240,7 @@ class ProcessEpisodeWrap:
     last_episode = 0
 
     @classmethod
-    def process_episode(cls, config, logger, mode, train_eps, eval_eps, episode):
+    def process_episode(cls, config, logger, mode, train_eps, eval_eps, episode, navigate_dataset, explore_dataset):
         directory = dict(train=config.traindir, eval=config.evaldir)[mode]
         cache = dict(train=train_eps, eval=eval_eps)[mode]
         # this saved episodes is given as train_eps or eval_eps from next call
@@ -251,6 +257,13 @@ class ProcessEpisodeWrap:
                     total += len(ep["reward"]) - 1
                 else:
                     del cache[key]
+                    for dataset in [navigate_dataset, explore_dataset]:
+                        for target_tuples in dataset.tuples:
+                            target_tuples.pop(key, None)
+                        for i, target_sizes in enumerate(dataset.episode_sizes):
+                            dataset.aggregate_sizes[i] -= target_sizes.get(key, 0)
+                            target_sizes.pop(key, None)
+                        dataset.save()
             if wandb.run is not None:
                 wandb.log({"dataset_size": total}, step=logger.step)
                 if logger.step - cls.last_episode >= config.log_every:
@@ -317,7 +330,12 @@ def main(config, defaults):
     else:
         directory = config.evaldir
     eval_eps = tools.load_episodes(directory, limit=1)
-    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps)
+
+    train_dataset = make_dataset(train_eps, config)
+    eval_dataset = make_dataset(eval_eps, config)
+    navigate_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, config.directory / "navigate.json")
+    explore_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, config.directory / "explore.json")
+    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
     acts = train_env.action_space
@@ -348,9 +366,7 @@ def main(config, defaults):
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
-    train_dataset = make_dataset(train_eps, config)
-    eval_dataset = make_dataset(eval_eps, config)
-    agent = Dreamer(config, logger, train_dataset).to(config.device)
+    agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset).to(config.device)
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
@@ -359,7 +375,7 @@ def main(config, defaults):
     state = None
     watched = [(agent._wm.heads["reward"], "reward.", 3000),
                (agent._wm.heads["image"], "image.", 1000),
-               (agent._task_behavior.a2c, "a2c.", 10000)]
+               (agent._task_behavior.a2c_navigate, "a2c.", 10000)]
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="nf5cv15k", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:

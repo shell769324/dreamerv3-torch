@@ -2,19 +2,27 @@ import gym
 import numpy as np
 import uuid
 import torch
+from tools import get_episode_name_prefix
 from envs.crafter import targets
+import json
+import os
 
 
 class CollectDataset:
     def __init__(
-        self, env, mode, train_eps, eval_eps=dict(), callbacks=None, precision=32
+        self, env, train_eps, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
     ):
         self._env = env
         self._callbacks = callbacks or ()
         self._precision = precision
         self._episode = None
-        self._cache = dict(train=train_eps, eval=eval_eps)[mode]
-        self._temp_name = str(uuid.uuid4())
+        self._cache = train_eps
+        self.navigate_dataset = navigate_dataset
+        self.explore_dataset = explore_dataset
+        self.begin = 0
+        self.curr = 0
+        self.directory = directory
+
 
     def __getattr__(self, name):
         return getattr(self._env, name)
@@ -22,6 +30,7 @@ class CollectDataset:
     def step(self, action):
         obs, reward, done, info = self._env.step(action)
         obs = {k: self._convert(v) for k, v in obs.items()}
+        obs.pop("augmented", None)
         transition = obs.copy()
         if isinstance(action, dict):
             transition.update(action)
@@ -29,12 +38,21 @@ class CollectDataset:
             transition["action"] = action
         transition["reward"] = reward
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
+        if transition["reward_mode"] != self._episode[-1]["reward_mode"] or done:
+            # mode 0 is nagivate
+            ep_name = get_episode_name_prefix(self.directory)
+            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
+            cache = dataset.tuples
+            if ep_name not in cache[self._episode[-1]["target"]]:
+                cache[self._episode[-1]["target"]][ep_name] = []
+                dataset.episode_sizes[self._episode[-1]["target"]][ep_name] = 0
+            cache[self._episode[-1]["target"]][ep_name].append([self.begin, self.curr])
+            dataset.episode_sizes[self._episode[-1]["target"]][ep_name] += self.curr - self.begin
+            dataset.aggregate_sizes[self._episode[-1]["target"]] += self.curr - self.begin
+            self.begin = self.curr
         self._episode.append(transition)
-        self.add_to_cache(transition)
+        self.curr += 1
         if done:
-            # detele transitions before whole episode is stored
-            del self._cache[self._temp_name]
-            self._temp_name = str(uuid.uuid4())
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
@@ -43,6 +61,8 @@ class CollectDataset:
             info["episode"] = episode
             for callback in self._callbacks:
                 callback(episode)
+            self.navigate_dataset.save()
+            self.explore_dataset.save()
         return obs, reward, done, info
 
     def reset(self):
@@ -54,22 +74,9 @@ class CollectDataset:
         transition["reward"] = 0.0
         transition["discount"] = 1.0
         self._episode = [transition]
-        self.add_to_cache(transition)
+        self.begin = 0
+        self.curr = 1
         return obs
-
-    def add_to_cache(self, transition):
-        if self._temp_name not in self._cache:
-            self._cache[self._temp_name] = dict()
-            for key, val in transition.items():
-                self._cache[self._temp_name][key] = [self._convert(val)]
-        else:
-            for key, val in transition.items():
-                if key not in self._cache[self._temp_name]:
-                    # fill missing data(action)
-                    self._cache[self._temp_name][key] = [self._convert(0 * val)]
-                    self._cache[self._temp_name][key].append(self._convert(val))
-                else:
-                    self._cache[self._temp_name][key].append(self._convert(val))
 
     def _convert(self, value):
         value = np.array(value)

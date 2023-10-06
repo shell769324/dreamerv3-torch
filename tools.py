@@ -1,4 +1,5 @@
 import datetime
+import math
 import collections
 import io
 import json
@@ -8,6 +9,8 @@ import re
 import time
 import uuid
 from envs.crafter import targets
+import random
+import os
 
 import numpy as np
 
@@ -20,7 +23,6 @@ from torch.utils.tensorboard import SummaryWriter
 
 
 to_np = lambda x: x.detach().cpu().numpy()
-
 
 def symlog(x):
     return torch.sign(x) * torch.log(torch.abs(x) + 1.0)
@@ -207,15 +209,101 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
     return step - steps, episode - episodes, done, length, obs, agent_state, reward
 
 
+class SliceDataset:
+    def __init__(self, dataset, batch_size, batch_length, path, seed=0):
+        self.dataset = dataset
+        self.tuples = [dict()] * len(targets)
+        self.episode_sizes = [dict()] * len(targets)
+        self.aggregate_sizes = [0] * len(targets)
+        self.batch_size = int(batch_size / 2)
+        self.batch_length = batch_length
+        self.random = np.random.RandomState(seed)
+        self.path = path
+        self.load()
+
+    def sample(self, dist):
+        frame_counts = [0.0] * len(targets)
+        for i in range(len(dist)):
+            frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
+        remained = self.batch_length * self.batch_size - sum(frame_counts)
+        frame_counts[random.randint(0, len(targets) - 1)] += remained
+        tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
+        p = [self.episode_sizes[i] for i in range(len(targets))]
+        # sample episode by their length
+        for i, sl in enumerate(p):
+            p[i] = sl / np.sum(sl)
+        ret = dict()
+        curr_target = 0
+        curr_target_frame = 0
+        for _ in range(self.batch_size):
+            size = 0
+            while size < self.batch_length:
+                (ep_name, slices_in_episode) = self.random.choice(tuple_list[curr_target], p=p)
+                episode = self.dataset[ep_name]
+                num_slices = self.episode_sizes[curr_target][ep_name]
+                probs = [(sl[1] - sl[0]) / num_slices for sl in slices_in_episode]
+                index = np.random.choice(
+                    a=list(range(len(slices_in_episode))),
+                    p=probs
+                )
+                start_frame = self.random.randint(slices_in_episode[index][0], slices_in_episode[index][1] - 1)
+
+                while index < len(slices_in_episode) and size < self.batch_length and curr_target_frame < frame_counts[curr_target]:
+                    end_frame = min(start_frame + self.batch_length - size, slices_in_episode[index][1], start_frame + frame_counts[curr_target] - curr_target_frame)
+                    if end_frame - start_frame < 2:
+                        continue
+                    size += end_frame - start_frame
+                    curr_target_frame += end_frame - start_frame
+                    ret = {
+                        k: np.append(
+                            ret[k], v[start_frame:end_frame], axis=0
+                        ) if k in ret else v[start_frame:end_frame]
+                        for k, v in episode.items() if k != "augmented"
+                    }
+                    index += 1
+                    if index < len(slices_in_episode):
+                        start_frame = slices_in_episode[index][0]
+                if curr_target_frame == frame_counts[curr_target]:
+                    curr_target += 1
+                    curr_target_frame = 0
+
+    def load(self):
+        if os.path.isfile(self.path):
+            print("Detect file on " + self.path + ". Will load")
+            with open(self.path) as json_file:
+                json_dict = json.load(json_file)
+                self.tuples = json_dict["tuples"]
+                self.episode_sizes = json_dict["episode_sizes"]
+                self.aggregate_sizes = json_dict["aggregate_sizes"]
+        else:
+            print("No file detected on " + self.path)
+
+    def save(self):
+        if os.path.isfile(self.path):
+            os.remove(self.path)
+        with open(self.path, 'w', encoding='utf-8') as f:
+            json_dict = dict()
+            json_dict["tuples"] = self.tuples
+            json_dict["episode_sizes"] = self.episode_sizes
+            json_dict["aggregate_sizes"] = self.aggregate_sizes
+            json.dump(json_dict, f, ensure_ascii=False, indent=4)
+            print("Saved slice dataset to " + self.path)
+
+
+def get_episode_name_prefix(directory, incr=0):
+    if "counter" not in get_episode_name_prefix.__dict__:
+        get_episode_name_prefix.counter = 0
+    prefix = str(get_episode_name_prefix.counter)
+    get_episode_name_prefix.counter += incr
+    return directory / f"{prefix}.npz"
+
+
 def save_episodes(directory, episodes):
     directory = pathlib.Path(directory).expanduser()
     directory.mkdir(parents=True, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
     filenames = []
     for episode in episodes:
-        identifier = str(uuid.uuid4().hex)
-        length = len(episode["reward"])
-        filename = directory / f"{timestamp}-{identifier}-{length}.npz"
+        filename = get_episode_name_prefix(directory, incr=1)
         with io.BytesIO() as f1:
             np.savez_compressed(f1, **episode)
             f1.seek(0)
