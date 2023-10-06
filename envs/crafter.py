@@ -47,7 +47,6 @@ class Crafter():
         spaces = {}
         spaces["image"] = gym.spaces.Box(0, 255, self._size + (3,), dtype=np.uint8)
         spaces["augmented"] = gym.spaces.Box(0, 255, self._crafter_env.aug_size + (3,), dtype=np.uint8)
-        spaces["log_reward"] = gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
         spaces["is_first"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["is_last"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -216,7 +215,6 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
-            log_reward=np.float32(info['reward'] if info else 0.0),
             target_reached_steps=target_reached_steps,
             target_reached=target_reached,
             prev_target=prev_target,
@@ -277,7 +275,6 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
-            log_reward=np.float32(info['reward'] if info else 0.0),
             target_spot_steps=target_spot_steps,
             target_spot=target_spot,
             prev_target=prev_target,
