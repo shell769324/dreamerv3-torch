@@ -276,7 +276,7 @@ class SliceDataset:
                 self.episode_sizes = json_dict["episode_sizes"]
                 self.aggregate_sizes = json_dict["aggregate_sizes"]
         else:
-            print("No file detected on " + self.path)
+            print("No file detected on ", self.path)
 
     def save(self):
         if os.path.isfile(self.path):
@@ -287,7 +287,7 @@ class SliceDataset:
             json_dict["episode_sizes"] = self.episode_sizes
             json_dict["aggregate_sizes"] = self.aggregate_sizes
             json.dump(json_dict, f, ensure_ascii=False, indent=4)
-            print("Saved slice dataset to " + self.path)
+            print("Saved slice dataset to ", self.path)
 
 
 def get_episode_name_prefix(directory, incr=0):
