@@ -238,7 +238,8 @@ class SliceDataset:
         for _ in range(self.batch_size):
             size = 0
             while size < self.batch_length:
-                (ep_name, slices_in_episode) = self.random.choice(tuple_list[curr_target], p=p)
+                picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p)
+                (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
                 num_slices = self.episode_sizes[curr_target][ep_name]
                 probs = [(sl[1] - sl[0]) / num_slices for sl in slices_in_episode]
