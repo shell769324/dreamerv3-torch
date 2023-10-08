@@ -217,7 +217,7 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
-            target_spot=True,
+            target_spot=self._last_min_dist is not None,
             target_reached_steps=target_reached_steps,
             target_reached=target_reached,
             prev_target=prev_target,
@@ -247,9 +247,9 @@ class Crafter():
             reward -= 5
         prev_target = self._target
 
-        min_dist = self._get_dist(player_pos, info)
+        self._last_min_dist = self._get_dist(player_pos, info)
         target_spot = False
-        if min_dist is not None:
+        if self._last_min_dist is not None:
             reward += 1
             target_spot = True
             self.target_spot_steps = 0
@@ -259,11 +259,11 @@ class Crafter():
         return self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
-            is_terminal=info['discount'] == 0, target_spot=target_spot, target_spot_steps=target_spot_steps,
+            is_terminal=info['discount'] == 0, target_spot_steps=target_spot_steps,
             prev_target=prev_target, where=where_array), reward, self._done, info
 
     def explore_obs(self, image, reward, info,
-                    is_first=False, is_last=False, is_terminal=False, augmented=None, target_spot=False,
+                    is_first=False, is_last=False, is_terminal=False, augmented=None,
                     target_spot_steps=0, prev_target=None, where=None):
         if prev_target is None:
             prev_target = self._target
@@ -279,7 +279,7 @@ class Crafter():
             is_terminal=is_terminal,
             target=self._target,
             target_spot_steps=target_spot_steps,
-            target_spot=target_spot,
+            target_spot=self._last_min_dist is not None,
             prev_target=prev_target,
             where=where,
             reward_mode=1,
