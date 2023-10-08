@@ -202,7 +202,17 @@ class Dreamer(nn.Module):
 
 
 def count_steps(folder):
-    return sum(int(str(n).split("-")[-1][:-4]) - 1 for n in folder.glob("*.npz"))
+    total = 0
+    for filename in reversed(sorted(folder.glob("*.npz"))):
+        try:
+            with filename.open("rb") as f:
+                episode = np.load(f)
+                episode = {k: episode[k] for k in episode.keys()}
+        except Exception as e:
+            print(f"Could not load episode: {e}")
+            continue
+        total += len(episode["reward"]) - 1
+    return total
 
 
 def make_dataset(episodes, config):
