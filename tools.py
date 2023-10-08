@@ -220,8 +220,6 @@ class SliceDataset:
         self.random = np.random.RandomState(seed)
         self.path = path
         self.load()
-        for i, name in enumerate(targets):
-            print(name, self.aggregate_sizes[i])
 
     def sample(self, dist):
         frame_counts = [0.0] * len(targets)
@@ -282,6 +280,8 @@ class SliceDataset:
             print("No file detected on", self.path)
 
     def save(self):
+        for i, name in enumerate(targets):
+            print(name, self.aggregate_sizes[i])
         if os.path.isfile(self.path):
             os.remove(self.path)
         with open(self.path, 'w', encoding='utf-8') as f:
