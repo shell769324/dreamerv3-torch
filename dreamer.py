@@ -59,7 +59,6 @@ class Dreamer(nn.Module):
         self._dataset = dataset
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
-        print(type(self.navigate_dataset), type(self.explore_dataset))
         self._wm = models.WorldModel(self._step, config, self.navigate_dataset, self.explore_dataset)
         self._task_behavior = models.ImagBehavior(
             config, self._wm, config.behavior_stop_grad
@@ -353,8 +352,8 @@ def main(config, defaults):
 
     train_dataset = make_dataset(train_eps, config)
     eval_dataset = make_dataset(eval_eps, config)
-    navigate_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, str(Path.joinpath(directory, "navigate.json").absolute()))
-    explore_dataset = SliceDataset(train_dataset, config.batch_size, config.batch_length, str(Path.joinpath(directory, "explore.json").absolute()))
+    navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length, str(Path.joinpath(directory, "navigate.json").absolute()))
+    explore_dataset = SliceDataset(eval_eps, config.batch_size, config.batch_length, str(Path.joinpath(directory, "explore.json").absolute()))
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
