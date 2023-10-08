@@ -249,7 +249,7 @@ class ProcessEpisodeWrap:
     last_episode = 0
 
     @classmethod
-    def process_episode(cls, config, logger, mode, train_eps, eval_eps, episode, navigate_dataset, explore_dataset):
+    def process_episode(cls, config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, episode):
         directory = dict(train=config.traindir, eval=config.evaldir)[mode]
         cache = dict(train=train_eps, eval=eval_eps)[mode]
         # this saved episodes is given as train_eps or eval_eps from next call
