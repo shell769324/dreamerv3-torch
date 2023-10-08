@@ -58,7 +58,7 @@ class CollectDataset:
             print("first", self._episode[0].keys())
             for t in self._episode:
                 print("other", t.keys())
-            episode = {k: [t[k] for t in self._episode if k in t] for k in self._episode[0]}
+            episode = {k: [t[k] for t in self._episode] for k in self._episode[0]}
             episode = {k: self._convert(v) for k, v in episode.items()}
             info["episode"] = episode
             for callback in self._callbacks:
