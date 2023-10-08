@@ -134,7 +134,7 @@ class WorldModel(nn.Module):
             opt=config.opt,
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
-                 "rssm": self.dynamics, "explore_reward": self.heads["explore_reward"], "navigate_reward": self.heads["navigate_reward"]
+                 "rssm": self.dynamics, "explore_reward": self.heads["explore_reward"], "navigate_reward": self.heads["navigate_reward"],
                  "where": self.heads["where"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
