@@ -30,7 +30,7 @@ to_np = lambda x: x.detach().cpu().numpy()
 
 
 class Dreamer(nn.Module):
-    def __init__(self, config, logger, dataset, navigate_dataset, explore_dataset):
+    def __init__(self, config, logger, dataset, navigate_dataset, explore_dataset, train_crafter, eval_crafter):
         super(Dreamer, self).__init__()
         self._config = config
         self._logger = logger
@@ -44,6 +44,8 @@ class Dreamer(nn.Module):
         self._metrics = {}
         self._step = count_steps(config.traindir)
         self._update_count = 0
+        self.train_crafter = train_crafter
+        self.eval_crafter = eval_crafter
         # Schedules.
         config.actor_entropy = lambda x=config.actor_entropy: tools.schedule(
             x, self._step
@@ -159,7 +161,13 @@ class Dreamer(nn.Module):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         reward_prediction = self._wm.heads["reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
-        means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
+        crafter_env = self.train_crafter if training else self.eval_crafter
+        if obs["target_spot"]:
+            means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
+            crafter_env.reward_type = "navigate"
+        else:
+            means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
+            crafter_env.reward_type = "explore"
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -374,9 +382,10 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    watched = [(agent._wm.heads["reward"], "reward.", 3000),
-               (agent._wm.heads["image"], "image.", 1000),
-               (agent._task_behavior.a2c_navigate, "a2c.", 10000)]
+    watched = [(agent._wm.heads["reward"], "reward.", 6000),
+               (agent._wm.heads["image"], "image.", 2000),
+               (agent._task_behavior.a2c_navigate, "a2c.", 15000),
+               (agent._task_behavior.a2c_explore, "a2c.", 15000)]
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="nf5cv15k", resume=True):
     with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:

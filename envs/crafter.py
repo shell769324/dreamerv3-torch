@@ -138,6 +138,8 @@ class Crafter():
             return self.navigate_step(action)
         elif self.reward_type == "explore":
             return self.explore_step(action)
+        else:
+            raise ValueError("impossible")
 
     def navigate_step(self, action):
         if len(action.shape) >= 1:
@@ -215,6 +217,7 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
+            target_spot=True,
             target_reached_steps=target_reached_steps,
             target_reached=target_reached,
             prev_target=prev_target,

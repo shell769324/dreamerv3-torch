@@ -1,5 +1,5 @@
-torch==2.0.0
-torchvision==0.15.1
+torch==1.13.1
+torchvision==0.14.1
 numpy==1.20.1
 tensorboard==2.5.0
 pandas==1.2.4
