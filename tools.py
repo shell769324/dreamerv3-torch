@@ -216,12 +216,12 @@ class SliceDataset:
         self.episode_sizes = [dict()] * len(targets)
         self.aggregate_sizes = [0] * len(targets)
         self.batch_size = int(batch_size / 2)
-        for i, name in enumerate(targets):
-            print(name, self.aggregate_sizes[i])
         self.batch_length = batch_length
         self.random = np.random.RandomState(seed)
         self.path = path
         self.load()
+        for i, name in enumerate(targets):
+            print(name, self.aggregate_sizes[i])
 
     def sample(self, dist):
         frame_counts = [0.0] * len(targets)
