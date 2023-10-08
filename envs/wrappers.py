@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import uuid
 import torch
-from tools import get_episode_name_prefix
+from tools import get_episode_name
 from envs.crafter import targets
 import json
 import os
@@ -39,7 +39,9 @@ class CollectDataset:
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
         if transition["reward_mode"] != self._episode[-1]["reward_mode"] or done:
             # mode 0 is nagivate
-            ep_name = get_episode_name_prefix(self.directory)
+            ep_name = get_episode_name(self.directory)
+            print(ep_name)
+            exit(1)
             dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.tuples
             if ep_name not in cache[self._episode[-1]["target"]]:

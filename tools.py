@@ -290,11 +290,11 @@ class SliceDataset:
             print("Saved slice dataset to ", self.path)
 
 
-def get_episode_name_prefix(directory, incr=0):
-    if "counter" not in get_episode_name_prefix.__dict__:
-        get_episode_name_prefix.counter = 0
-    prefix = str(get_episode_name_prefix.counter)
-    get_episode_name_prefix.counter += incr
+def get_episode_name(directory, incr=0):
+    if "counter" not in get_episode_name.__dict__:
+        get_episode_name.counter = 0
+    prefix = str(get_episode_name.counter)
+    get_episode_name.counter += incr
     return directory / f"{prefix}.npz"
 
 
@@ -303,7 +303,7 @@ def save_episodes(directory, episodes):
     directory.mkdir(parents=True, exist_ok=True)
     filenames = []
     for episode in episodes:
-        filename = get_episode_name_prefix(directory, incr=1)
+        filename = get_episode_name(directory, incr=1)
         with io.BytesIO() as f1:
             np.savez_compressed(f1, **episode)
             f1.seek(0)
