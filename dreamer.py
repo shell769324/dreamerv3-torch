@@ -390,7 +390,7 @@ def main(config, defaults):
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
-    agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset).to(config.device)
+    agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset, train_crafter, eval_crafter).to(config.device)
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
