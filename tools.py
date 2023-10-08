@@ -253,8 +253,6 @@ class SliceDataset:
 
                 while index < len(slices_in_episode) and size < self.batch_length and curr_target_frame < frame_counts[curr_target]:
                     end_frame = min(start_frame + self.batch_length - size, slices_in_episode[index][1], start_frame + frame_counts[curr_target] - curr_target_frame)
-                    if end_frame - start_frame < 2:
-                        continue
                     size += end_frame - start_frame
                     curr_target_frame += end_frame - start_frame
                     ret = {
