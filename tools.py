@@ -236,8 +236,10 @@ class SliceDataset:
         curr_target = 0
         curr_target_frame = 0
         for _ in range(self.batch_size):
+            print("gather", targets[curr_target])
             size = 0
             while size < self.batch_length:
+                print("gather", targets[curr_target], "inner")
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
