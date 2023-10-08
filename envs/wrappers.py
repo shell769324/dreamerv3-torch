@@ -56,9 +56,9 @@ class CollectDataset:
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
-            print("first", self._episode[0].keyset())
+            print("first", self._episode[0].keys())
             for t in self._episode:
-                print("other", t.keyset())
+                print("other", t.keys())
             episode = {k: [t[k] for t in self._episode] for k in self._episode[0]}
             episode = {k: self._convert(v) for k, v in episode.items()}
             info["episode"] = episode
