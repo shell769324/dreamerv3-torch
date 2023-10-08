@@ -30,7 +30,6 @@ class CollectDataset:
     def step(self, action):
         obs, reward, done, info = self._env.step(action)
         obs = {k: self._convert(v) for k, v in obs.items()}
-        obs.pop("augmented", None)
         transition = obs.copy()
         if isinstance(action, dict):
             transition.update(action)
