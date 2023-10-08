@@ -284,6 +284,7 @@ class Crafter():
             target_reached_steps=0,
             target_reached=False,
             prev_target=prev_target,
+            distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
             where=where,
             reward_mode=1,
             **log_achievements,
