@@ -59,6 +59,7 @@ class Dreamer(nn.Module):
         self._dataset = dataset
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
+        print(type(self.navigate_dataset), type(self.explore_dataset))
         self._wm = models.WorldModel(self._step, config, self.navigate_dataset, self.explore_dataset)
         self._task_behavior = models.ImagBehavior(
             config, self._wm, config.behavior_stop_grad
