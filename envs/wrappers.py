@@ -40,6 +40,7 @@ class CollectDataset:
         if transition["reward_mode"] != self._episode[-1]["reward_mode"] or done:
             # mode 0 is nagivate
             ep_name = str(get_episode_name(self.directory))
+            print("slice dataset", ep_name)
             dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.tuples
             if ep_name not in cache[self._episode[-1]["target"]]:

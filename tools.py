@@ -380,6 +380,7 @@ def load_episodes(directory, limit=None, reverse=True):
             except Exception as e:
                 print(f"Could not load episode: {e}")
                 continue
+            print("dict", str(filename))
             episodes[str(filename)] = episode
             total += len(episode["reward"]) - 1
             if limit and total >= limit:
@@ -393,6 +394,7 @@ def load_episodes(directory, limit=None, reverse=True):
             except Exception as e:
                 print(f"Could not load episode: {e}")
                 continue
+            print("dict", str(filename))
             episodes[str(filename)] = episode
             total += len(episode["reward"]) - 1
             if limit and total >= limit:
