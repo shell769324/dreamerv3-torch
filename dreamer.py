@@ -267,6 +267,7 @@ class ProcessEpisodeWrap:
         length = len(episode["reward"]) - 1
         score = float(episode["reward"].astype(np.float64).sum())
         video = episode["augmented"]
+        print("process", str(filename))
         cache[str(filename)] = episode
         video = video[None].squeeze(0).transpose(0, 3, 1, 2)
         if mode == "train":
