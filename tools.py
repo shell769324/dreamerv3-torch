@@ -269,6 +269,7 @@ class SliceDataset:
                 if curr_target_frame == frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
+        return ret
 
     def load(self):
         if os.path.isfile(self.path):
