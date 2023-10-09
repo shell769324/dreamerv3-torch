@@ -252,6 +252,7 @@ class SliceDataset:
                     p=probs
                 )
                 assert slices_in_episode[index][0] <= slices_in_episode[index][1] - 1, "impossible slice " + targets[curr_target] + " index " + index + str(slices_in_episode[index])
+                print(slices_in_episode[index])
                 start_frame = self.random.randint(slices_in_episode[index][0], slices_in_episode[index][1] - 1)
 
                 while index < len(slices_in_episode) and size < self.batch_length and curr_target_frame < frame_counts[curr_target]:
