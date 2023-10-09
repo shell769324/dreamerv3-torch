@@ -222,9 +222,11 @@ class SliceDataset:
         self.load()
 
     def sample(self, dist):
+        print("dist", dist)
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
+        print("frame_counts", frame_counts)
         remained = self.batch_length * self.batch_size - sum(frame_counts)
         frame_counts[random.randint(0, len(targets) - 1)] += remained
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
