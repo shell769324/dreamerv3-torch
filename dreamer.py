@@ -231,6 +231,9 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
     env = wrappers.OneHotAction(crafter_env)
     env = wrappers.TimeLimit(env, config.time_limit)
     env = wrappers.SelectAction(env, key="action")
+    if mode == "eval":
+        navigate_dataset = {}
+        explore_dataset = {}
     if (mode == "train") or (mode == "eval"):
         callbacks = [
             functools.partial(
