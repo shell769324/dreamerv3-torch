@@ -238,7 +238,7 @@ class SliceDataset:
         ret = dict()
         curr_target = 0
         curr_target_frame = 0
-        print("sample", self.name, self.dataset.keys())
+        print("sample", str(self.path)[-10:], self.name, self.dataset.keys())
         for _ in range(self.batch_size):
             print("gather", self.name, targets[curr_target])
             size = 0
@@ -284,7 +284,7 @@ class SliceDataset:
             print("No file detected on", self.path)
 
     def save(self):
-        print("save", self.name, self.path, self.dataset.keys())
+        print("save", self.name, str(self.path)[-10:], self.dataset.keys())
         for i, name in enumerate(targets):
             print(name, self.aggregate_sizes[i])
         if os.path.isfile(self.path):
