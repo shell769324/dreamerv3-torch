@@ -279,6 +279,7 @@ class ProcessEpisodeWrap:
                 if not config.dataset_size or total <= config.dataset_size - length:
                     total += len(ep["reward"]) - 1
                 else:
+                    print("removing train", key)
                     del cache[key]
                     for dataset in [navigate_dataset, explore_dataset]:
                         for target_tuples in dataset.tuples:
@@ -298,7 +299,9 @@ class ProcessEpisodeWrap:
             # keep only last item for saving memory
             while len(cache) > 1:
                 # FIFO
-                cache.popitem()
+                a = cache.popitem()
+                print("removing eval", a)
+
             # start counting scores for evaluation
             if cls.last_step_at_eval != logger.step:
                 cls.eval_scores = []
