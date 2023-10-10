@@ -210,7 +210,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 
 
 class SliceDataset:
-    def __init__(self, dataset, batch_size, batch_length, path, seed=0):
+    def __init__(self, dataset, batch_size, batch_length, path, seed=0, name=""):
         self.dataset = dataset
         self.tuples = [dict()] * len(targets)
         self.episode_sizes = [dict()] * len(targets)
@@ -219,6 +219,7 @@ class SliceDataset:
         self.batch_length = batch_length
         self.random = np.random.RandomState(seed)
         self.path = path
+        self.name = name
         self.load()
 
     def sample(self, dist):
@@ -237,12 +238,12 @@ class SliceDataset:
         ret = dict()
         curr_target = 0
         curr_target_frame = 0
-        print("sample", self.dataset.keys())
+        print("sample", self.name, self.dataset.keys())
         for _ in range(self.batch_size):
-            print("gather", targets[curr_target])
+            print("gather", self.name, targets[curr_target])
             size = 0
             while size < self.batch_length:
-                print("gather", targets[curr_target], curr_target_frame)
+                print("gather", self.name, targets[curr_target], curr_target_frame)
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
@@ -284,7 +285,7 @@ class SliceDataset:
             print("No file detected on", self.path)
 
     def save(self):
-        print("save", self.dataset.keys())
+        print("save", self.name, self.dataset.keys())
         for i, name in enumerate(targets):
             print(name, self.aggregate_sizes[i])
         if os.path.isfile(self.path):

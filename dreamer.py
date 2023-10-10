@@ -356,8 +356,10 @@ def main(config, defaults):
 
     train_dataset = make_dataset(train_eps, config)
     eval_dataset = make_dataset(eval_eps, config)
-    navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length, str(Path.joinpath(directory, "navigate.json").absolute()))
-    explore_dataset = SliceDataset(eval_eps, config.batch_size, config.batch_length, str(Path.joinpath(directory, "explore.json").absolute()))
+    navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), name="train")
+    explore_dataset = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+                                   str(Path.joinpath(directory, "explore.json").absolute()), name="train")
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
