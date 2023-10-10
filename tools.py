@@ -243,7 +243,6 @@ class SliceDataset:
             print("gather", self.name, targets[curr_target])
             size = 0
             while size < self.batch_length:
-                print("gather", self.name, targets[curr_target], curr_target_frame)
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
@@ -383,7 +382,6 @@ def load_episodes(directory, limit=None, reverse=True):
             except Exception as e:
                 print(f"Could not load episode: {e}")
                 continue
-            print("dict", str(filename))
             episodes[str(filename)] = episode
             total += len(episode["reward"]) - 1
             if limit and total >= limit:
@@ -397,7 +395,6 @@ def load_episodes(directory, limit=None, reverse=True):
             except Exception as e:
                 print(f"Could not load episode: {e}")
                 continue
-            print("dict", str(filename))
             episodes[str(filename)] = episode
             total += len(episode["reward"]) - 1
             if limit and total >= limit:
