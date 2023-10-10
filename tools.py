@@ -237,6 +237,7 @@ class SliceDataset:
         ret = dict()
         curr_target = 0
         curr_target_frame = 0
+        print(self.dataset.keys())
         for _ in range(self.batch_size):
             print("gather", targets[curr_target])
             size = 0
