@@ -284,7 +284,7 @@ class SliceDataset:
             print("No file detected on", self.path)
 
     def save(self):
-        print("save", self.name, str(self.path)[-10:], self.dataset.keys())
+        print("save", self.name, str(self.path)[-15:], self.dataset.keys())
         for i, name in enumerate(targets):
             print(name, self.aggregate_sizes[i])
         if os.path.isfile(self.path):
