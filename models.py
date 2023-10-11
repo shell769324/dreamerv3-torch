@@ -152,6 +152,12 @@ class WorldModel(nn.Module):
         target_dist = target_dist / np.sum(target_dist)
         navigate_data = self.preprocess(self.navigate_dataset.sample(target_dist))
         explore_data = self.preprocess(self.explore_dataset.sample(target_dist))
+        print("navigate")
+        for k, v in navigate_data.items():
+            print(k, v.shape)
+        print("explore")
+        for k, v in explore_data.items():
+            print(k, v.shape)
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
 
         with tools.RequiresGrad(self):
