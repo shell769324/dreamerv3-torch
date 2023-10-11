@@ -231,9 +231,6 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
     env = wrappers.OneHotAction(crafter_env)
     env = wrappers.TimeLimit(env, config.time_limit)
     env = wrappers.SelectAction(env, key="action")
-    if mode == "eval":
-        navigate_dataset = {}
-        explore_dataset = {}
     if (mode == "train") or (mode == "eval"):
         callbacks = [
             functools.partial(
@@ -361,9 +358,15 @@ def main(config, defaults):
     eval_dataset = make_dataset(eval_eps, config)
     navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
                                     str(Path.joinpath(directory, "navigate.json").absolute()), name="train")
-    explore_dataset = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+    explore_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
                                    str(Path.joinpath(directory, "explore.json").absolute()), name="train")
-    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
+
+    navigate_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+                                    str(Path.joinpath(directory, "eval_navigate.json").absolute()), name="eval")
+    explore_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+                                   str(Path.joinpath(directory, "eval_explore.json").absolute()), name="eval")
+    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset if mode == "train" else navigate_dataset_eval,
+                                 explore_dataset if mode == "train" else explore_dataset_eval)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
     acts = train_env.action_space
