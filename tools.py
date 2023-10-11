@@ -226,7 +226,6 @@ class SliceDataset:
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
-        print("frame_counts", frame_counts)
         remained = self.batch_length * self.batch_size - sum(frame_counts)
         frame_counts[random.randint(0, len(targets) - 1)] += remained
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
@@ -238,7 +237,6 @@ class SliceDataset:
         curr_target = 0
         curr_target_frame = 0
         for _ in range(self.batch_size):
-            print("gather", self.name, targets[curr_target])
             size = 0
             while size < self.batch_length:
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
@@ -287,9 +285,6 @@ class SliceDataset:
             print("No file detected on", self.path)
 
     def save(self):
-        print("save", self.name, str(self.path)[-13:], self.dataset.keys())
-        for i, name in enumerate(targets):
-            print(name, self.aggregate_sizes[i])
         if os.path.isfile(self.path):
             os.remove(self.path)
         with open(self.path, 'w', encoding='utf-8') as f:
