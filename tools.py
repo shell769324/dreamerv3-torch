@@ -268,10 +268,12 @@ class SliceDataset:
                 if curr_target_frame == frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
-        for _, v in ret.items():
-            v.resize((self.batch_size, self.batch_length))
-        print("ret", ret.keys())
-        return ret
+        result = dict()
+        for k, v in ret.items():
+            shape = v.shape
+            desired = tuple([self.batch_size, self.batch_length] + v[1:])
+            result[k] = v.reshape(desired)
+        return result
 
     def load(self):
         if os.path.isfile(self.path):
