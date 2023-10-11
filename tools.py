@@ -271,7 +271,7 @@ class SliceDataset:
         result = dict()
         for k, v in ret.items():
             shape = v.shape
-            desired = tuple([self.batch_size, self.batch_length] + v[1:])
+            desired = tuple([self.batch_size, self.batch_length] + shape[1:])
             result[k] = v.reshape(desired)
         return result
 
