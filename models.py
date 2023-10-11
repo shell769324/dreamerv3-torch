@@ -319,7 +319,7 @@ class ImagBehavior(nn.Module):
             with tools.RequiresGrad(self):
                 with torch.cuda.amp.autocast(self._use_amp):
                     flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
-                    target_array = torch.from_numpy(flatten(data["target"])).to(self._device)
+                    target_array = flatten(data["target"]).to(self._device)
                     imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
                         post, self._config.imag_horizon, target_array,
                     )
