@@ -268,6 +268,8 @@ class SliceDataset:
                 if curr_target_frame == frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
+        for _, v in ret.items():
+            v.resize(self.batch_size, self.batch_length)
         print("ret", ret.keys())
         return ret
 
