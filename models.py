@@ -196,7 +196,7 @@ class WorldModel(nn.Module):
                         right_data = navigate_data if "navigate" in name else explore_data
                         (stoch, deter) = self.dynamics.get_sep(explore_post)
                         pred = head(stoch, deter, right_data["target"])
-                        like = pred.log_prob(right_data[name])
+                        like = pred.log_prob(right_data["reward"])
                         likes[name] = like
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
