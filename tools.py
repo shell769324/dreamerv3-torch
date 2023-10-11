@@ -273,7 +273,7 @@ class SliceDataset:
 
     def load(self):
         if os.path.isfile(self.path):
-            print("Detect file on", self.path, ". Will load")
+            print("Detect file on {}. Will load.".format(self.path))
             with open(self.path) as json_file:
                 json_dict = json.load(json_file)
                 self.tuples = json_dict["tuples"]
