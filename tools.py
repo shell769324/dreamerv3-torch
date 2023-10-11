@@ -223,7 +223,6 @@ class SliceDataset:
         self.load()
 
     def sample(self, dist):
-        print("dist", dist)
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
@@ -238,7 +237,6 @@ class SliceDataset:
         ret = dict()
         curr_target = 0
         curr_target_frame = 0
-        print("sample", str(self.path)[-13:], self.name, self.dataset.keys())
         for _ in range(self.batch_size):
             print("gather", self.name, targets[curr_target])
             size = 0
@@ -270,6 +268,7 @@ class SliceDataset:
                 if curr_target_frame == frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
+        print("ret", ret.keys())
         return ret
 
     def load(self):
