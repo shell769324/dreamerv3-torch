@@ -173,8 +173,8 @@ class WorldModel(nn.Module):
                 explore_post, explore_prior = self.dynamics.observe(
                     explore_embed, explore_data["action"], explore_data["is_first"]
                 )
-                prior = {k: torch.cat([v, explore_prior[v]], dim=0) for k, v in navigate_prior.items() if k in explore_prior}
-                post = {k: torch.cat([v, explore_post[v]], dim=0) for k, v in navigate_post.items() if k in explore_post}
+                prior = {k: torch.cat([v, explore_prior[k]], dim=0) for k, v in navigate_prior.items() if k in explore_prior}
+                post = {k: torch.cat([v, explore_post[k]], dim=0) for k, v in navigate_post.items() if k in explore_post}
                 kl_free = tools.schedule(self._config.kl_free, self._step)
                 dyn_scale = tools.schedule(self._config.dyn_scale, self._step)
                 rep_scale = tools.schedule(self._config.rep_scale, self._step)
