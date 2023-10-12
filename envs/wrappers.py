@@ -52,6 +52,18 @@ class CollectDataset:
         self._episode.append(transition)
         self.curr += 1
         if done:
+            ep_name = str(get_episode_name(self.directory))
+            for i, transition in enumerate(self._episode):
+                if transition["reward_mode"] != self._episode[-1]["reward_mode"] or i == len(self._episode) - 1:
+                    dataset = [self.navigate_dataset, self.explore_dataset][transition["reward_mode"]]
+                    cache = dataset.tuples
+                    if ep_name not in cache[transition["target"]]:
+                        cache[transition["target"]][ep_name] = []
+                        dataset.episode_sizes[transition["target"]][ep_name] = 0
+                    cache[transition["target"]][ep_name].append([self.begin, self.curr])
+                    dataset.episode_sizes[transition["target"]][ep_name] += self.curr - self.begin
+                    dataset.aggregate_sizes[transition["target"]] += self.curr - self.begin
+                    self.begin = self.curr
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
