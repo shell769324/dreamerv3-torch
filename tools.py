@@ -235,6 +235,7 @@ class SliceDataset:
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
+        print(self.name, self.path[-13:], frame_counts)
         remained = self.batch_length * self.batch_size - sum(frame_counts)
         frame_counts[random.randint(0, len(targets) - 1)] += remained
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
@@ -273,6 +274,7 @@ class SliceDataset:
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
                 if curr_target_frame == frame_counts[curr_target]:
+                    print("finish collecting", curr_target, curr_target_frame)
                     curr_target += 1
                     curr_target_frame = 0
         result = dict()
