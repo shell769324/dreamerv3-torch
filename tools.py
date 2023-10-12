@@ -274,14 +274,12 @@ class SliceDataset:
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
                 if curr_target_frame == frame_counts[curr_target]:
-                    print("finish collecting", targets[curr_target], curr_target_frame)
                     curr_target += 1
                     curr_target_frame = 0
         result = dict()
         for k, v in ret.items():
             shape = v.shape
             desired = tuple([self.batch_size, self.batch_length] + list(shape[1:]))
-            print(k, v.shape)
             result[k] = v.reshape(desired)
         return result
 
