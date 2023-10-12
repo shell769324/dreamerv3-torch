@@ -153,6 +153,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
             reward = [reward[0] * (1 - done[0])]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
+        target_spot = np.stack([o["target_spot"] for o in obs])
         action, agent_state, value, pred_reward = agent(obs, done, agent_state, reward, training=training)
         crafter.value = value
         crafter.reward = pred_reward
@@ -173,14 +174,22 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         step += (done * length).sum()
         length *= 1 - done
         for i, d in enumerate(done):
+            mode = "train" if training else "eval"
             if d and metrics is not None:
-                mode = "train" if training else "eval"
+                action_type = "navigate" if target_spot[i] else "explore"
                 target_name = targets[obs[i]["prev_target"]]
-                failure_name = mode + "_" + target_name + "_failure"
+                failure_name = mode + "_" + target_name + "_{}_failure".format(action_type)
                 if failure_name not in metrics.keys():
                     metrics[failure_name] = 1
                 else:
                     metrics[failure_name] += 1
+        death_count = "death_count"
+        if metrics is not None:
+            if death_count not in metrics.keys():
+                metrics[death_count] = 1
+            else:
+                metrics[death_count] += 1
+
         for i, r in enumerate(reward):
             if metrics is not None:
                 if r <= -2:

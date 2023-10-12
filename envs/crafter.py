@@ -54,9 +54,8 @@ class Crafter():
         spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(targets) * 4,), dtype=np.uint8)
         spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
-        spaces["target_reached_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
-        spaces["target_spot_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint16)
-        spaces["target_reached"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+        spaces["target_reached_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
+        spaces["target_spot_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
         spaces["target_spot"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["prev_target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward_mode"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
@@ -130,7 +129,7 @@ class Crafter():
                                             where_array)
         self.prev_info = info
         if self._last_min_dist is None:
-            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array)
+            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_spot_steps=0)
         return self.navigate_obs(image, 0.0, {}, is_first=True, augmented=augmented, where=where_array)
 
     def step(self, action):
@@ -160,8 +159,7 @@ class Crafter():
         if self._env._world[player_pos][0] == 'lava':
             reward -= 5
         faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
-        target_reached = False
-        target_reached_steps = self.target_reached_steps
+        target_reached_steps = -1
         prev_target = self._target
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if self.prev_info is None:
@@ -172,7 +170,7 @@ class Crafter():
             reward += 1
             self._target = np.random.randint(0, len(targets))
             self._last_min_dist = self._get_dist(player_pos, info)
-            target_reached = True
+            target_reached_steps = self.target_reached_steps
             self.target_reached_steps = 0
         elif face_in_bound and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target]:
             reward += 1
@@ -197,13 +195,13 @@ class Crafter():
         return self.navigate_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
-            is_terminal=info['discount'] == 0, target_reached=target_reached, target_reached_steps=target_reached_steps,
+            is_terminal=info['discount'] == 0, target_reached_steps=target_reached_steps,
             prev_target=prev_target, where=where_array), reward, self._done, info
 
     def navigate_obs(
             self, image, reward, info,
-            is_first=False, is_last=False, is_terminal=False, augmented=None, target_reached=False,
-            target_reached_steps=0, prev_target=None, where=None):
+            is_first=False, is_last=False, is_terminal=False, augmented=None,
+            target_reached_steps=-1, prev_target=None, where=None):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
@@ -217,10 +215,9 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
-            target_spot_steps=0,
             target_spot=self._last_min_dist is not None,
+            target_spot_steps=-1,
             target_reached_steps=target_reached_steps,
-            target_reached=target_reached,
             prev_target=prev_target,
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
             where=where,
@@ -238,7 +235,7 @@ class Crafter():
         where_array = self.compute_where(previous_pos, self._env._sem_view())
         image, _, self._done, info = self._env.step(action)
         self.target_spot_steps += 1
-        target_spot_steps = self.target_spot_steps
+        target_spot_steps = -1
         # reward = np.float32(reward)
         player_pos = info['player_pos']
 
@@ -249,10 +246,9 @@ class Crafter():
         prev_target = self._target
 
         self._last_min_dist = self._get_dist(player_pos, info)
-        target_spot = False
         if self._last_min_dist is not None:
             reward += 1
-            target_spot = True
+            target_spot_steps = self.target_spot_steps
             self.target_spot_steps = 0
         self.prev_info = info
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
@@ -265,7 +261,7 @@ class Crafter():
 
     def explore_obs(self, image, reward, info,
                     is_first=False, is_last=False, is_terminal=False, augmented=None,
-                    target_spot_steps=0, prev_target=None, where=None):
+                    target_spot_steps=-1, prev_target=None, where=None):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
@@ -279,10 +275,9 @@ class Crafter():
             is_last=is_last,
             is_terminal=is_terminal,
             target=self._target,
-            target_spot_steps=target_spot_steps,
             target_spot=self._last_min_dist is not None,
-            target_reached_steps=0,
-            target_reached=False,
+            target_spot_steps=target_spot_steps,
+            target_reached_steps=-1,
             prev_target=prev_target,
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
             where=where,
