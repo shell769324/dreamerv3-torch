@@ -37,18 +37,6 @@ class CollectDataset:
             transition["action"] = action
         transition["reward"] = reward
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
-        if transition["reward_mode"] != self._episode[-1]["reward_mode"] or done:
-            # mode 0 is nagivate
-            ep_name = str(get_episode_name(self.directory))
-            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
-            cache = dataset.tuples
-            if ep_name not in cache[self._episode[-1]["target"]]:
-                cache[self._episode[-1]["target"]][ep_name] = []
-                dataset.episode_sizes[self._episode[-1]["target"]][ep_name] = 0
-            cache[self._episode[-1]["target"]][ep_name].append([self.begin, self.curr])
-            dataset.episode_sizes[self._episode[-1]["target"]][ep_name] += self.curr - self.begin
-            dataset.aggregate_sizes[self._episode[-1]["target"]] += self.curr - self.begin
-            self.begin = self.curr
         self._episode.append(transition)
         self.curr += 1
         if done:
