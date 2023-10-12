@@ -38,7 +38,6 @@ class CollectDataset:
         transition["reward"] = reward
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
         self._episode.append(transition)
-        self.curr += 1
         if done:
             ep_name = str(get_episode_name(self.directory))
             print("wrapper", ep_name)
@@ -53,6 +52,7 @@ class CollectDataset:
                     dataset.episode_sizes[transition["target"]][ep_name] += self.curr - self.begin
                     dataset.aggregate_sizes[transition["target"]] += self.curr - self.begin
                     self.begin = self.curr
+                self.curr += 1
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
