@@ -235,9 +235,9 @@ class SliceDataset:
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
-        print(self.name, self.path[-13:], frame_counts)
         remained = self.batch_length * self.batch_size - sum(frame_counts)
         frame_counts[random.randint(0, len(targets) - 1)] += remained
+        print(self.name, self.path[-13:], frame_counts, self.aggregate_sizes)
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
         p = [np.array([self.episode_sizes[i][name] for name, _ in tuple_list[i]]) for i in range(len(targets))]
         # sample episode by their length
