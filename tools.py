@@ -153,7 +153,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
             reward = [reward[0] * (1 - done[0])]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        target_spot = np.stack([o["target_spot"] for o in obs])
+        target_spot = obs["target_spot"]
         action, agent_state, value, pred_reward = agent(obs, done, agent_state, reward, training=training)
         crafter.value = value
         crafter.reward = pred_reward
