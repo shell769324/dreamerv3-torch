@@ -231,12 +231,34 @@ class SliceDataset:
         self.name = name
         self.load()
 
+    def sanity_check(self):
+        expected_aggregate_size = [0] * len(targets)
+        for i in range(len(targets)):
+            for ep_name, count in self.episode_sizes[i]:
+                expected_aggregate_size[i] += count
+            assert(expected_aggregate_size[i] == self.aggregate_sizes[i])
+        for i in range(len(targets)):
+            for ep_name, count in self.episode_sizes[i].items():
+                assert(ep_name in self.tuples[i])
+                total = 0
+                for st, ed in self.tuples[i][ep_name]:
+                    total += ed - st
+                assert(total == count)
+        for i in range(len(targets)):
+            for ep_name in self.tuples[i].keys():
+                assert(ep_name in self.episode_sizes[i])
+
     def sample(self, dist):
+        self.sanity_check()
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
         remained = self.batch_length * self.batch_size - sum(frame_counts)
-        frame_counts[random.randint(0, len(targets) - 1)] += remained
+        start = random.randint(0, len(targets) - 1)
+        for i in range(len(dist)):
+            index = (i + start) % len(targets)
+            if self.aggregate_sizes[index] != 0:
+                frame_counts[index] += remained
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
         p = [np.array([self.episode_sizes[i][name] for name, _ in tuple_list[i]]) for i in range(len(targets))]
         # sample episode by their length
