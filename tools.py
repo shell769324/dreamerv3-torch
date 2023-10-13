@@ -301,6 +301,7 @@ class SliceDataset:
         for k, v in ret.items():
             shape = v.shape
             desired = tuple([self.batch_size, self.batch_length] + list(shape[1:]))
+            assert(np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "expected {} actual {}".format(desired, v.shape))
             result[k] = v.reshape(desired)
         return result
 
