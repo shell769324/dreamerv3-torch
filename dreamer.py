@@ -92,6 +92,7 @@ class Dreamer(nn.Module):
 
             if self._should_log(step):
                 metrics_dict = {}
+                types = ["spot", "reached"]
                 for prefix in ["train", "eval"]:
                     for t in types:
                         total_successes = 0
