@@ -40,7 +40,6 @@ class CollectDataset:
         self._episode.append(transition)
         if done:
             ep_name = str(get_episode_name(self.directory))
-            print("wrapper", ep_name)
             for i, transition in enumerate(self._episode):
                 if transition["reward_mode"] != self._episode[-1]["reward_mode"] or i == len(self._episode) - 1:
                     dataset = [self.navigate_dataset, self.explore_dataset][transition["reward_mode"]]

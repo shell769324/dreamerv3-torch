@@ -93,7 +93,6 @@ class Dreamer(nn.Module):
             if self._should_log(step):
                 metrics_dict = {}
                 for prefix in ["train", "eval"]:
-                    types = ["spot", "reached"]
                     for t in types:
                         total_successes = 0
                         total_failures = 0
@@ -116,6 +115,10 @@ class Dreamer(nn.Module):
                         metrics_dict["lava_death_rate"] = float(self._metrics.get("lava_count", 0)) / self._metrics.get("death_count")
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
+                for i in range(len(targets)):
+                    metrics_dict[targets[i] + "_navigate_dataset_size"] = self.navigate_dataset.aggregate_sizes[i]
+                for i in range(len(targets)):
+                    metrics_dict[targets[i] + "_explore_dataset_size"] = self.explore_dataset.aggregate_sizes[i]
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
@@ -273,7 +276,6 @@ class ProcessEpisodeWrap:
         length = len(episode["reward"]) - 1
         score = float(episode["reward"].astype(np.float64).sum())
         video = episode["augmented"]
-        print("process", str(filename))
         cache[str(filename)] = episode
         video = video[None].squeeze(0).transpose(0, 3, 1, 2)
         if mode == "train":
@@ -282,7 +284,6 @@ class ProcessEpisodeWrap:
                 if not config.dataset_size or total <= config.dataset_size - length:
                     total += len(ep["reward"]) - 1
                 else:
-                    print("removing train", key)
                     del cache[key]
                     for dataset in [navigate_dataset, explore_dataset]:
                         for target_tuples in dataset.tuples:
@@ -303,7 +304,6 @@ class ProcessEpisodeWrap:
             while len(cache) > 1:
                 # FIFO
                 a = cache.popitem()
-                print("removing eval", a)
 
             # start counting scores for evaluation
             if cls.last_step_at_eval != logger.step:
