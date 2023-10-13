@@ -129,6 +129,7 @@ class Crafter():
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
                                             where_array, self._last_min_dist is not None)
         self.prev_info = info
+        self.was_facing = False
         if self._last_min_dist is None:
             return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_spot_steps=0)
         return self.navigate_obs(image, 0.0, {}, is_first=True, augmented=augmented, where=where_array)
