@@ -126,7 +126,7 @@ class Crafter():
         self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
         where_array = self.compute_where(self._crafter_env._player.pos, info)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array)
+                                            where_array, self._last_min_dist is not None)
         self.prev_info = info
         if self._last_min_dist is None:
             return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_spot_steps=0)
