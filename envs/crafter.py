@@ -189,7 +189,7 @@ class Crafter():
                 reward -= 0.5
             self._last_min_dist = self._get_dist(player_pos, info)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array)
+                                            where_array, self._last_min_dist is not None)
         self.prev_info = info
 
         return self.navigate_obs(
@@ -252,7 +252,7 @@ class Crafter():
             self.target_spot_steps = 0
         self.prev_info = info
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array)
+                                            where_array, self._last_min_dist is not None)
         return self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
