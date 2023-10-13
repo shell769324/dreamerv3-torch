@@ -236,17 +236,17 @@ class SliceDataset:
         for i in range(len(targets)):
             for ep_name, count in self.episode_sizes[i].items():
                 expected_aggregate_size[i] += count
-            assert(expected_aggregate_size[i] == self.aggregate_sizes[i]), "expected aggregate for {} is {}. Actual is {}".format(targets[i], expected_aggregate_size[i], self.aggregate_sizes[i])
+            assert(expected_aggregate_size[i] == self.aggregate_sizes[i], "expected aggregate for {} is {}. Actual is {}".format(targets[i], expected_aggregate_size[i], self.aggregate_sizes[i]))
         for i in range(len(targets)):
             for ep_name, count in self.episode_sizes[i].items():
-                assert(ep_name in self.tuples[i])
+                assert(ep_name in self.tuples[i], "episode_sizes has episode {} but tuples doesn't".format(ep_name))
                 total = 0
                 for st, ed in self.tuples[i][ep_name]:
                     total += ed - st
-                assert(total == count)
+                assert(total == count, "expected total for {} {} is {}, actual is {}".format(ep_name, targets[i], count, total))
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
-                assert(ep_name in self.episode_sizes[i])
+                assert(ep_name in self.episode_sizes[i], "tuples has episode {} but ep doesn't".format(ep_name))
 
     def sample(self, dist):
         self.sanity_check()
