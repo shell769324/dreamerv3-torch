@@ -34,6 +34,7 @@ class Crafter():
         self.reward = 0
         self.prev_info = None
         self.reward_type = None
+        self.was_facing = False
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -172,12 +173,17 @@ class Crafter():
             self._last_min_dist = self._get_dist(player_pos, info)
             target_reached_steps = self.target_reached_steps
             self.target_reached_steps = 0
+            self.was_facing = False
         elif face_in_bound and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target]:
-            reward += 1
+            if not self.was_facing:
+                reward += 1
+                self.was_facing = True
         else:
             # For measuring distance, we should use previous image since objects may move
             delayed_min_dist = self._get_dist(player_pos, self.prev_info, center=previous_pos)
             min_dist = self._get_dist(player_pos, info)
+            if self.was_facing:
+                reward -= 1
             if self._last_min_dist is None:
                 raise RuntimeError("Illegal state, none last min dist")
             elif min_dist is None:
@@ -188,6 +194,7 @@ class Crafter():
             elif self._last_min_dist < delayed_min_dist:
                 reward -= 0.5
             self._last_min_dist = self._get_dist(player_pos, info)
+            self.was_facing = False
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
                                             where_array, self._last_min_dist is not None)
         self.prev_info = info
