@@ -234,7 +234,7 @@ class SliceDataset:
     def sanity_check(self):
         expected_aggregate_size = [0] * len(targets)
         for i in range(len(targets)):
-            for ep_name, count in self.episode_sizes[i]:
+            for ep_name, count in self.episode_sizes[i].items():
                 expected_aggregate_size[i] += count
             assert(expected_aggregate_size[i] == self.aggregate_sizes[i])
         for i in range(len(targets)):
