@@ -236,7 +236,7 @@ class SliceDataset:
         for i in range(len(targets)):
             for ep_name, count in self.episode_sizes[i].items():
                 expected_aggregate_size[i] += count
-            assert(expected_aggregate_size[i] == self.aggregate_sizes[i])
+            assert(expected_aggregate_size[i] == self.aggregate_sizes[i]), "expected aggregate for {} is {}. Actual is {}".format(targets[i], expected_aggregate_size[i], self.aggregate_sizes[i])
         for i in range(len(targets)):
             for ep_name, count in self.episode_sizes[i].items():
                 assert(ep_name in self.tuples[i])
