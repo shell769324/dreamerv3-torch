@@ -156,7 +156,7 @@ class Crafter():
             action = np.argmax(action)
         # don't do noop
         action += 1
-
+        previous_pos = self._crafter_env._player.pos
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_navigate_steps += 1
