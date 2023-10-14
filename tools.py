@@ -273,7 +273,7 @@ class SliceDataset:
         curr_target_frame = 0
         for _ in range(self.batch_size):
             size = 0
-            while size < self.batch_length and curr_target_frame < frame_counts[curr_target]:
+            while size < self.batch_length:
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
@@ -298,7 +298,7 @@ class SliceDataset:
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
-                if curr_target_frame == frame_counts[curr_target]:
+                while curr_target_frame == frame_counts[curr_target] and curr_target < len(targets):
                     curr_target += 1
                     curr_target_frame = 0
         result = dict()
