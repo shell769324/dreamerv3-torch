@@ -19,8 +19,6 @@ class CollectDataset:
         self._cache = train_eps
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
-        self.begin = 0
-        self.curr = 0
         self.directory = directory
 
 
@@ -40,18 +38,21 @@ class CollectDataset:
         self._episode.append(transition)
         if done:
             ep_name = str(get_episode_name(self.directory))
+            begin = 0
             for i, transition in enumerate(self._episode):
-                if transition["reward_mode"] != self._episode[-1]["reward_mode"] or i == len(self._episode) - 1:
+                if i == 0:
+                    continue
+                if transition["reward_mode"] != self._episode[i - 1]["reward_mode"] or i == len(self._episode) - 1:
                     dataset = [self.navigate_dataset, self.explore_dataset][transition["reward_mode"]]
                     cache = dataset.tuples
                     if ep_name not in cache[transition["target"]]:
                         cache[transition["target"]][ep_name] = []
                         dataset.episode_sizes[transition["target"]][ep_name] = 0
-                    cache[transition["target"]][ep_name].append([self.begin, self.curr])
-                    dataset.episode_sizes[transition["target"]][ep_name] += self.curr - self.begin
-                    dataset.aggregate_sizes[transition["target"]] += self.curr - self.begin
-                    self.begin = self.curr
-                self.curr += 1
+                    end = i if i != len(self._episode) - 1 else i + 1
+                    cache[transition["target"]][ep_name].append([begin, end])
+                    dataset.episode_sizes[transition["target"]][ep_name] += end - begin
+                    dataset.aggregate_sizes[transition["target"]] += end - begin
+                    begin = i
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
@@ -73,8 +74,6 @@ class CollectDataset:
         transition["reward"] = 0.0
         transition["discount"] = 1.0
         self._episode = [transition]
-        self.begin = 0
-        self.curr = 1
         return obs
 
     def _convert(self, value):

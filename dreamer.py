@@ -358,9 +358,9 @@ def main(config, defaults):
     train_eps = tools.load_episodes(directory, limit=config.dataset_size)
     train_dataset = make_dataset(train_eps, config)
     navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), name="train")
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), mode="train", name="navigate")
     explore_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), name="train")
+                                   str(Path.joinpath(directory, "explore.json").absolute()), mode="train", name="explore")
 
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))
@@ -369,9 +369,9 @@ def main(config, defaults):
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
     navigate_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), name="eval")
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), mode="eval", name="navigate")
     explore_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), name="eval")
+                                   str(Path.joinpath(directory, "explore.json").absolute()), mode="eval", name="explore")
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset if mode == "train" else navigate_dataset_eval,
                                  explore_dataset if mode == "train" else explore_dataset_eval)
     train_env, train_crafter = make("train")

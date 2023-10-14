@@ -220,7 +220,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 
 
 class SliceDataset:
-    def __init__(self, dataset, batch_size, batch_length, path, seed=0, name=""):
+    def __init__(self, dataset, batch_size, batch_length, path, seed=0, mode="", name=""):
         self.dataset = dataset
         self.tuples = [dict()] * len(targets)
         self.episode_sizes = [dict()] * len(targets)
@@ -229,6 +229,7 @@ class SliceDataset:
         self.batch_length = batch_length
         self.random = np.random.RandomState(seed)
         self.path = path
+        self.mode = mode
         self.name = name
         self.load()
 
@@ -315,7 +316,22 @@ class SliceDataset:
                 self.episode_sizes = json_dict["episode_sizes"]
                 self.aggregate_sizes = json_dict["aggregate_sizes"]
         else:
-            print("No file detected on", self.path)
+            print("No file detected on {}. Will recompute".format(self.path))
+            for ep_name, episode in self.dataset:
+                start = 0
+                reward_modes = episode.get("reward_mode")
+                for i in range(1, len(episode.get("reward"))):
+                    transition_reward_mode = ["navigate", "explore"][reward_modes[i]]
+                    if transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or i == len(episode.get("reward")) - 1):
+                        target = episode["target"][i]
+                        if ep_name not in self.tuples[target]:
+                            self.tuples[target][ep_name] = []
+                            self.episode_sizes[target][ep_name] = 0
+                        end = i if i != len(episode.get("reward")) - 1 else i + 1
+                        self.tuples[target][ep_name].append([start, end])
+                        self.episode_sizes[target][ep_name] += end - start
+                        self.aggregate_sizes[target] += end - start
+                        start = i
 
     def save(self):
         if os.path.isfile(self.path):
