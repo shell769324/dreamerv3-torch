@@ -309,9 +309,6 @@ class SliceDataset:
         return result
 
     def load(self):
-        if np.sum(self.aggregate_sizes) > 0:
-            print("Data is newly sampled. Will skip loading")
-            return
         if os.path.isfile(self.path):
             print("Detect file on {}. Will load.".format(self.path))
             with open(self.path) as json_file:
