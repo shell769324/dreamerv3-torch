@@ -303,14 +303,15 @@ class ImagBehavior(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
-        iter = [("navigate", "navigate/reward", navigate_post, navigate_data), ("explore", "explore/reward", explore_post, explore_data)]
-        for prefix, head_name, post, data in iter:
+        iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate),
+                ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore)]
+        for prefix, head_name, post, data, a2c_head in iter:
             with tools.RequiresGrad(self):
                 with torch.cuda.amp.autocast(self._use_amp):
                     flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                     target_array = flatten(data["target"]).to(self._device)
                     imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
-                        post, self._config.imag_horizon, target_array,
+                        post, self._config.imag_horizon, target_array, a2c_head
                     )
                     value = tools.TwoHotDistSymlog(logits=means)
                     target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
@@ -374,7 +375,7 @@ class ImagBehavior(nn.Module):
             metrics[prefix + "/actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
-    def _imagine(self, start, horizon, target_array):
+    def _imagine(self, start, horizon, target_array, a2c_head):
         dynamics = self._world_model.dynamics
         # start['deter'] (18, 64, 3072) -> (1152, 3072)
         flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
@@ -384,7 +385,7 @@ class ImagBehavior(nn.Module):
             state, _, _, _, _, _ = prev
             stoch, deter = dynamics.get_sep(state)
             stoch, deter = stoch.detach(), deter.detach()
-            mean, policy_param = self.a2c_navigate(stoch, deter, target_array)
+            mean, policy_param = a2c_head(stoch, deter, target_array)
             policy = tools.OneHotDist(policy_param, unimix_ratio=self._config.action_unimix_ratio)
             action = policy.sample()
             succ = dynamics.img_step(state, action, sample=self._config.imag_sample)
