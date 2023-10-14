@@ -8,7 +8,7 @@ import pickle
 import re
 import time
 import uuid
-from envs.crafter import targets
+from envs.crafter import targets, reward_type_reverse
 import random
 import os
 
@@ -173,17 +173,17 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         length += 1
         step += (done * length).sum()
         length *= 1 - done
+        mode = "train" if training else "eval"
         for i, d in enumerate(done):
-            mode = "train" if training else "eval"
             if d and metrics is not None:
                 action_type = "navigate" if target_spot[i] else "explore"
                 target_name = targets[obs[i]["prev_target"]]
-                failure_name = mode + "_" + target_name + "_{}_failure".format(action_type)
+                failure_name = "{}_{}_failure/{}".format(mode, action_type, target_name)
                 if failure_name not in metrics.keys():
                     metrics[failure_name] = 1
                 else:
                     metrics[failure_name] += 1
-        death_count = "death_count"
+        death_count = "{}_death_count".format(mode)
         if metrics is not None:
             if death_count not in metrics.keys():
                 metrics[death_count] = 1
@@ -192,8 +192,9 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 
         for i, r in enumerate(reward):
             if metrics is not None:
-                if r <= -2:
-                    lava_count = "lava_count"
+                reward_type = reward_type_reverse[obs[i]["reward_type"]]
+                if reward_type == "lava":
+                    lava_count = "{}_lava_count".format(mode)
                     if lava_count not in metrics.keys():
                         metrics[lava_count] = 1
                     else:
@@ -201,14 +202,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     continue
                 target_name = targets[obs[i]["prev_target"]]
                 reward_diff = abs(r - pred_reward)
-                if abs(0.5 - r) < 1e-5:
-                    reward_diff_name = "eval_reward_" + target_name + "_closer_diff"
-                elif abs(-0.5 - r) < 1e-5:
-                    reward_diff_name = "eval_reward_" + target_name + "_farther_diff"
-                elif abs(1 - r) < 1e-5:
-                    reward_diff_name = "eval_reward_" + target_name + "_hit_diff"
-                else:
-                    reward_diff_name = "eval_reward_" + target_name + "_stable_diff"
+                reward_diff_name = "{}_reward_{}_diff/{}".format(mode, reward_type, target_name)
                 if reward_diff_name not in metrics.keys():
                     metrics[reward_diff_name] = [reward_diff]
                 else:

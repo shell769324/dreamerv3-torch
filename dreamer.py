@@ -92,34 +92,35 @@ class Dreamer(nn.Module):
 
             if self._should_log(step):
                 metrics_dict = {}
-                types = ["spot", "reached"]
+                types = ["explore", "navigate"]
                 for prefix in ["train", "eval"]:
                     for t in types:
                         total_successes = 0
                         total_failures = 0
                         for target_name in targets:
-                            success_name = prefix + "_" + target_name + "_{}_success".format(t)
+                            success_name = "{}_{}_success/{}".format(prefix, t, target_name)
                             successes = self._metrics.get(success_name, 0)
                             total_successes += successes
-                            failure_name = prefix + "_" + target_name + "_{}_failure".format(t)
+                            failure_name = "{}_{}_failure/{}".format(prefix, t, target_name)
                             failures = self._metrics.get(failure_name, 0)
                             total_failures += failures
                             if successes != 0 or failures != 0:
-                                name = prefix + "_" + target_name + "_{}_success_rate".format(t)
+                                name = "{}_{}_success_rate/{}".format(prefix, t, target_name)
                                 metrics_dict[name] = float(successes) / (failures + successes)
                             self._metrics.pop(success_name, None)
                             self._metrics.pop(failure_name, None)
                         if total_successes != 0 or total_failures != 0:
-                            metrics_dict["total_" + prefix + "_{}_success_rate".format(t)] = \
+                            metrics_dict["{}_{}_success_rate/total".format(prefix, t)] = \
                                 float(total_successes) / (total_failures + total_successes)
-                    if self._metrics.get("death_count", 0) != 0:
-                        metrics_dict["lava_death_rate"] = float(self._metrics.get("lava_count", 0)) / self._metrics.get("death_count")
+                    if self._metrics.get("{}_death_count".format(prefix), 0) != 0:
+                        metrics_dict["{}_lava_death_rate".format(prefix)] = \
+                            float(self._metrics.get("{}_lava_count".format(prefix), 0)) / self._metrics.get("{}_death_count".format(prefix))
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                 for i in range(len(targets)):
-                    metrics_dict[targets[i] + "_navigate_dataset_size"] = self.navigate_dataset.aggregate_sizes[i]
+                    metrics_dict["navigate_dataset_size/" + targets[i]] = self.navigate_dataset.aggregate_sizes[i]
                 for i in range(len(targets)):
-                    metrics_dict[targets[i] + "_explore_dataset_size"] = self.explore_dataset.aggregate_sizes[i]
+                    metrics_dict["explore_dataset_size/" + targets[i]] = self.explore_dataset.aggregate_sizes[i]
                 openl = self._wm.video_pred(next(self._dataset))
                 # 6 64 192 64 3
                 video = to_np(openl[0]).transpose(0, 3, 1, 2)
@@ -129,12 +130,12 @@ class Dreamer(nn.Module):
                 wandb.log(metrics_dict, step=step)
                 self._metrics.clear()
         for i in range(len(obs["reward"])):
-            types = ["spot", "reached"]
+            types = ["explore", "navigate"]
             for t in types:
                 if obs["target_{}_steps".format(t)][i] >= 0:
                     target_name = targets[obs["prev_target"][i]]
-                    step_name = mode + "_" + target_name + "_{}_step".format(t)
-                    success_name = mode + "_" + target_name + "_{}_success".format(t)
+                    step_name = "{}_{}_step/{}".format(mode, t, target_name)
+                    success_name = "{}_{}_success/{}".format(mode, t, target_name)
                     if step_name not in self._metrics.keys():
                         self._metrics[step_name] = [obs["target_{}_steps".format(t)][i]]
                         self._metrics[success_name] = 1
