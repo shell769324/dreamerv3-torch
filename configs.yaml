@@ -45,7 +45,7 @@ defaults:
   dyn_std_act: 'sigmoid2'
   dyn_min_std: 0.1
   dyn_temp_post: True
-  grad_heads: ['image', 'explore_reward', 'navigate_reward', 'cont', 'where']
+  grad_heads: ['image', 'explore/reward', 'navigate/reward', 'cont', 'where']
   units: 512
   reward_layers: 2
   cont_layers: 2

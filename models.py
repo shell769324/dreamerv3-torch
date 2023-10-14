@@ -134,7 +134,7 @@ class WorldModel(nn.Module):
             opt=config.opt,
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
-                 "rssm": self.dynamics, "explore_reward": self.heads["explore_reward"], "navigate_reward": self.heads["navigate_reward"],
+                 "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
                  "where": self.heads["where"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
@@ -184,18 +184,17 @@ class WorldModel(nn.Module):
 
                     if "reward" in name:
                         right_data = navigate_data if "navigate" in name else explore_data
-                        reward_prefix = "navigate" if "navigate" in name else "explore"
                         (stoch, deter) = self.dynamics.get_sep(explore_post)
                         pred = head(stoch, deter, right_data["target"])
                         like = pred.log_prob(right_data["reward"])
                         likes[name] = like
-                        losses["{}/reward".format(reward_prefix)] = -torch.mean(like) * self._scales.get(name, 1.0)
+                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         if not reward_suppressor.isnan().any():
-                            losses["{}/reward".format(reward_prefix)] += reward_suppressor
-                        metrics.update(tools.tensorstats(pred.logits, "{}/reward_logits".format(reward_prefix)))
-                        metrics["{}/reward_suppressor".format(reward_prefix)] = to_np(reward_suppressor)
+                            losses[name] += reward_suppressor
+                        metrics.update(tools.tensorstats(pred.logits, "{}_logits".format(name)))
+                        metrics["{}_suppressor".format(name)] = to_np(reward_suppressor)
 
                 model_loss = sum(losses.values()) + kl_loss
                 metrics.update(self._model_opt(model_loss))
