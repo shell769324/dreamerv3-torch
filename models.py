@@ -90,7 +90,7 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
-        self.heads["explore_reward"] = networks.EmbeddedDenseHead(
+        self.heads["explore/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,
             config.explore_reward_layers,
@@ -101,7 +101,7 @@ class WorldModel(nn.Module):
             outscale=0.0,
             device=config.device,
         )
-        self.heads["navigate_reward"] = networks.EmbeddedDenseHead(
+        self.heads["navigate/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,
             config.navigate_reward_layers,
