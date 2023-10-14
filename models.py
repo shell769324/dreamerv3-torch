@@ -150,6 +150,8 @@ class WorldModel(nn.Module):
         target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
         navigate_data = self.preprocess(self.navigate_dataset.sample(target_dist))
+        target_dist = np.array(copy.copy(self.explore_dataset.aggregate_sizes))
+        target_dist = target_dist / np.sum(target_dist)
         explore_data = self.preprocess(self.explore_dataset.sample(target_dist))
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
 
