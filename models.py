@@ -303,7 +303,7 @@ class ImagBehavior(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
-        iter = [("navigate", "navigate_reward", navigate_post, navigate_data), ("explore", "explore_reward", explore_post, explore_data)]
+        iter = [("navigate", "navigate/reward", navigate_post, navigate_data), ("explore", "explore/reward", explore_post, explore_data)]
         for prefix, head_name, post, data in iter:
             with tools.RequiresGrad(self):
                 with torch.cuda.amp.autocast(self._use_amp):
