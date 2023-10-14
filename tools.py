@@ -332,6 +332,7 @@ class SliceDataset:
                         self.episode_sizes[target][ep_name] += end - start
                         self.aggregate_sizes[target] += end - start
                         start = i
+            self.sanity_check()
 
     def save(self):
         if os.path.isfile(self.path):
