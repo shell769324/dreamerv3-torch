@@ -184,7 +184,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                 else:
                     metrics[failure_name] += 1
         death_count = "{}_death_count".format(mode)
-        if metrics is not None:
+        if metrics is not None and done.any():
             if death_count not in metrics.keys():
                 metrics[death_count] = 1
             else:
@@ -202,7 +202,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                     continue
                 target_name = targets[obs[i]["prev_target"]]
                 reward_diff = abs(r - pred_reward)
-                reward_diff_name = "{}_reward_{}_diff/{}".format(mode, reward_type, target_name)
+                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
                 if reward_diff_name not in metrics.keys():
                     metrics[reward_diff_name] = [reward_diff]
                 else:
