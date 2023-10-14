@@ -416,9 +416,9 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    watched = [(agent._wm.heads["explore_reward"], "explore_reward.", 6000),
-               (agent._wm.heads["navigate_reward"], "navigate_reward.", 6000),
-               (agent._wm.heads["image"], "image.", 2000),
+    watched = [(agent._wm.heads["explore/reward"], "explore_reward.", 6000),
+               (agent._wm.heads["navigate/reward"], "navigate_reward.", 6000),
+               (agent._wm.heads["image"], "image.", 3000),
                (agent._task_behavior.a2c_navigate, "a2c_navigate.", 15000),
                (agent._task_behavior.a2c_explore, "a2c_explore.", 15000)]
     # with wandb.init(project='mastering crafter with world models', config=defaults, id="nf5cv15k", resume=True):
