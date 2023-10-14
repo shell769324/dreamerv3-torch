@@ -309,6 +309,9 @@ class SliceDataset:
         return result
 
     def load(self):
+        if np.sum(self.aggregate_sizes) > 0:
+            print("Data is newly sampled. Will skip loading")
+            return
         if os.path.isfile(self.path):
             print("Detect file on {}. Will load.".format(self.path))
             with open(self.path) as json_file:
@@ -317,9 +320,6 @@ class SliceDataset:
                 self.episode_sizes = json_dict["episode_sizes"]
                 self.aggregate_sizes = json_dict["aggregate_sizes"]
         else:
-            if np.sum(self.aggregate_sizes) > 0:
-                print("Data is newly sampled. Will skip loading")
-                return
             print("No file detected on {}. Will recompute".format(self.path))
             for ep_name, episode in self.dataset.items():
                 start = 0
