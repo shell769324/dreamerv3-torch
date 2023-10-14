@@ -144,7 +144,6 @@ class WorldModel(nn.Module):
         # image (batch_size, batch_length, h, w, ch)
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
-        conditional_metrics = {}
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
@@ -185,16 +184,18 @@ class WorldModel(nn.Module):
 
                     if "reward" in name:
                         right_data = navigate_data if "navigate" in name else explore_data
+                        reward_prefix = "navigate" if "navigate" in name else "explore"
                         (stoch, deter) = self.dynamics.get_sep(explore_post)
                         pred = head(stoch, deter, right_data["target"])
                         like = pred.log_prob(right_data["reward"])
                         likes[name] = like
-                        losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
+                        losses["{}/reward".format(reward_prefix)] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         if not reward_suppressor.isnan().any():
                             losses[name] += reward_suppressor
-                        metrics.update(tools.tensorstats(pred.logits, name + "_logits"))
+                        metrics.update(tools.tensorstats(pred.logits, "{}/reward_logits".format(reward_prefix)))
+                        metrics["{}/reward_suppressor".format(reward_prefix)] = to_np(reward_suppressor)
 
                 model_loss = sum(losses.values()) + kl_loss
                 metrics.update(self._model_opt(model_loss))
@@ -204,9 +205,7 @@ class WorldModel(nn.Module):
         metrics["rep_scale"] = rep_scale
         metrics["dyn_loss"] = to_np(dyn_loss)
         metrics["rep_loss"] = to_np(rep_loss)
-        metrics["reward_suppressor"] = to_np(reward_suppressor)
         metrics["kl"] = to_np(torch.mean(kl_value))
-        metrics = {**metrics, **conditional_metrics}
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(prior).entropy())
@@ -334,7 +333,8 @@ class ImagBehavior(nn.Module):
                         state_ent,
                         weights,
                         policy,
-                        value_mode
+                        value_mode,
+                        prefix
                     )
                     policy_abs = policy_params.abs()
                     policy_abs[policy_abs <= threshold] = 0
@@ -436,7 +436,8 @@ class ImagBehavior(nn.Module):
         state_ent,
         weights,
         policy,
-        value
+        value,
+        prefix
     ):
         metrics = {}
         # Q-val for actor is not transformed using symlog
@@ -446,10 +447,10 @@ class ImagBehavior(nn.Module):
         )
         actor_entropy = self._config.actor_entropy() * actor_ent[:-1][:, :, None]
         actor_target += actor_entropy
-        metrics["actor_entropy"] = to_np(torch.mean(actor_entropy))
+        metrics["{}/actor_entropy".format(prefix)] = to_np(torch.mean(actor_entropy))
         if not self._config.future_entropy and (self._config.actor_state_entropy() > 0):
             state_entropy = self._config.actor_state_entropy() * state_ent[:-1]
             actor_target += state_entropy
-            metrics["actor_state_entropy"] = to_np(torch.mean(state_entropy))
+            metrics["{}/actor_state_entropy".format(prefix)] = to_np(torch.mean(state_entropy))
         actor_loss = -torch.mean(weights[:-1] * actor_target)
         return actor_loss, metrics
