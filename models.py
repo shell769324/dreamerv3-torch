@@ -356,23 +356,23 @@ class ImagBehavior(nn.Module):
                     if not value_suppressor.isnan().any():
                         value_loss += value_suppressor
 
-            metrics.update(tools.tensorstats(policy_params, prefix + "_action_logits"))
-            metrics.update(tools.tensorstats(means, prefix + "_value_logits"))
-            metrics.update(tools.tensorstats(value.mode(), prefix + "_value"))
-            metrics.update(tools.tensorstats(target, prefix + "_target"))
-            metrics.update(tools.tensorstats(reward, prefix + "_imag_reward"))
+            metrics.update(tools.tensorstats(policy_params, prefix + "/action_logits"))
+            metrics.update(tools.tensorstats(means, prefix + "/value_logits"))
+            metrics.update(tools.tensorstats(value.mode(), prefix + "/value"))
+            metrics.update(tools.tensorstats(target, prefix + "/target"))
+            metrics.update(tools.tensorstats(reward, prefix + "/imag_reward"))
             metrics.update(
                 tools.tensorstats(
-                    torch.argmax(imag_action, dim=-1).float(), prefix + "_imag_action"
+                    torch.argmax(imag_action, dim=-1).float(), prefix + "/imag_action"
                 )
             )
-            metrics[prefix + "_actor_ent"] = to_np(torch.mean(actor_ent))
+            metrics[prefix + "/actor_ent"] = to_np(torch.mean(actor_ent))
             with tools.RequiresGrad(self):
                 metrics.update(self._a2c_opt(actor_loss + value_loss))
-            metrics[prefix + "_value_loss"] = value_loss.detach().cpu().numpy()
-            metrics[prefix + "_actor_loss"] = actor_loss.detach().cpu().numpy()
-            metrics[prefix + "_value_suppressor"] = value_suppressor.detach().cpu().numpy()
-            metrics[prefix + "_actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
+            metrics[prefix + "/value_loss"] = value_loss.detach().cpu().numpy()
+            metrics[prefix + "/actor_loss"] = actor_loss.detach().cpu().numpy()
+            metrics[prefix + "/value_suppressor"] = value_suppressor.detach().cpu().numpy()
+            metrics[prefix + "/actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array):
