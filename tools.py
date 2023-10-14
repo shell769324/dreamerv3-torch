@@ -298,7 +298,7 @@ class SliceDataset:
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
-                while curr_target_frame == frame_counts[curr_target] and curr_target < len(targets):
+                while curr_target_frame >= frame_counts[curr_target] and curr_target < len(targets):
                     curr_target += 1
                     curr_target_frame = 0
         result = dict()
