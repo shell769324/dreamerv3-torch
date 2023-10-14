@@ -193,7 +193,7 @@ class WorldModel(nn.Module):
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
                         if not reward_suppressor.isnan().any():
-                            losses[name] += reward_suppressor
+                            losses["{}/reward".format(reward_prefix)] += reward_suppressor
                         metrics.update(tools.tensorstats(pred.logits, "{}/reward_logits".format(reward_prefix)))
                         metrics["{}/reward_suppressor".format(reward_prefix)] = to_np(reward_suppressor)
 
