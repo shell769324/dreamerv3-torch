@@ -261,6 +261,7 @@ class SliceDataset:
             index = (i + start) % len(targets)
             if self.aggregate_sizes[index] != 0:
                 frame_counts[index] += remained
+                break
         tuple_list = [list(self.tuples[i].items()) for i in range(len(targets))]
         p = [np.array([self.episode_sizes[i][name] for name, _ in tuple_list[i]]) for i in range(len(targets))]
         # sample episode by their length
