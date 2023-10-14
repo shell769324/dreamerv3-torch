@@ -317,7 +317,7 @@ class SliceDataset:
                 self.aggregate_sizes = json_dict["aggregate_sizes"]
         else:
             print("No file detected on {}. Will recompute".format(self.path))
-            for ep_name, episode in self.dataset:
+            for ep_name, episode in self.dataset.items():
                 start = 0
                 reward_modes = episode.get("reward_mode")
                 for i in range(1, len(episode.get("reward"))):
