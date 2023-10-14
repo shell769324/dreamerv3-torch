@@ -226,7 +226,7 @@ class Crafter():
     def navigate_obs(
             self, image, reward, info,
             is_first=False, is_last=False, is_terminal=False, augmented=None,
-            target_navigate_steps=-1, prev_target=None, where=None, reward_type=None):
+            target_navigate_steps=-1, prev_target=None, where=None, reward_type="default"):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
@@ -293,7 +293,7 @@ class Crafter():
 
     def explore_obs(self, image, reward, info,
                     is_first=False, is_last=False, is_terminal=False, augmented=None,
-                    target_explore_steps=-1, prev_target=None, where=None, reward_type=None):
+                    target_explore_steps=-1, prev_target=None, where=None, reward_type="default"):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
