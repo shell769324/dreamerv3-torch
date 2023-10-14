@@ -282,14 +282,14 @@ class ImagBehavior(nn.Module):
             embed_dim=config.embed_dim,
             unimix_ratio=config.action_unimix_ratio,
         )
-        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"a2c": self.a2c_navigate})
+        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"navigate/a2c": self.a2c_navigate, "explore/a2c": self.a2c_explore})
         self._a2c_opt = tools.Optimizer(
             "a2c",
-            [{'params': self.a2c_navigate.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
+            [{'params': self.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
             config.ac_lr,
             config.ac_opt_eps,
             config.actor_grad_clip,
-            **kw,
+            **kw
         )
         if self._config.reward_EMA:
             self.reward_ema = RewardEMA(device=self._config.device)
