@@ -421,8 +421,8 @@ def main(config, defaults):
                (agent._wm.heads["image"], "image.", 3000),
                (agent._task_behavior.a2c_navigate, "a2c_navigate.", 15000),
                (agent._task_behavior.a2c_explore, "a2c_explore.", 15000)]
-    with wandb.init(project='mastering crafter with world models', config=defaults, id="cwbtocu1", resume=True):
-    # with wandb.init(project='mastering crafter with world models', config=defaults):
+    # with wandb.init(project='mastering crafter with world models', config=defaults, id="cwbtocu1", resume=True):
+    with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(
