@@ -156,10 +156,9 @@ class Crafter():
             action = np.argmax(action)
         # don't do noop
         action += 1
-        previous_pos = self._crafter_env._player.pos
 
-        where_array = self.compute_where(previous_pos, self._env._sem_view())
         image, reward, self._done, info = self._env.step(action)
+        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_navigate_steps += 1
         # reward = np.float32(reward)
         player_pos = info['player_pos']
@@ -256,10 +255,9 @@ class Crafter():
             action = np.argmax(action)
         # don't do noop
         action += 1
-        previous_pos = self._crafter_env._player.pos
 
-        where_array = self.compute_where(previous_pos, self._env._sem_view())
         image, _, self._done, info = self._env.step(action)
+        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_explore_steps += 1
         target_explore_steps = -1
         # reward = np.float32(reward)
