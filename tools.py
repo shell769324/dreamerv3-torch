@@ -252,6 +252,7 @@ class SliceDataset:
 
     def sample(self, dist):
         self.sanity_check()
+        print("{} {} sample".format(self.mode, self.name), self.aggregate_sizes)
         frame_counts = [0.0] * len(targets)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * self.batch_size * dist[i])
@@ -336,6 +337,7 @@ class SliceDataset:
             self.sanity_check()
 
     def save(self):
+        print("{} {} save".format(self.mode, self.name), self.aggregate_sizes)
         if os.path.isfile(self.path):
             os.remove(self.path)
         with open(self.path, 'w', encoding='utf-8') as f:
