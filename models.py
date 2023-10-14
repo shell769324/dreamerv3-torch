@@ -305,8 +305,9 @@ class ImagBehavior(nn.Module):
         coeff = torch.tensor(self._config.regularization).to("cuda")
         iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate),
                 ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore)]
+        total_loss = None
         for prefix, head_name, post, data, a2c_head in iter:
-            with tools.RequiresGrad(self):
+            with tools.RequiresGrad(a2c_head):
                 with torch.cuda.amp.autocast(self._use_amp):
                     flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                     target_array = flatten(data["target"]).to(self._device)
@@ -367,12 +368,16 @@ class ImagBehavior(nn.Module):
                 )
             )
             metrics[prefix + "/actor_ent"] = to_np(torch.mean(actor_ent))
-            with tools.RequiresGrad(self):
-                metrics.update(self._a2c_opt(actor_loss + value_loss))
+            if total_loss is None:
+                total_loss = actor_loss + value_loss
+            else:
+                total_loss += actor_loss + value_loss
             metrics[prefix + "/value_loss"] = value_loss.detach().cpu().numpy()
             metrics[prefix + "/actor_loss"] = actor_loss.detach().cpu().numpy()
             metrics[prefix + "/value_suppressor"] = value_suppressor.detach().cpu().numpy()
             metrics[prefix + "/actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
+        with tools.RequiresGrad([self.a2c_navigate, self.a2c_explore]):
+            metrics.update(self._a2c_opt(total_loss))
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 
     def _imagine(self, start, horizon, target_array, a2c_head):
