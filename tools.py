@@ -201,6 +201,13 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
                         metrics[lava_count] += 1
                     continue
                 target_name = targets[obs[i]["prev_target"]]
+                # Lost track of target when navigating is a failure
+                if reward_type == "navigate_lost":
+                    failure_name = "{}_navigate_failure/{}".format(mode, target_name)
+                    if failure_name not in metrics.keys():
+                        metrics[failure_name] = 1
+                    else:
+                        metrics[failure_name] += 1
                 reward_diff = abs(r - pred_reward)
                 reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
                 if reward_diff_name not in metrics.keys():
