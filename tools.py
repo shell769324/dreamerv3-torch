@@ -222,8 +222,8 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 class SliceDataset:
     def __init__(self, dataset, batch_size, batch_length, path, seed=0, mode="", name=""):
         self.dataset = dataset
-        self.tuples = [dict()] * len(targets)
-        self.episode_sizes = [dict()] * len(targets)
+        self.tuples = [dict() for _ in range(len(targets))]
+        self.episode_sizes = [dict() for _ in range(len(targets))]
         self.aggregate_sizes = [0] * len(targets)
         self.batch_size = int(batch_size / 2)
         self.batch_length = batch_length
