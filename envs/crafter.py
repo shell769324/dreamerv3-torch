@@ -267,6 +267,7 @@ class Crafter():
 
         reward = np.float32(0)
         # Hit lava very negative reward
+        reward_type = "explore_stable"
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward += reward_types.get(reward_type)[0]
