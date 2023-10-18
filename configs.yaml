@@ -63,6 +63,7 @@ defaults:
   cont_scale: 1.0
   reward_scale: 1.0
   present_scale: 1.0
+  where_scale: 2.0
   weight_decay: 0
   transformer_weight_decay: 0.01
   A2C_weight_decay: 0.01
@@ -71,7 +72,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 50
+  batch_size: 40
   batch_length: 64
   train_ratio: 512
   pretrain: 100
@@ -138,10 +139,10 @@ crafter:
   actor_dist: 'onehot'
   units: 1024
   explore_reward_layers: 3
-  navigate_reward_layers: 4
+  navigate_reward_layers: 5
   cont_layers: 4
   explore_a2c_layers: 3
-  navigate_a2c_layers: 4
+  navigate_a2c_layers: 5
   where_layers: 4
   imag_gradient: 'reinforce'
   disag_units: 1024

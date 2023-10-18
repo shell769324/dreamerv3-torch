@@ -137,7 +137,7 @@ class WorldModel(nn.Module):
                  "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
                  "where": self.heads["where"]}
         )
-        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale)
+        self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, where=config.where_scale)
 
     def _train(self):
         # action (batch_size, batch_length, act_dim)
@@ -180,6 +180,10 @@ class WorldModel(nn.Module):
                         feat = self.dynamics.get_feat(post)
                         pred = head(feat)
                         like = pred.log_prob(data[name])
+                        # Penalize the present case more so the model doesn't converge to predicting everything
+                        # is not present
+                        if name == "where":
+                            like = like * torch.where(data[name] == 1, 2, 1)
 
                         likes[name] = like
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)

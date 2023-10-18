@@ -107,6 +107,12 @@ class Dreamer(nn.Module):
                             if successes != 0 or failures != 0:
                                 name = "{}_{}_success_rate/{}".format(prefix, t, target_name)
                                 metrics_dict[name] = float(successes) / (failures + successes)
+                                if t == "navigate":
+                                    for subtype in ["face", "touch"]:
+                                        subtype_success_name = "{}_{}_success/{}".format(prefix, subtype, target_name)
+                                        subtype_name = "{}_{}_success_rate/{}".format(prefix, subtype, target_name)
+                                        metrics_dict[subtype_name] = float(self._metrics.get(subtype_success_name, 0)) / (failures + successes)
+                                        self._metrics.pop(subtype_success_name, None)
                             self._metrics.pop(success_name, None)
                             self._metrics.pop(failure_name, None)
                         if total_successes != 0 or total_failures != 0:
@@ -130,7 +136,7 @@ class Dreamer(nn.Module):
                 wandb.log(metrics_dict, step=step)
                 self._metrics.clear()
         for i in range(len(obs["reward"])):
-            types = ["explore", "navigate"]
+            types = ["explore", "navigate", "face", "touch"]
             for t in types:
                 if obs["target_{}_steps".format(t)][i] >= 0:
                     target_name = targets[obs["prev_target"][i]]
