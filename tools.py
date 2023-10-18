@@ -344,7 +344,6 @@ class SliceDataset:
             json_dict["episode_sizes"] = self.episode_sizes
             json_dict["aggregate_sizes"] = self.aggregate_sizes
             json.dump(json_dict, f, ensure_ascii=False, indent=4)
-            print("Saved slice dataset to", self.path)
 
 
 def get_episode_name(directory, incr=0):
