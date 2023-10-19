@@ -290,7 +290,7 @@ class ImagBehavior(nn.Module):
         kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"navigate/a2c": self.a2c_navigate, "explore/a2c": self.a2c_explore})
         self._a2c_opt = tools.Optimizer(
             "a2c",
-            [{'params': self.parameters(), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
+            [{'params': list(self.a2c_navigate.parameters()) + list(self.a2c_explore.parameters()), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
             config.ac_lr,
             config.ac_opt_eps,
             config.actor_grad_clip,
