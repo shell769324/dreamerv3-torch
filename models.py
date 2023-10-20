@@ -190,7 +190,8 @@ class WorldModel(nn.Module):
 
                     if "reward" in name:
                         right_data = navigate_data if "navigate" in name else explore_data
-                        (stoch, deter) = self.dynamics.get_sep(explore_post)
+                        right_post = navigate_post if "navigate" in name else explore_post
+                        (stoch, deter) = self.dynamics.get_sep(right_post)
                         pred = head(stoch, deter, right_data["target"])
                         like = pred.log_prob(right_data["reward"])
                         likes[name] = like
@@ -208,8 +209,8 @@ class WorldModel(nn.Module):
         metrics["kl_free"] = kl_free
         metrics["dyn_scale"] = dyn_scale
         metrics["rep_scale"] = rep_scale
-        metrics["dyn_loss"] = to_np(dyn_loss)
-        metrics["rep_loss"] = to_np(rep_loss)
+        # dyn and rep loss have the same value
+        metrics["dyn_rep_loss"] = to_np(dyn_loss)
         metrics["kl"] = to_np(torch.mean(kl_value))
         with torch.cuda.amp.autocast(self._use_amp):
             metrics["prior_ent"] = to_np(
