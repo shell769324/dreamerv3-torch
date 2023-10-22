@@ -190,6 +190,7 @@ class WorldModel(nn.Module):
 
                     if "reward" in name:
                         right_data = navigate_data if "navigate" in name else explore_data
+                        # Detach explore post since it doesn't add anything to world model
                         right_post = navigate_post if "navigate" in name else explore_post
                         (stoch, deter) = self.dynamics.get_sep(right_post)
                         pred = head(stoch, deter, right_data["target"])
@@ -241,6 +242,9 @@ class WorldModel(nn.Module):
         obs = {k: torch.Tensor(v).to(self._config.device) for k, v in obs.items()}
         return obs
 
+    # Get the first 6 segment of this batch, for the first 5 frames, observe
+    # for the rest of 64 - 5 frames, imagine
+    # Top is ground truth, middle is restored and last is error
     def video_pred(self, data):
         data = self.preprocess(data)
         embed = self.encoder(data)
@@ -258,8 +262,8 @@ class WorldModel(nn.Module):
         truth = data["image"][:6] + 0.5
         model = model + 0.5
         error = (model - truth + 1.0) / 2.0
-
-        return (torch.cat([truth, model, error], 2) * 255).type(torch.IntTensor)
+        batches = torch.cat([truth, model, error], 2) * 255
+        return torch.cat([b for b in batches], 2).type(torch.IntTensor)
 
 
 class ImagBehavior(nn.Module):
@@ -310,16 +314,16 @@ class ImagBehavior(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
         coeff = torch.tensor(self._config.regularization).to("cuda")
-        iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate),
-                ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore)]
+        iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate, self._config.navigate_imag_horizon),
+                ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore, self._config.explore_imag_horizon)]
         total_loss = None
-        for prefix, head_name, post, data, a2c_head in iter:
+        for prefix, head_name, post, data, a2c_head, imag_horizon in iter:
             with tools.RequiresGrad(a2c_head):
                 with torch.cuda.amp.autocast(self._use_amp):
                     flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
                     target_array = flatten(data["target"]).to(self._device)
                     imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
-                        post, self._config.imag_horizon, target_array, a2c_head
+                        post, imag_horizon, target_array, a2c_head
                     )
                     value = tools.TwoHotDistSymlog(logits=means)
                     target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])

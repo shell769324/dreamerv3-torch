@@ -72,7 +72,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 40
+  batch_size: 48
   batch_length: 64
   train_ratio: 512
   pretrain: 100
@@ -93,7 +93,8 @@ defaults:
   # Behavior.
   find_discount: 0.85
   discount_lambda: 0.95
-  imag_horizon: 15
+  explore_imag_horizon: 9
+  navigate_imag_horizon: 12
   imag_gradient: 'dynamics'
   imag_gradient_mix: '0.0'
   imag_sample: True

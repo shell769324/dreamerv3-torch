@@ -128,8 +128,8 @@ class Dreamer(nn.Module):
                 for i in range(len(targets)):
                     metrics_dict["explore_dataset_size/" + targets[i]] = self.explore_dataset.aggregate_sizes[i]
                 openl = self._wm.video_pred(next(self._dataset))
-                # 6 64 192 64 3
-                video = to_np(openl[0]).transpose(0, 3, 1, 2)
+                # 64 (64 * 3) (64 * 6) 3
+                video = to_np(openl).transpose(0, 3, 1, 2)
                 wandb.log({
                     "train_comp": wandb.Video(video, caption="train_comp", fps=10)
                 })
@@ -185,6 +185,8 @@ class Dreamer(nn.Module):
             reward_prediction = self._wm.heads["explore/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
             means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
             crafter_env.reward_type = "explore"
+        where_prediction = self._wm.heads["where"](self._wm.dynamics.get_feat())
+        crafter_env.predicted_where = where_prediction
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -363,9 +365,9 @@ def main(config, defaults):
         directory = config.traindir
     train_eps = tools.load_episodes(directory, limit=config.dataset_size)
     train_dataset = make_dataset(train_eps, config)
-    navigate_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
+    navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 2/3), config.batch_length,
                                     str(Path.joinpath(directory, "navigate.json").absolute()), mode="train", name="navigate")
-    explore_dataset = SliceDataset(train_eps, config.batch_size, config.batch_length,
+    explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/3), config.batch_length,
                                    str(Path.joinpath(directory, "explore.json").absolute()), mode="train", name="explore")
 
     if config.offline_evaldir:
@@ -374,9 +376,9 @@ def main(config, defaults):
         directory = config.evaldir
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
-    navigate_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+    navigate_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 2/3), config.batch_length,
                                     str(Path.joinpath(directory, "navigate.json").absolute()), mode="eval", name="navigate")
-    explore_dataset_eval = SliceDataset(eval_eps, config.batch_size, config.batch_length,
+    explore_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 1/3), config.batch_length,
                                    str(Path.joinpath(directory, "explore.json").absolute()), mode="eval", name="explore")
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset if mode == "train" else navigate_dataset_eval,
                                  explore_dataset if mode == "train" else explore_dataset_eval)
@@ -450,7 +452,7 @@ def main(config, defaults):
             print("Start evaluation.")
             tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
-            video = to_np(video_pred[0]).transpose(0, 3, 1, 2)
+            video = to_np(video_pred).transpose(0, 3, 1, 2)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
             })

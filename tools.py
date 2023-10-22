@@ -225,7 +225,7 @@ class SliceDataset:
         self.tuples = [dict() for _ in range(len(targets))]
         self.episode_sizes = [dict() for _ in range(len(targets))]
         self.aggregate_sizes = [0] * len(targets)
-        self.batch_size = int(batch_size / 2)
+        self.batch_size = batch_size
         self.batch_length = batch_length
         self.random = np.random.RandomState(seed)
         self.path = path

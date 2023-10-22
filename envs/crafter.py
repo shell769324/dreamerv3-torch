@@ -5,8 +5,8 @@ import itertools
 
 targets = ["water", "stone", "tree", "coal", "iron", "cow"]
 target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collect_coal", "collect_iron", "eat_cow"]
-reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (2, 3), "navigate_face": (1, 4),
-                "navigate_lost": (-1, 5), "navigate_closer": (0.5, 6), "navigate_farther": (-0.5, 7), "navigate_avert":(-1, 8),
+reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3), "navigate_face": (0.5, 4),
+                "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6), "navigate_farther": (-0.5, 7), "navigate_avert":(-0.5, 8),
                 "navigate_stable":(0, 9), "default": (0, 10)}
 
 reward_type_reverse = [""] * len(reward_types.keys())
@@ -45,6 +45,7 @@ class Crafter():
         self.was_facing = False
         self.touched = False
         self.faced = False
+        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8).reshape(-1)
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -132,7 +133,9 @@ class Crafter():
             achievements[achievement] = 0
         info = {
             'semantic': self._crafter_env._sem_view(),
-            'achievements': achievements
+            'achievements': achievements,
+            'player_pos': self._crafter_env._player.pos,
+            'player_facing': self._crafter_env._player.facing,
         }
         self._target = np.random.randint(0, len(targets))
         self.target_explore_steps = 0
@@ -140,8 +143,9 @@ class Crafter():
         self.faced = False
         self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
         where_array = self.compute_where(self._crafter_env._player.pos, info)
+        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8).reshape(-1)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self._last_min_dist is not None)
+                                            where_array, self.predicted_where, self._last_min_dist is not None)
         self.touched = False
         self.prev_info = info
         self.was_facing = False
@@ -160,9 +164,19 @@ class Crafter():
     def navigate_step(self, action):
         if len(action.shape) >= 1:
             action = np.argmax(action)
+
+        assert self.prev_info is not None, "prev info is None"
         # don't do noop
         action += 1
         previous_pos = self._crafter_env._player.pos
+        cow_do = False
+        if action == 5:
+            player_pos = self.prev_info['player_pos']
+            facing = self.prev_info['player_facing']
+            faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
+            face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
+            if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] == targets[self._target] and self._target == targets.index("cow"):
+                cow_do = True
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_navigate_steps += 1
@@ -181,8 +195,6 @@ class Crafter():
         target_navigate_steps = -1
         prev_target = self._target
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
-        if self.prev_info is None:
-            self.prev_info = info
 
         achievement = target_mapping[targets[self._target]]
         touch_step = -1
@@ -200,6 +212,9 @@ class Crafter():
                 self.touched = self._last_min_dist == 1
                 if self.touched:
                     touch_step = 0
+                reward_type = "navigate_do"
+                reward += reward_types.get(reward_type)[0]
+            elif cow_do:
                 reward_type = "navigate_do"
                 reward += reward_types.get(reward_type)[0]
             elif face_in_bound and self._id_to_item[info['semantic'][faced_pos]] == targets[self._target]:
@@ -240,7 +255,7 @@ class Crafter():
                 self._last_min_dist = self._get_dist(player_pos, info)
                 self.was_facing = False
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array, self._last_min_dist is not None)
+                                            where_array, self.predicted_where, self._last_min_dist is not None)
         self.prev_info = info
 
         return self.navigate_obs(
@@ -313,7 +328,7 @@ class Crafter():
                 reward += reward_types.get(reward_type)[0]
         self.prev_info = info
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array, self._last_min_dist is not None)
+                                            where_array, self.predicted_where, self._last_min_dist is not None)
         return self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
