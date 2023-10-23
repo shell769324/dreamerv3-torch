@@ -187,6 +187,7 @@ class Dreamer(nn.Module):
             crafter_env.reward_type = "explore"
         where_prediction = self._wm.heads["where"](self._wm.dynamics.get_feat(latent))
         crafter_env.predicted_where = where_prediction.mode()
+        print(crafter_env.predicted_where)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
