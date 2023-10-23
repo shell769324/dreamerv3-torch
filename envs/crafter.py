@@ -255,6 +255,7 @@ class Crafter():
                 self._last_min_dist = self._get_dist(player_pos, info)
                 self.was_facing = False
         print(where_array, self.predicted_where)
+        exit(1)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
                                             where_array, self.predicted_where, self._last_min_dist is not None)
         self.prev_info = info
