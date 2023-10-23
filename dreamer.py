@@ -186,7 +186,7 @@ class Dreamer(nn.Module):
             means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
             crafter_env.reward_type = "explore"
         where_prediction = self._wm.heads["where"](self._wm.dynamics.get_feat(latent))
-        crafter_env.predicted_where = where_prediction
+        crafter_env.predicted_where = where_prediction.mode()
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
