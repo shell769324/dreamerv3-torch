@@ -180,10 +180,6 @@ class WorldModel(nn.Module):
                         feat = self.dynamics.get_feat(post)
                         pred = head(feat)
                         like = pred.log_prob(data[name])
-                        # Penalize the present case more so the model doesn't converge to predicting everything
-                        # is not present
-                        if name == "where":
-                            like = like * torch.where(data[name] == 1, 2, 1)
 
                         likes[name] = like
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)

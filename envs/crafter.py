@@ -40,6 +40,7 @@ class Crafter():
         self._col_side = self._env._local_view._grid[1] // 2
         self.value = 0
         self.reward = 0
+        self.prev_actual_reward = 0
         self.prev_info = None
         self.reward_type = None
         self.was_facing = False
@@ -146,6 +147,7 @@ class Crafter():
         self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8).reshape(-1)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
                                             where_array, self.predicted_where, self._last_min_dist is not None)
+        self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
         self.was_facing = False
@@ -177,6 +179,10 @@ class Crafter():
             face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
             if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] == targets[self._target] and self._target == targets.index("cow"):
                 cow_do = True
+
+        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
+                                            self.compute_where(self._crafter_env._player.pos, self._env._sem_view()),
+                                            self.predicted_where, self._last_min_dist is not None)
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_navigate_steps += 1
@@ -230,7 +236,6 @@ class Crafter():
                     self.touched = True
             else:
                 # For measuring distance, we should use previous image since objects may move
-                delayed_min_dist = self._get_dist(player_pos, self.prev_info, center=previous_pos)
                 min_dist = self._get_dist(player_pos, info)
                 if min_dist == 1:
                     if not self.touched:
@@ -243,9 +248,9 @@ class Crafter():
                     self.touched = False
                     self.faced = False
                     self.target_navigate_steps = 0
-                elif self._last_min_dist > delayed_min_dist:
+                elif self._last_min_dist > min_dist:
                     reward_type = "navigate_closer"
-                elif self._last_min_dist < delayed_min_dist:
+                elif self._last_min_dist < min_dist:
                     reward_type = "navigate_farther"
                 elif self.was_facing:
                     reward_type = "navigate_avert"
@@ -254,9 +259,8 @@ class Crafter():
                 reward += reward_types.get(reward_type)[0]
                 self._last_min_dist = self._get_dist(player_pos, info)
                 self.was_facing = False
-        augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array, self.predicted_where, self._last_min_dist is not None)
         self.prev_info = info
+        self.prev_actual_reward = reward
 
         return self.navigate_obs(
             image, reward, info, augmented=augmented,
@@ -301,6 +305,10 @@ class Crafter():
         # don't do noop
         action += 1
 
+        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
+                                            self.compute_where(self._crafter_env._player.pos, self._env._sem_view()),
+                                            self.predicted_where, self._last_min_dist is not None)
+
         image, _, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         self.target_explore_steps += 1
@@ -327,8 +335,7 @@ class Crafter():
                 reward_type = "explore_stable"
                 reward += reward_types.get(reward_type)[0]
         self.prev_info = info
-        augmented = self._env.render_target(targets[self._target], self._last_min_dist, reward, self.value, self.reward,
-                                            where_array, self.predicted_where, self._last_min_dist is not None)
+        self.prev_actual_reward = reward
         return self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
