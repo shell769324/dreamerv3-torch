@@ -38,9 +38,6 @@ class CollectDataset:
         self._episode[-1]["augmented"] = transition["augmented"]
         self._episode.append(transition)
         if done:
-            # For the last one we won't have a chance to create the augmented image
-            # Just replace it with regular one instead
-            self._episode[-1]["augmented"] = transition["image"]
             ep_name = str(get_episode_name(self.directory))
             begin = 0
             for i, transition in enumerate(self._episode):
