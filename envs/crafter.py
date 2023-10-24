@@ -5,9 +5,10 @@ import itertools
 
 targets = ["water", "stone", "tree", "coal", "iron", "cow"]
 target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collect_coal", "collect_iron", "eat_cow"]
-reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3), "navigate_face": (0.5, 4),
-                "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6), "navigate_farther": (-0.5, 7), "navigate_avert":(-0.5, 8),
-                "navigate_stable":(0, 9), "default": (0, 10)}
+reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3),
+                "navigate_face": (0.5, 4), "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6),
+                "navigate_farther": (-0.5, 7), "navigate_avert": (-0.5, 8), "navigate_stable": (0, 9),
+                "default": (0, 10)}
 
 reward_type_reverse = [""] * len(reward_types.keys())
 for k, (a, b) in reward_types.items():
