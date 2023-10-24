@@ -35,7 +35,7 @@ class CollectDataset:
             transition["action"] = action
         transition["reward"] = reward
         transition["discount"] = info.get("discount", np.array(1 - float(done)))
-        self._episode[-1]["augmented"] = transition["transition"]
+        self._episode[-1]["augmented"] = transition["augmented"]
         self._episode.append(transition)
         if done:
             # For the last one we won't have a chance to create the augmented image
