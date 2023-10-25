@@ -103,7 +103,6 @@ class Crafter():
         faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if face_in_bound:
-            print(sem)
             name = self._id_to_item[sem[faced_pos]]
             if name in targets:
                 face_index = targets.index(name)
@@ -151,7 +150,7 @@ class Crafter():
         self.target_navigate_steps = 0
         self.faced = False
         self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, info)
+        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, info['semantic'])
         self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8).reshape(-1)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
                                             where_array, self.predicted_where, self._last_min_dist is not None)
