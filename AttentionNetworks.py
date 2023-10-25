@@ -146,7 +146,7 @@ class MixedHead(nn.Module):
         else:
             std = self._std
         if self._dist == "normal":
-            return tools.Normal(mean)
+            return tools.Normal(mean, self._device)
         if self._dist == "huber":
             return tools.ContDist(
                 torchd.independent.Independent(
