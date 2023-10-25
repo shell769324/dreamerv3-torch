@@ -103,7 +103,7 @@ class Crafter():
         faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if face_in_bound:
-            name = self._id_to_item[self.prev_info['semantic'][faced_pos]]
+            name = self._id_to_item[sem[faced_pos]]
             if name in targets:
                 face_index = targets.index(name)
                 where[face_index][-1] = 1
