@@ -8,7 +8,7 @@ target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collec
 reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3),
                 "navigate_face": (0.5, 4), "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6),
                 "navigate_farther": (-0.5, 7), "navigate_avert": (-0.5, 8), "navigate_stable": (0, 9),
-                "default": (0, 10)}
+                "useless_do": (-0.1, 10), "default": (0, 11)}
 
 reward_type_reverse = [""] * len(reward_types.keys())
 for k, (a, b) in reward_types.items():
@@ -29,7 +29,7 @@ class Crafter():
         self._achievements = crafter.constants.achievements.copy()
         self._done = True
         self._target = np.random.randint(0, len(targets))
-        self._id_to_item = [0] * 19
+        self._id_to_item = [""] * 19
         self._last_min_dist = None
         self.target_navigate_steps = 0
         self.target_explore_steps = 0
@@ -47,7 +47,7 @@ class Crafter():
         self.was_facing = False
         self.touched = False
         self.faced = False
-        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8).reshape(-1)
+        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8).reshape(-1)
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -98,9 +98,15 @@ class Crafter():
                     min_dist = dist if min_dist is None else min(dist, min_dist)
         return min_dist
 
-    def compute_where(self, player_pos, sem):
-        where = np.zeros((len(targets), 4), dtype=np.uint8)
-
+    def compute_where(self, player_pos, facing, sem):
+        where = np.zeros((len(targets), 5), dtype=np.uint8)
+        faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
+        face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
+        if face_in_bound:
+            name = self._id_to_item[self.prev_info['semantic'][faced_pos]]
+            if name in targets:
+                face_index = targets.index(name)
+                where[face_index][-1] = 1
         def condition(i1, i2, t):
             return 0 <= i1 < len(sem) and 0 <= i2 < len(sem[0]) and self._id_to_item[sem[i1][i2]] == t
 
@@ -144,8 +150,8 @@ class Crafter():
         self.target_navigate_steps = 0
         self.faced = False
         self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-        where_array = self.compute_where(self._crafter_env._player.pos, info)
-        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8).reshape(-1)
+        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, info)
+        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8).reshape(-1)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
                                             where_array, self.predicted_where, self._last_min_dist is not None)
         self.prev_actual_reward = 0
@@ -173,6 +179,7 @@ class Crafter():
         action += 1
         previous_pos = self._crafter_env._player.pos
         cow_do = False
+        useless_do = False
         if action == 5:
             player_pos = self.prev_info['player_pos']
             facing = self.prev_info['player_facing']
@@ -180,12 +187,16 @@ class Crafter():
             face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
             if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] == targets[self._target] and self._target == targets.index("cow"):
                 cow_do = True
+            if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] in ["grass", "path", "sand"]:
+                useless_do = True
 
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
-                                            self.compute_where(self._crafter_env._player.pos, self._env._sem_view()),
+                                            self.compute_where(self._crafter_env._player.pos,
+                                                               self._crafter_env._player.facing,
+                                                               self._env._sem_view()),
                                             self.predicted_where, self._last_min_dist is not None)
         image, reward, self._done, info = self._env.step(action)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
+        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
         self.target_navigate_steps += 1
         # reward = np.float32(reward)
         player_pos = info['player_pos']
@@ -255,6 +266,8 @@ class Crafter():
                     reward_type = "navigate_farther"
                 elif self.was_facing:
                     reward_type = "navigate_avert"
+                elif useless_do:
+                    reward_type = "useless_do"
                 else:
                     reward_type = "navigate_stable"
                 reward += reward_types.get(reward_type)[0]
@@ -307,11 +320,20 @@ class Crafter():
         action += 1
 
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
-                                            self.compute_where(self._crafter_env._player.pos, self._env._sem_view()),
+                                            self.compute_where(self._crafter_env._player.pos,
+                                                               self._crafter_env._player.facing,
+                                                               self._env._sem_view()),
                                             self.predicted_where, self._last_min_dist is not None)
-
+        useless_do = False
+        if action == 5:
+            player_pos = self.prev_info['player_pos']
+            facing = self.prev_info['player_facing']
+            faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
+            face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
+            if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] in ["grass", "path", "sand"]:
+                useless_do = True
         image, _, self._done, info = self._env.step(action)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
+        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
         self.target_explore_steps += 1
         target_explore_steps = -1
         # reward = np.float32(reward)
@@ -332,6 +354,9 @@ class Crafter():
                 reward += reward_types.get(reward_type)[0]
                 target_explore_steps = self.target_explore_steps
                 self.target_explore_steps = 0
+            elif useless_do:
+                reward_type = "useless_do"
+                reward += reward_types.get(reward_type)[0]
             else:
                 reward_type = "explore_stable"
                 reward += reward_types.get(reward_type)[0]

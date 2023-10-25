@@ -577,7 +577,7 @@ class A2CHead(nn.Module):
         max_std=1.0,
         temp=0.1,
         unimix_ratio=0.01,
-        embed_dim=512,
+        embed_dim=512
     ):
         super(A2CHead, self).__init__()
         self._layers = layers

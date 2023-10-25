@@ -82,7 +82,7 @@ class WorldModel(nn.Module):
         )
         self.heads["where"] = networks.DenseHead(
             feat_size,  # pytorch version
-            (len(targets) * 4,),
+            (len(targets) * 5,),
             config.where_layers,
             config.units,
             config.act,
@@ -145,8 +145,8 @@ class WorldModel(nn.Module):
         # reward (batch_size, batch_length)
         # discount (batch_size, batch_length)
         metrics = {}
-        threshold = torch.tensor(self._config.regularize_threshold).to("cuda")
-        coeff = torch.tensor(self._config.regularization).to("cuda")
+        threshold = torch.tensor(self._config.regularize_threshold).to(self._config.device)
+        coeff = torch.tensor(self._config.regularization).to(self._config.device)
         target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
         navigate_data = self.preprocess(self.navigate_dataset.sample(target_dist))
@@ -277,7 +277,7 @@ class ImagBehavior(nn.Module):
             config.navigate_a2c_layers,
             config.units,
             embed_dim=config.embed_dim,
-            unimix_ratio=config.action_unimix_ratio,
+            unimix_ratio=config.action_unimix_ratio
         )
         self.a2c_explore = networks.A2CHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
@@ -308,8 +308,8 @@ class ImagBehavior(nn.Module):
         explore_data
     ):
         metrics = {}
-        threshold = torch.tensor(self._config.a2c_regularize_threshold).to("cuda")
-        coeff = torch.tensor(self._config.regularization).to("cuda")
+        threshold = torch.tensor(self._config.a2c_regularize_threshold).to(self._config.device)
+        coeff = torch.tensor(self._config.regularization).to(self._config.device)
         iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate, self._config.navigate_imag_horizon),
                 ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore, self._config.explore_imag_horizon)]
         total_loss = None
@@ -321,7 +321,7 @@ class ImagBehavior(nn.Module):
                     imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
                         post, imag_horizon, target_array, a2c_head
                     )
-                    value = tools.TwoHotDistSymlog(logits=means)
+                    value = tools.TwoHotDistSymlog(logits=means, device=self._device)
                     target_array_expanded = target_array.expand(imag_stoch.shape[0], target_array.shape[0])
                     reward = self._world_model.heads[head_name](imag_stoch, imag_deter, target_array_expanded).mode()
                     policy = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
@@ -332,7 +332,7 @@ class ImagBehavior(nn.Module):
                     target, weights = self._compute_target(
                         imag_state, reward, value_mode
                     )
-                    value = tools.TwoHotDistSymlog(logits=means[:-1])
+                    value = tools.TwoHotDistSymlog(logits=means[:-1], device=self._device)
                     value_mode = value.mode().detach()
                     actor_loss, mets = self._compute_actor_loss(
                         imag_action,

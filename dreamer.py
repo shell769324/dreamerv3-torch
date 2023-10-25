@@ -198,7 +198,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        return policy_output, state, tools.TwoHotDistSymlog(logits=means).mode().reshape(-1).item(), reward_prediction.mode().reshape(-1).item()
+        return policy_output, state, tools.TwoHotDistSymlog(logits=means, device=self._config.device).mode().reshape(-1).item(), reward_prediction.mode().reshape(-1).item()
 
     def _exploration(self, action, training):
         amount = self._config.expl_amount if training else self._config.eval_noise
