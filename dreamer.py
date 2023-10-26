@@ -187,7 +187,7 @@ class Dreamer(nn.Module):
             crafter_env.reward_type = "explore"
         where_prediction, front_prediction = self._wm.embed_where(embed)
         crafter_env.predicted_where = where_prediction.mode().reshape(len(targets), 4).to(torch.long).cpu().detach().numpy().astype(np.uint8)[0]
-        crafter_env.predicted_front = front_prediction.mode().argmax()
+        crafter_env.predicted_front = front_prediction.mode().argmax().cpu().detach().numpy().astype(np.int8)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
