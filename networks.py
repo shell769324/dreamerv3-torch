@@ -522,7 +522,7 @@ class WhereHead(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.layers.apply(tools.weight_init)
 
-        self.mean_layer = nn.Linear(inp_dim, len(targets * 5 + 1))
+        self.mean_layer = nn.Linear(inp_dim, len(targets) * 5 + 1)
         self.mean_layer.apply(tools.uniform_weight_init(outscale))
 
     def forward(self, features, dtype=None):
