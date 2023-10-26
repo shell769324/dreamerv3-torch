@@ -490,6 +490,57 @@ class DenseHead(nn.Module):
             return tools.TwoHotDistSymlog(logits=mean, device=self._device)
         raise NotImplementedError(self._dist)
 
+class WhereHead(nn.Module):
+    def __init__(
+        self,
+        inp_dim,
+        layers,
+        units,
+        act=nn.ELU,
+        norm=nn.LayerNorm,
+        dist="normal",
+        std=1.0,
+        outscale=1.0,
+        device="cuda",
+    ):
+        super(WhereHead, self).__init__()
+        if len(self._shape) == 0:
+            self._shape = (1,)
+        self._layers = layers
+        self._units = units
+        self._act = act
+        self._norm = norm
+        self._dist = dist
+        self._std = std
+        self._device = device
+
+        layers = []
+        for index in range(self._layers):
+            layers.append(nn.Linear(inp_dim, self._units, bias=False))
+            layers.append(norm(self._units, eps=1e-03))
+            layers.append(act())
+            if index == 0:
+                inp_dim = self._units
+        self.layers = nn.Sequential(*layers)
+        self.layers.apply(tools.weight_init)
+
+        self.mean_layer = nn.Linear(inp_dim, len(targets * 5 + 1))
+        self.mean_layer.apply(tools.uniform_weight_init(outscale))
+
+    def forward(self, features, dtype=None):
+        x = features
+        out = self.layers(x)
+        mean = self.mean_layer(out)
+        where = mean[..., :len(targets) * 4]
+        front = mean[..., len(targets) * 4:]
+        return (tools.Bernoulli(
+                torchd.independent.Independent(
+                    torchd.bernoulli.Bernoulli(logits=where), 1
+                )
+            ),
+            tools.OneHotDist(logits=front))
+
+
 class GRUCell(nn.Module):
     def __init__(self, inp_size, size, norm=False, act=torch.tanh, update_bias=-1):
         super(GRUCell, self).__init__()

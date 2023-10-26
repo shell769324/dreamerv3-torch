@@ -47,7 +47,8 @@ class Crafter():
         self.was_facing = False
         self.touched = False
         self.faced = False
-        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8).reshape(-1)
+        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8)
+        self.front = len(targets)
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -66,7 +67,8 @@ class Crafter():
         spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
         spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
-        spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(targets) * 4,), dtype=np.uint8)
+        spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(targets), 4), dtype=np.uint8)
+        spaces["front"] = gym.spaces.Box(-np.inf, np.inf, (len(targets) + 1,), dtype=np.uint8)
         spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
         spaces["target_navigate_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
         spaces["target_touch_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
@@ -98,15 +100,17 @@ class Crafter():
                     min_dist = dist if min_dist is None else min(dist, min_dist)
         return min_dist
 
-    def compute_where(self, player_pos, facing, sem):
-        where = np.zeros((len(targets), 5), dtype=np.uint8)
+    def compute_front(self, player_pos, facing, sem):
         faced_pos = (player_pos[0] + facing[0], player_pos[1] + facing[1])
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if face_in_bound:
             name = self._id_to_item[sem[faced_pos]]
             if name in targets:
-                face_index = targets.index(name)
-                where[face_index][-1] = 1
+                return targets.index(name)
+        return len(targets)
+
+    def compute_where(self, player_pos, sem):
+        where = np.zeros((len(targets), 4), dtype=np.uint8)
         def condition(i1, i2, t):
             return 0 <= i1 < len(sem) and 0 <= i2 < len(sem[0]) and self._id_to_item[sem[i1][i2]] == t
 
@@ -131,7 +135,7 @@ class Crafter():
                 for j in range(player_pos[1], high_col):
                     if condition(i, j, t):
                         where[index][3] = 1
-        return where.reshape(-1)
+        return where
 
     def reset(self):
         self._done = False
@@ -150,17 +154,19 @@ class Crafter():
         self.target_navigate_steps = 0
         self.faced = False
         self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, info['semantic'])
-        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8).reshape(-1)
+        where_array = self.compute_where(self._crafter_env._player.pos, info['semantic'])
+        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, info['semantic'])
+        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8)
+        self.front = np.zeros(len(targets), dtype=np.uint8)
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self.predicted_where, self._last_min_dist is not None)
+                                            where_array, self.predicted_where, self._last_min_dist is not None, front)
         self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
         self.was_facing = False
         if self._last_min_dist is None:
-            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_explore_steps=0)
-        return self.navigate_obs(image, 0.0, {}, is_first=True, augmented=augmented, where=where_array)
+            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_explore_steps=0, front=front)
+        return self.navigate_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, front=front)
 
     def step(self, action):
         if self.reward_type == "navigate":
@@ -192,11 +198,14 @@ class Crafter():
 
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
                                             self.compute_where(self._crafter_env._player.pos,
-                                                               self._crafter_env._player.facing,
                                                                self._env._sem_view()),
-                                            self.predicted_where, self._last_min_dist is not None)
+                                            self.predicted_where, self._last_min_dist is not None,
+                                            self.compute_front(self._crafter_env._player.pos,
+                                                               self._crafter_env._player.facing,
+                                                               self._env._sem_view()))
         image, reward, self._done, info = self._env.step(action)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
+        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
+        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
         self.target_navigate_steps += 1
         # reward = np.float32(reward)
         player_pos = info['player_pos']
@@ -281,12 +290,13 @@ class Crafter():
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_navigate_steps=target_navigate_steps,
             prev_target=prev_target, where=where_array, reward_type=reward_type, face_step=face_step,
-            touch_step=touch_step), reward, self._done, info
+            touch_step=touch_step, front=front), reward, self._done, info
 
     def navigate_obs(
             self, image, reward, info,
             is_first=False, is_last=False, is_terminal=False, augmented=None,
-            target_navigate_steps=-1, prev_target=None, where=None, reward_type="default", face_step=-1, touch_step=-1):
+            target_navigate_steps=-1, prev_target=None, where=None, reward_type="default", face_step=-1, touch_step=-1,
+            front=len(targets)):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
@@ -310,6 +320,7 @@ class Crafter():
             reward_type=reward_types.get(reward_type)[1],
             target_face_steps=face_step,
             target_touch_steps=touch_step,
+            front=front,
             **log_achievements,
         )
 
@@ -319,11 +330,14 @@ class Crafter():
         # don't do noop
         action += 1
 
-        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
+        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward,
+                                            self.value, self.reward,
                                             self.compute_where(self._crafter_env._player.pos,
-                                                               self._crafter_env._player.facing,
                                                                self._env._sem_view()),
-                                            self.predicted_where, self._last_min_dist is not None)
+                                            self.predicted_where, self._last_min_dist is not None,
+                                            self.compute_front(self._crafter_env._player.pos,
+                                                               self._crafter_env._player.facing,
+                                                               self._env._sem_view()))
         useless_do = False
         if action == 5:
             player_pos = self.prev_info['player_pos']
@@ -333,7 +347,9 @@ class Crafter():
             #if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] in ["grass", "path", "sand"]:
             #    useless_do = True
         image, _, self._done, info = self._env.step(action)
-        where_array = self.compute_where(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
+        where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
+        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
+                                                               self._env._sem_view())
         self.target_explore_steps += 1
         target_explore_steps = -1
         # reward = np.float32(reward)
@@ -366,11 +382,11 @@ class Crafter():
             image, reward, info, augmented=augmented,
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_explore_steps=target_explore_steps,
-            prev_target=prev_target, where=where_array, reward_type=reward_type), reward, self._done, info
+            prev_target=prev_target, where=where_array, reward_type=reward_type, front=front), reward, self._done, info
 
     def explore_obs(self, image, reward, info,
                     is_first=False, is_last=False, is_terminal=False, augmented=None,
-                    target_explore_steps=-1, prev_target=None, where=None, reward_type="default"):
+                    target_explore_steps=-1, prev_target=None, where=None, reward_type="default", front=len(targets)):
         if prev_target is None:
             prev_target = self._target
         log_achievements = {
@@ -394,6 +410,7 @@ class Crafter():
             reward_type=reward_types.get(reward_type)[1],
             target_face_steps=-1,
             target_touch_steps=-1,
+            front=front,
             **log_achievements,
         )
 

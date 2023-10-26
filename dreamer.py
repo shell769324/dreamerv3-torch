@@ -185,8 +185,9 @@ class Dreamer(nn.Module):
             reward_prediction = self._wm.heads["explore/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
             means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
             crafter_env.reward_type = "explore"
-        where_prediction = self._wm.heads["where"](self._wm.dynamics.get_feat(latent))
+        where_prediction, front_prediction = self._wm.embed_where(embed)
         crafter_env.predicted_where = where_prediction.mode().to(torch.long).cpu().detach().numpy().astype(np.uint8)[0]
+        crafter_env.predicted_front = front_prediction.mode().argmax()
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()

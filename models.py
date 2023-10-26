@@ -123,14 +123,12 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
-        self.embed_where = networks.DenseHead(
+        self.embed_where = networks.WhereHead(
             12288,
-            (len(targets) * 5,),
             config.where_layers,
             config.units,
             config.act,
             config.norm,
-            dist="binary",
             device=config.device,
         )
         for name in config.grad_heads:
@@ -146,6 +144,7 @@ class WorldModel(nn.Module):
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
                  "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
+                 "where": self.embed_where
                  }#"where": self.heads["where"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, where=config.where_scale)
@@ -169,14 +168,14 @@ class WorldModel(nn.Module):
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 losses = {}
-                likes = {}
                 navigate_embed = self.encoder(navigate_data)
                 explore_embed = self.encoder(explore_data)
                 combined_embed = torch.cat([navigate_embed, explore_embed], 0)
-                pred = self.embed_where(combined_embed)
-                like = pred.log_prob(data["where"])
-                likes["where"] = like
-                losses["where"] = -torch.mean(like) * self._scales.get("where", 1.0)
+                where_pred, front_pred = self.embed_where(combined_embed)
+                where_like = where_pred.log_prob(data["where"])
+                front_like = front_pred.log_prob(torch.nn.functional.one_hot(data["front"], num_classes=len(targets + 1)).to(self._config.device))
+                losses["where"] = -torch.mean(where_like) * self._scales.get("where", 1.0)
+                losses["front"] = -torch.mean(front_like) * self._scales.get("front", 1.0)
 
                 navigate_post, navigate_prior = self.dynamics.observe(
                     navigate_embed, navigate_data["action"], navigate_data["is_first"]
@@ -198,7 +197,6 @@ class WorldModel(nn.Module):
                         pred = head(feat)
                         like = pred.log_prob(data[name])
 
-                        likes[name] = like
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
 
                     if "reward" in name:
@@ -208,7 +206,6 @@ class WorldModel(nn.Module):
                         (stoch, deter) = self.dynamics.get_sep(right_post)
                         pred = head(stoch, deter, right_data["target"])
                         like = pred.log_prob(right_data["reward"])
-                        likes[name] = like
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
