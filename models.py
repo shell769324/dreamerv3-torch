@@ -173,6 +173,7 @@ class WorldModel(nn.Module):
                 combined_embed = torch.cat([navigate_embed, explore_embed], 0)
                 where_pred, front_pred = self.embed_where(combined_embed)
                 where_like = where_pred.log_prob(data["where"].reshape(data["where"].shape[:-2] + (np.prod(data["where"].shape[-2:]),)))
+                print(data["front"].shape)
                 front_like = front_pred.log_prob(torch.nn.functional.one_hot(data["front"], num_classes=len(targets + 1)).to(self._config.device))
                 losses["where"] = -torch.mean(where_like) * self._scales.get("where", 1.0)
                 losses["front"] = -torch.mean(front_like) * self._scales.get("front", 1.0)
