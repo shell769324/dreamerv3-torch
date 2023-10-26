@@ -276,7 +276,7 @@ class SliceDataset:
                 try:
                     picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 except:
-                    print(curr_target, tuple_list)
+                    print(curr_target, tuple_list, dist)
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
                 num_slices = self.episode_sizes[curr_target][ep_name]
