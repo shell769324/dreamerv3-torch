@@ -47,7 +47,7 @@ class Crafter():
         self.was_facing = False
         self.touched = False
         self.faced = False
-        self.predicted_where = np.zeros((len(targets), 5), dtype=np.uint8)
+        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8)
         self.front = len(targets)
         if outdir:
             self._env = crafter.Recorder(
