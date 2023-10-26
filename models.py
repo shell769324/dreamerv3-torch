@@ -122,6 +122,16 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
+        self.embed_where = networks.DenseHead(
+            feat_size,  # pytorch version
+            (len(targets) * 5,),
+            config.where_layers,
+            config.units,
+            config.act,
+            config.norm,
+            dist="binary",
+            device=config.device,
+        )
         for name in config.grad_heads:
             assert name in self.heads, name
         self._model_opt = tools.Optimizer(
@@ -159,6 +169,8 @@ class WorldModel(nn.Module):
             with torch.cuda.amp.autocast(self._use_amp):
                 navigate_embed = self.encoder(navigate_data)
                 explore_embed = self.encoder(explore_data)
+                print(navigate_embed.shape, explore_embed.shape)
+                exit(1)
                 navigate_post, navigate_prior = self.dynamics.observe(
                     navigate_embed, navigate_data["action"], navigate_data["is_first"]
                 )
