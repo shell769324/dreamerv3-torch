@@ -157,7 +157,7 @@ class Crafter():
         where_array = self.compute_where(self._crafter_env._player.pos, info['semantic'])
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, info['semantic'])
         self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8)
-        self.front = np.zeros(len(targets), dtype=np.uint8)
+        self.front = len(targets) + 1
         augmented = self._env.render_target(targets[self._target], self._last_min_dist, 0, self.value, self.reward,
                                             where_array, self.predicted_where, self._last_min_dist is not None, front)
         self.prev_actual_reward = 0
