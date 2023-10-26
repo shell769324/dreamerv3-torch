@@ -80,7 +80,7 @@ class WorldModel(nn.Module):
             shape,
             config.decoder_kernels,
         )
-        self.heads["where"] = networks.DenseHead(
+        """self.heads["where"] = networks.DenseHead(
             feat_size,  # pytorch version
             (len(targets) * 5,),
             config.where_layers,
@@ -90,6 +90,7 @@ class WorldModel(nn.Module):
             dist="binary",
             device=config.device,
         )
+        """
         self.heads["explore/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,
@@ -123,7 +124,7 @@ class WorldModel(nn.Module):
             device=config.device,
         )
         self.embed_where = networks.DenseHead(
-            feat_size,  # pytorch version
+            12288,
             (len(targets) * 5,),
             config.where_layers,
             config.units,
@@ -145,7 +146,7 @@ class WorldModel(nn.Module):
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
                  "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
-                 "where": self.heads["where"]}
+                 }#"where": self.heads["where"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, where=config.where_scale)
 
@@ -167,10 +168,16 @@ class WorldModel(nn.Module):
 
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
+                losses = {}
+                likes = {}
                 navigate_embed = self.encoder(navigate_data)
                 explore_embed = self.encoder(explore_data)
-                print(navigate_embed.shape, explore_embed.shape)
-                exit(1)
+                combined_embed = torch.cat([navigate_embed, explore_embed], 0)
+                pred = self.embed_where(combined_embed)
+                like = pred.log_prob(data["where"])
+                likes["where"] = like
+                losses["where"] = -torch.mean(like) * self._scales.get("where", 1.0)
+
                 navigate_post, navigate_prior = self.dynamics.observe(
                     navigate_embed, navigate_data["action"], navigate_data["is_first"]
                 )
@@ -185,8 +192,6 @@ class WorldModel(nn.Module):
                 kl_loss, kl_value, dyn_loss, rep_loss = self.dynamics.kl_loss(
                     post, prior, kl_free, dyn_scale, rep_scale
                 )
-                losses = {}
-                likes = {}
                 for name, head in self.heads.items():
                     if "reward" not in name:
                         feat = self.dynamics.get_feat(post)
