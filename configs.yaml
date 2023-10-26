@@ -93,8 +93,8 @@ defaults:
   # Behavior.
   find_discount: 0.85
   discount_lambda: 0.95
-  explore_imag_horizon: 9
-  navigate_imag_horizon: 12
+  explore_imag_horizon: 8
+  navigate_imag_horizon: 11
   imag_gradient: 'dynamics'
   imag_gradient_mix: '0.0'
   imag_sample: True
