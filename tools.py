@@ -281,8 +281,8 @@ class SliceDataset:
         curr_target_frame = 0
         for i in range(self.batch_size):
             size = 0
+            prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
             while size < self.batch_length:
-                prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
                 assert len(tuple_list[curr_target]) > 0, "{} {}: aggregate {}, required dist {}".format(
                     self.mode, self.name, self.aggregate_sizes, dist)
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
@@ -309,12 +309,11 @@ class SliceDataset:
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
-
-                assert (prev_total - ret["image"].shape[0]) == self.batch_length, "{} {} {}: expected {} actual {}".format(
-                    self.mode, self.name, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
                 while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
+            assert (prev_total - ret["image"].shape[0]) == self.batch_length, "{} {} {}: expected {} actual {}".format(
+                self.mode, self.name, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
         result = dict()
         for k, v in ret.items():
             shape = v.shape
