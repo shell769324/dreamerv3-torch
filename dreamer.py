@@ -172,17 +172,20 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
-        target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
+        prev_target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
         for i, target in enumerate(obs["prev_target"]):
+            prev_target_array[i] = target.to(self._config.device)
+        target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
+        for i, target in enumerate(obs["target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         crafter_env = self.train_crafter if training else self.eval_crafter
         if obs["target_spot"]:
-            reward_prediction = self._wm.heads["navigate/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
+            reward_prediction = self._wm.heads["navigate/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
             means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
             crafter_env.reward_type = "navigate"
         else:
-            reward_prediction = self._wm.heads["explore/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), target_array)
+            reward_prediction = self._wm.heads["explore/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
             means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
             crafter_env.reward_type = "explore"
         where_prediction, front_prediction = self._wm.embed_where(embed)
