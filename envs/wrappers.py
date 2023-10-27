@@ -44,17 +44,24 @@ class CollectDataset:
                 if i == 0:
                     continue
                 if (transition["reward_mode"] != self._episode[i - 1]["reward_mode"]
-                        or transition["target"] != self._episode[i - 1]["target"]) or i == len(self._episode) - 1:
+                        or transition["target"] != self._episode[i - 1]["target"]):
                     dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
                     cache = dataset.tuples
                     if ep_name not in cache[transition["prev_target"]]:
                         cache[transition["prev_target"]][ep_name] = []
                         dataset.episode_sizes[transition["prev_target"]][ep_name] = 0
-                    end = i if i != len(self._episode) - 1 else i + 1
-                    cache[transition["prev_target"]][ep_name].append([begin, end])
-                    dataset.episode_sizes[transition["prev_target"]][ep_name] += end - begin
-                    dataset.aggregate_sizes[transition["prev_target"]] += end - begin
+                    cache[transition["prev_target"]][ep_name].append([begin, i])
+                    dataset.episode_sizes[transition["prev_target"]][ep_name] += i - begin
+                    dataset.aggregate_sizes[transition["prev_target"]] += i - begin
                     begin = i
+            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
+            cache = dataset.tuples
+            if ep_name not in cache[transition["target"]]:
+                cache[transition["target"]][ep_name] = []
+                dataset.episode_sizes[transition["target"]][ep_name] = 0
+            cache[transition["target"]][ep_name].append([begin, len(self._episode)])
+            dataset.episode_sizes[transition["target"]][ep_name] += len(self._episode) - begin
+            dataset.aggregate_sizes[transition["target"]] += len(self._episode) - begin
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value
