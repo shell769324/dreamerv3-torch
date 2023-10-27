@@ -43,16 +43,17 @@ class CollectDataset:
             for i, transition in enumerate(self._episode):
                 if i == 0:
                     continue
-                if transition["reward_mode"] != self._episode[i - 1]["reward_mode"] or i == len(self._episode) - 1:
-                    dataset = [self.navigate_dataset, self.explore_dataset][transition["reward_mode"]]
+                if (transition["reward_mode"] != self._episode[i - 1]["reward_mode"]
+                        or transition["target"] != self._episode[i - 1]["target"]) or i == len(self._episode) - 1:
+                    dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
                     cache = dataset.tuples
-                    if ep_name not in cache[transition["target"]]:
-                        cache[transition["target"]][ep_name] = []
-                        dataset.episode_sizes[transition["target"]][ep_name] = 0
+                    if ep_name not in cache[transition["prev_target"]]:
+                        cache[transition["prev_target"]][ep_name] = []
+                        dataset.episode_sizes[transition["prev_target"]][ep_name] = 0
                     end = i if i != len(self._episode) - 1 else i + 1
-                    cache[transition["target"]][ep_name].append([begin, end])
-                    dataset.episode_sizes[transition["target"]][ep_name] += end - begin
-                    dataset.aggregate_sizes[transition["target"]] += end - begin
+                    cache[transition["prev_target"]][ep_name].append([begin, end])
+                    dataset.episode_sizes[transition["prev_target"]][ep_name] += end - begin
+                    dataset.aggregate_sizes[transition["prev_target"]] += end - begin
                     begin = i
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:

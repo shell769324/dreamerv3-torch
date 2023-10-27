@@ -251,9 +251,9 @@ class SliceDataset:
                     for t in range(st, ed):
                         assert self.dataset[ep_name]["target"][t] == i, "{} {}: {} transition {} is {}, not {}".\
                             format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target"][t]], targets[i])
-                        should_spot = self.name == "navigate"
-                        assert self.dataset[ep_name]["target_spot"][t] == should_spot, "{} {}: {} transition {} {} wrong". \
-                            format(self.mode, self.name, ep_name, t, self.dataset[ep_name]["target_spot"][t])
+                        reward_mode = 0 if self.name == "navigate" else 1
+                        assert self.dataset[ep_name]["reward_mode"][t] == reward_mode, "{} {}: {} transition {} {} reward_mode wrong". \
+                            format(self.mode, self.name, ep_name, t, self.dataset[ep_name]["reward_mode"][t])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
@@ -337,9 +337,11 @@ class SliceDataset:
                 start = 0
                 reward_modes = episode.get("reward_mode")
                 for i in range(1, len(episode.get("reward"))):
-                    transition_reward_mode = ["navigate", "explore"][reward_modes[i]]
-                    if transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or i == len(episode.get("reward")) - 1):
-                        target = episode["target"][i]
+                    prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i]]
+                    if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
+                                                                     episode["target"][i] != episode["target"][i - 1] or
+                                                                     i == len(episode.get("reward")) - 1):
+                        target = episode["target"][i - 1]
                         if ep_name not in self.tuples[target]:
                             self.tuples[target][ep_name] = []
                             self.episode_sizes[target][ep_name] = 0
