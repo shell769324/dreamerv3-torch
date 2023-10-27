@@ -204,7 +204,7 @@ class WorldModel(nn.Module):
                         # Detach explore post since it doesn't add anything to world model
                         right_post = navigate_post if "navigate" in name else explore_post
                         (stoch, deter) = self.dynamics.get_sep(right_post)
-                        pred = head(stoch, deter, right_data["target"])
+                        pred = head(stoch, deter, right_data["prev_target"])
                         like = pred.log_prob(right_data["reward"])
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()

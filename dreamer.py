@@ -173,7 +173,7 @@ class Dreamer(nn.Module):
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
         target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
-        for i, target in enumerate(obs["target"]):
+        for i, target in enumerate(obs["prev_target"]):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         crafter_env = self.train_crafter if training else self.eval_crafter

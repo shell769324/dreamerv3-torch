@@ -245,6 +245,9 @@ class SliceDataset:
                 total = 0
                 for st, ed in self.tuples[i][ep_name]:
                     total += ed - st
+                    for t in range(st, ed):
+                        assert self.dataset[ep_name]["target"] == i, "{} {}: {} episode {} transition is not {}".\
+                            format(self.mode, self.name, ep_name, t, targets[i])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
@@ -270,13 +273,13 @@ class SliceDataset:
         ret = dict()
         curr_target = 0
         curr_target_frame = 0
-        for _ in range(self.batch_size):
+        for i in range(self.batch_size):
             size = 0
             while size < self.batch_length:
-                try:
-                    picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
-                except:
-                    print(curr_target, tuple_list, dist)
+                prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
+                assert len(tuple_list[curr_target]) > 0, "{} {}: aggregate {}, required dist {}".format(
+                    self.mode, self.name, self.aggregate_sizes, dist)
+                picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
                 num_slices = self.episode_sizes[curr_target][ep_name]
@@ -300,6 +303,9 @@ class SliceDataset:
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
+
+                assert (prev_total - ret["image"].shape[0]) == self.batch_length, "{} {} {}: expected {} actual {}".format(
+                    self.mode, self.name, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
                 while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
@@ -307,7 +313,7 @@ class SliceDataset:
         for k, v in ret.items():
             shape = v.shape
             desired = tuple([self.batch_size, self.batch_length] + list(shape[1:]))
-            assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {}: expected {} actual {}".format(self.mode, self.name, desired, v.shape)
+            assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
         return result
 
