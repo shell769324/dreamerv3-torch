@@ -353,6 +353,11 @@ class SliceDataset:
                         self.episode_sizes[target][ep_name] += end - start
                         self.aggregate_sizes[target] += end - start
                         start = i
+                if ep_name == "logdir/train_eps/95.npz":
+                    for i in range(len(targets)):
+                        print(targets[i])
+                        print(self.tuples[i][ep_name])
+                        print(self.episode_sizes[i][ep_name])
             self.sanity_check()
 
     def save(self):
