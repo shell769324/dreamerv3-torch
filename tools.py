@@ -343,19 +343,25 @@ class SliceDataset:
                     if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
                         start = i
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
-                                                                     episode["target"][i] != episode["target"][i - 1] or
-                                                                     i == len(episode.get("reward")) - 1):
+                                                                     episode["target"][i] != episode["target"][i - 1]):
                         target = episode["target"][i - 1]
                         if ep_name not in self.tuples[target]:
                             self.tuples[target][ep_name] = []
                             self.episode_sizes[target][ep_name] = 0
-                        end = i if i != len(episode.get("reward")) - 1 else i + 1
-                        self.tuples[target][ep_name].append([start, end])
-                        self.episode_sizes[target][ep_name] += end - start
-                        self.aggregate_sizes[target] += end - start
+                        self.tuples[target][ep_name].append([start, i])
+                        self.episode_sizes[target][ep_name] += i - start
+                        self.aggregate_sizes[target] += i - start
                         start = i
                     if ["navigate", "explore"][reward_modes[i]] != self.name:
                         start = -1
+                if ["navigate", "explore"][reward_modes[-1]] == self.name:
+                    target = episode["target"][-1]
+                    if ep_name not in self.tuples[target]:
+                        self.tuples[target][ep_name] = []
+                        self.episode_sizes[target][ep_name] = 0
+                    self.tuples[target][ep_name].append([start, len(episode[target])])
+                    self.episode_sizes[target][ep_name] += len(episode[target]) - start
+                    self.aggregate_sizes[target] += len(episode[target]) - start
                 if ep_name == "logdir/train_eps/200.npz":
                     for i in range(len(targets)):
                         print(targets[i])
