@@ -356,7 +356,7 @@ class SliceDataset:
                         self.tuples[target][ep_name].append([start, end])
                         self.episode_sizes[target][ep_name] += end - start
                         self.aggregate_sizes[target] += end - start
-                        start = -1
+                        start = -1 if reward_modes[i] != reward_modes[i - 1] else i
                 if ep_name == "logdir/train_eps/612.npz":
                     for i in range(len(targets)):
                         print(targets[i])
