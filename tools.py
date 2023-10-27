@@ -359,9 +359,9 @@ class SliceDataset:
                     if ep_name not in self.tuples[target]:
                         self.tuples[target][ep_name] = []
                         self.episode_sizes[target][ep_name] = 0
-                    self.tuples[target][ep_name].append([start, len(episode[target])])
-                    self.episode_sizes[target][ep_name] += len(episode[target]) - start
-                    self.aggregate_sizes[target] += len(episode[target]) - start
+                    self.tuples[target][ep_name].append([start, len(episode["target"])])
+                    self.episode_sizes[target][ep_name] += len(episode["target"]) - start
+                    self.aggregate_sizes[target] += len(episode["target"]) - start
                 if ep_name == "logdir/train_eps/200.npz":
                     for i in range(len(targets)):
                         print(targets[i])
