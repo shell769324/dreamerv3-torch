@@ -253,7 +253,7 @@ class SliceDataset:
                             format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target"][t]], targets[i])
                         should_spot = self.name == "navigate"
                         assert self.dataset[ep_name]["target_spot"][t] == should_spot, "{} {}: {} transition {} {} wrong". \
-                            format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target_spot"][t]])
+                            format(self.mode, self.name, ep_name, t, self.dataset[ep_name]["target_spot"][t])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
