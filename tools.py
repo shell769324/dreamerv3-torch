@@ -342,7 +342,7 @@ class SliceDataset:
                 for i in range(1, len(episode.get("reward"))):
                     prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i - 1]]
                     if ep_name == "logdir/train_eps/612.npz":
-                        print(i, ["navigate", "explore"][reward_modes[i]], reward_modes[i - 1])
+                        print(i, ["navigate", "explore"][reward_modes[i]], reward_modes[i])
                     if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
                         start = i
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
