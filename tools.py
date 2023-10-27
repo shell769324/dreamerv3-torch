@@ -334,6 +334,9 @@ class SliceDataset:
         else:
             print("No file detected on {}. Will recompute".format(self.path))
             for ep_name, episode in self.dataset.items():
+                if ep_name == "logdir/train_eps/95.npz":
+                    print(episode.get("reward_mode"))
+                    print(episode.get("target"))
                 start = 0
                 reward_modes = episode.get("reward_mode")
                 for i in range(1, len(episode.get("reward"))):
