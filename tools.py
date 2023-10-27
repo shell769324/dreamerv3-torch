@@ -356,8 +356,9 @@ class SliceDataset:
                 if ep_name == "logdir/train_eps/95.npz":
                     for i in range(len(targets)):
                         print(targets[i])
-                        print(self.tuples[i][ep_name])
-                        print(self.episode_sizes[i][ep_name])
+                        if ep_name in self.tuples[i]:
+                            print(self.tuples[i][ep_name])
+                            print(self.episode_sizes[i][ep_name])
             self.sanity_check()
 
     def save(self):
