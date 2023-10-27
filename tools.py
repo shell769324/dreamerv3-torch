@@ -312,7 +312,7 @@ class SliceDataset:
                 while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
-            assert (prev_total - ret["image"].shape[0]) == self.batch_length, "{} {} {}: expected {} actual {}".format(
+            assert (ret["image"].shape[0] - prev_total) == self.batch_length, "{} {} {}: expected {} actual {}".format(
                 self.mode, self.name, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
         result = dict()
         for k, v in ret.items():
