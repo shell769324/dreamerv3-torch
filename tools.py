@@ -337,8 +337,6 @@ class SliceDataset:
                 reward_modes = episode.get("reward_mode")
                 for i in range(1, len(episode.get("reward"))):
                     prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i - 1]]
-                    if ep_name == "logdir/train_eps/200.npz":
-                        print(i, ["navigate", "explore"][reward_modes[i]], episode.get("target")[i])
                     if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
                         start = i
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
@@ -361,12 +359,6 @@ class SliceDataset:
                     self.tuples[target][ep_name].append([start, len(episode["target"])])
                     self.episode_sizes[target][ep_name] += len(episode["target"]) - start
                     self.aggregate_sizes[target] += len(episode["target"]) - start
-                if ep_name == "logdir/train_eps/200.npz":
-                    for i in range(len(targets)):
-                        print(targets[i])
-                        if ep_name in self.tuples[i]:
-                            print(self.tuples[i][ep_name])
-                            print(self.episode_sizes[i][ep_name])
             self.sanity_check()
 
     def save(self):
