@@ -334,15 +334,12 @@ class SliceDataset:
         else:
             print("No file detected on {}. Will recompute".format(self.path))
             for ep_name, episode in self.dataset.items():
-                if ep_name == "logdir/train_eps/200.npz":
-                    print(episode.get("reward_mode"))
-                    print(episode.get("target"))
                 start = -1
                 reward_modes = episode.get("reward_mode")
                 for i in range(1, len(episode.get("reward"))):
                     prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i - 1]]
                     if ep_name == "logdir/train_eps/200.npz":
-                        print(i, ["navigate", "explore"][reward_modes[i]], reward_modes[i])
+                        print(i, ["navigate", "explore"][reward_modes[i]], episode.get("target")[i])
                     if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
                         start = i
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
