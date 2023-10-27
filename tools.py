@@ -243,7 +243,10 @@ class SliceDataset:
             for ep_name, count in self.episode_sizes[i].items():
                 assert ep_name in self.tuples[i], "{} {}: episode_sizes has episode {} but tuples doesn't".format(self.mode, self.name, ep_name)
                 total = 0
-                for st, ed in self.tuples[i][ep_name]:
+                for j, (st, ed) in enumerate(self.tuples[i][ep_name]):
+                    if j > 0:
+                        assert st != self.tuples[i][ep_name][j - 1], "{} {}: {} episode {} {} the same".\
+                            format(self.mode, self.name, ep_name, self.tuples[i][ep_name][j - 1], (st, ed))
                     total += ed - st
                     for t in range(st, ed):
                         assert self.dataset[ep_name]["target"] == i, "{} {}: {} episode {} transition is not {}".\
