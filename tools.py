@@ -343,9 +343,7 @@ class SliceDataset:
                     prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i - 1]]
                     if ep_name == "logdir/train_eps/612.npz":
                         print(i, ["navigate", "explore"][reward_modes[i]], reward_modes[i])
-                    if ["navigate", "explore"][reward_modes[i]] != self.name:
-                        start = -1
-                    elif start == -1:
+                    if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
                         start = i
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
                                                                      episode["target"][i] != episode["target"][i - 1] or
@@ -359,6 +357,8 @@ class SliceDataset:
                         self.episode_sizes[target][ep_name] += end - start
                         self.aggregate_sizes[target] += end - start
                         start = i
+                    if ["navigate", "explore"][reward_modes[i]] != self.name:
+                        start = -1
                 if ep_name == "logdir/train_eps/612.npz":
                     for i in range(len(targets)):
                         print(targets[i])
