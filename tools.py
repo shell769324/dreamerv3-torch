@@ -249,8 +249,11 @@ class SliceDataset:
                             format(self.mode, self.name, ep_name, self.tuples[i][ep_name][j - 1], (st, ed))
                     total += ed - st
                     for t in range(st, ed):
-                        assert self.dataset[ep_name]["target"][t] == i, "{} {}: {} episode {} transition is {}, not {}".\
+                        assert self.dataset[ep_name]["target"][t] == i, "{} {}: {} transition {} is {}, not {}".\
                             format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target"][t]], targets[i])
+                        should_spot = self.name == "navigate"
+                        assert self.dataset[ep_name]["target_spot"][t] == should_spot, "{} {}: {} transition {} {} wrong". \
+                            format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target_spot"][t]])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
