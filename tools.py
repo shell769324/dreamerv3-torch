@@ -22,6 +22,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 
+thresholds = [7, 9, 10, 22, 32, 15]
 to_np = lambda x: x.detach().cpu().numpy()
 
 def symlog(x):
@@ -244,16 +245,16 @@ class SliceDataset:
                 assert ep_name in self.tuples[i], "{} {}: episode_sizes has episode {} but tuples doesn't".format(self.mode, self.name, ep_name)
                 total = 0
                 for j, (st, ed) in enumerate(self.tuples[i][ep_name]):
-                    if j > 0:
-                        assert st != self.tuples[i][ep_name][j - 1], "{} {}: {} episode {} {} the same".\
-                            format(self.mode, self.name, ep_name, self.tuples[i][ep_name][j - 1], (st, ed))
                     total += ed - st
-                    for t in range(st, ed):
+                    for t in range(st, ed - 1):
                         assert self.dataset[ep_name]["target"][t] == i, "{} {}: {} transition {} is {}, not {}".\
                             format(self.mode, self.name, ep_name, t, targets[self.dataset[ep_name]["target"][t]], targets[i])
                         reward_mode = 0 if self.name == "navigate" else 1
                         assert self.dataset[ep_name]["reward_mode"][t] == reward_mode, "{} {}: {} transition {} {} reward_mode wrong". \
                             format(self.mode, self.name, ep_name, t, "navigate" if self.dataset[ep_name]["reward_mode"][t] == 0 else "explore")
+                    assert self.dataset[ep_name]["prev_target"][ed] == i, "{} {}: {} transition {} is {}, not {}". \
+                        format(self.mode, self.name, ep_name, ed, targets[self.dataset[ep_name]["prev_target"][ed]],
+                               targets[i])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():
@@ -342,12 +343,15 @@ class SliceDataset:
                     if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
                                                                      episode["target"][i] != episode["target"][i - 1]):
                         target = episode["target"][i - 1]
-                        if ep_name not in self.tuples[target]:
-                            self.tuples[target][ep_name] = []
-                            self.episode_sizes[target][ep_name] = 0
-                        self.tuples[target][ep_name].append([start, i])
-                        self.episode_sizes[target][ep_name] += i - start
-                        self.aggregate_sizes[target] += i - start
+                        # Must include the next frame to learn do/lost reward
+                        end = i + 1
+                        if end - start >= thresholds[target]:
+                            if ep_name not in self.tuples[target]:
+                                self.tuples[target][ep_name] = []
+                                self.episode_sizes[target][ep_name] = 0
+                            self.tuples[target][ep_name].append([start, end])
+                            self.episode_sizes[target][ep_name] += end - start
+                            self.aggregate_sizes[target] += end - start
                         start = i
                     if ["navigate", "explore"][reward_modes[i]] != self.name:
                         start = -1

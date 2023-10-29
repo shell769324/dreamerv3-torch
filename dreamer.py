@@ -340,7 +340,7 @@ class ProcessEpisodeWrap:
             cls.eval_done = True
 
         print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
-        if wandb.run is not None and score > -5:
+        if wandb.run is not None and score > -10:
             wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
 
 
@@ -433,8 +433,10 @@ def main(config, defaults):
                (agent._wm.heads["image"], "image.", 3000),
                (agent._task_behavior.a2c_navigate, "a2c_navigate.", 15000),
                (agent._task_behavior.a2c_explore, "a2c_explore.", 15000)]
-    # with wandb.init(project='mastering crafter with world models', config=defaults, id="zkqf7iz3", resume=True):
-    with wandb.init(project='mastering crafter with world models', config=defaults):
+    wand_id = config.wandb_id or None
+    resume = config.resume or None
+    with wandb.init(project='mastering crafter with world models', config=defaults, id=wand_id, resume=resume):
+    # with wandb.init(project='mastering crafter with world models', config=defaults):
         for model, name, param_freq in watched:
             model.requires_grad_(requires_grad=True)
             wandb.run._torch.add_log_parameters_hook(

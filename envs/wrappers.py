@@ -6,6 +6,7 @@ from tools import get_episode_name
 from envs.crafter import targets
 import json
 import os
+from tools import thresholds
 
 
 class CollectDataset:
@@ -47,12 +48,14 @@ class CollectDataset:
                         or transition["target"] != self._episode[i - 1]["target"]):
                     dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
                     cache = dataset.tuples
-                    if ep_name not in cache[transition["prev_target"]]:
-                        cache[transition["prev_target"]][ep_name] = []
-                        dataset.episode_sizes[transition["prev_target"]][ep_name] = 0
-                    cache[transition["prev_target"]][ep_name].append([begin, i])
-                    dataset.episode_sizes[transition["prev_target"]][ep_name] += i - begin
-                    dataset.aggregate_sizes[transition["prev_target"]] += i - begin
+                    end = i + 1
+                    if end - begin >= thresholds[transition["prev_target"]]:
+                        if ep_name not in cache[transition["prev_target"]]:
+                            cache[transition["prev_target"]][ep_name] = []
+                            dataset.episode_sizes[transition["prev_target"]][ep_name] = 0
+                        cache[transition["prev_target"]][ep_name].append([begin, end])
+                        dataset.episode_sizes[transition["prev_target"]][ep_name] += end - begin
+                        dataset.aggregate_sizes[transition["prev_target"]] += end - begin
                     begin = i
             dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.tuples

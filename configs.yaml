@@ -18,7 +18,8 @@ defaults:
   precision: 16
   debug: False
   expl_gifs: False
-  resume: False
+  resume: null
+  wandb_id: null
 
   # Environment
   task: 'dmc_walker_walk'
