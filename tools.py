@@ -253,10 +253,9 @@ class SliceDataset:
                         assert self.dataset[ep_name]["reward_mode"][t] == reward_mode, "{} {}: {} transition {} {} reward_mode wrong". \
                             format(self.mode, self.name, ep_name, t, "navigate" if self.dataset[ep_name]["reward_mode"][t] == 0 else "explore")
                     if ed != len(self.dataset[ep_name]["target"]):
-                        assert self.dataset[ep_name]["prev_target"][ed - 1] == i, "{} {}: {} transition {} is {}, not {}\n{}\n{}\n{}\n{}". \
+                        assert self.dataset[ep_name]["prev_target"][ed - 1] == i, "{} {}: {} transition {} is {}, not {}". \
                             format(self.mode, self.name, ep_name, ed - 1, targets[self.dataset[ep_name]["prev_target"][ed - 1]],
-                                   targets[i], self.dataset[ep_name]["prev_target"], self.dataset[ep_name]["target"], self.dataset[ep_name]["reward_mode"],
-                                   self.tuples[i][ep_name])
+                                   targets[i])
                 assert total == count, "{} {}: expected total for {} {} is {}, actual is {}".format(self.mode, self.name, ep_name, targets[i], count, total)
         for i in range(len(targets)):
             for ep_name in self.tuples[i].keys():

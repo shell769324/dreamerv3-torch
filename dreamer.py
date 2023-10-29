@@ -7,7 +7,7 @@ import os
 import pathlib
 import sys
 from envs.crafter import targets
-from tools import SliceDataset
+from tools import SliceDataset, get_episode_name
 
 os.environ["MUJOCO_GL"] = "egl"
 
@@ -369,6 +369,12 @@ def main(config, defaults):
         directory = config.traindir
     train_eps = tools.load_episodes(directory, limit=config.dataset_size)
     train_dataset = make_dataset(train_eps, config)
+    last_counter = 0
+    for k in train_eps.keys():
+        st_idx = k.index("eps/") + len("eps/")
+        ed_idx = k.index(".npz")
+        last_counter = max(last_counter, int(k[st_idx:ed_idx]))
+    get_episode_name.counter = last_counter + 1
     navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 2/3), config.batch_length,
                                     str(Path.joinpath(directory, "navigate.json").absolute()), mode="train", name="navigate")
     explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/3), config.batch_length,
