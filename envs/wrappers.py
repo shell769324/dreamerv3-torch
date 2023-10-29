@@ -49,7 +49,8 @@ class CollectDataset:
                     dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
                     cache = dataset.tuples
                     end = i + 1
-                    if end - begin >= thresholds[transition["prev_target"]]:
+                    threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["reward_mode"]]]
+                    if end - begin >= threshold[transition["prev_target"]]:
                         if ep_name not in cache[transition["prev_target"]]:
                             cache[transition["prev_target"]][ep_name] = []
                             dataset.episode_sizes[transition["prev_target"]][ep_name] = 0

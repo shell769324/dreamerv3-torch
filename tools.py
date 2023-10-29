@@ -22,7 +22,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 
-thresholds = [7, 9, 10, 22, 32, 15]
+thresholds = {"navigate": [7, 9, 10, 22, 32, 15], "explore": [4, 5, 2, 7, 8, 4]}
 to_np = lambda x: x.detach().cpu().numpy()
 
 def symlog(x):
@@ -346,7 +346,7 @@ class SliceDataset:
                         target = episode["target"][i - 1]
                         # Must include the next frame to learn do/lost reward
                         end = i + 1
-                        if end - start >= thresholds[target]:
+                        if end - start >= thresholds[self.name][target]:
                             if ep_name not in self.tuples[target]:
                                 self.tuples[target][ep_name] = []
                                 self.episode_sizes[target][ep_name] = 0
