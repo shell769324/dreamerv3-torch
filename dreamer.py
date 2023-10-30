@@ -165,10 +165,11 @@ class Dreamer(nn.Module):
             )
         else:
             latent, action = state
-        obs = self._wm.preprocess(obs)
+        obs, marker = self._wm.preprocess(obs)
         embed = self._wm.encoder(obs)
         latent, _ = self._wm.dynamics.obs_step(
-            latent, action, embed, obs["is_first"], self._config.collect_dyn_sample
+            latent, action, embed, np.logical_and(obs["is_first"], marker).astype(obs["is_first"].dtype),
+            self._config.collect_dyn_sample
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
