@@ -279,6 +279,7 @@ class SliceDataset:
         for i, sl in enumerate(p):
             p[i] = sl / np.sum(sl)
         ret = dict()
+        markers = None
         curr_target = 0
         curr_target_frame = 0
         for i in range(self.batch_size):
@@ -308,6 +309,13 @@ class SliceDataset:
                         ) if k in ret else v[start_frame:end_frame]
                         for k, v in episode.items() if k != "augmented"
                     }
+                    if markers is None:
+                        markers = np.zeros((end_frame - start_frame,), dtype=np.uint8)
+                        markers[0] = 1
+                    else:
+                        this_marker = np.zeros((end_frame - start_frame,), dtype=np.uint8)
+                        this_marker[0] = 1
+                        markers = np.append(markers, this_marker, axis=0)
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
@@ -322,7 +330,7 @@ class SliceDataset:
             desired = tuple([self.batch_size, self.batch_length] + list(shape[1:]))
             assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
-        return result
+        return result, markers.reshape((self.batch_size, self.batch_length))
 
     def load(self):
         if os.path.isfile(self.path):

@@ -159,10 +159,10 @@ class WorldModel(nn.Module):
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
         target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
-        navigate_data = self.preprocess(self.navigate_dataset.sample(target_dist))
+        navigate_data, navigate_markers = self.preprocess(self.navigate_dataset.sample(target_dist))
         target_dist = np.array(copy.copy(self.explore_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
-        explore_data = self.preprocess(self.explore_dataset.sample(target_dist))
+        explore_data, explore_markers = self.preprocess(self.explore_dataset.sample(target_dist))
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
 
         with tools.RequiresGrad(self):
@@ -178,10 +178,10 @@ class WorldModel(nn.Module):
                 losses["front"] = -torch.mean(front_like) * self._scales.get("front", 1.0)
 
                 navigate_post, navigate_prior = self.dynamics.observe(
-                    navigate_embed, navigate_data["action"], navigate_data["is_first"]
+                    navigate_embed, navigate_data["action"], navigate_data["is_first"], markers=navigate_markers
                 )
                 explore_post, explore_prior = self.dynamics.observe(
-                    explore_embed, explore_data["action"], explore_data["is_first"]
+                    explore_embed, explore_data["action"], explore_data["is_first"], markers=explore_markers
                 )
                 prior = {k: torch.cat([v, explore_prior[k]], dim=0) for k, v in navigate_prior.items() if k in explore_prior}
                 post = {k: torch.cat([v, explore_post[k]], dim=0) for k, v in navigate_post.items() if k in explore_post}

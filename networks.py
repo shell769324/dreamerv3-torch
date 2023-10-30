@@ -100,18 +100,24 @@ class RSSM(nn.Module):
         state["stoch"] = self.get_stoch(state["deter"])
         return state
 
-    def observe(self, embed, action, is_first, state=None):
+    def observe(self, embed, action, is_first, markers=None):
         swap = lambda x: x.permute([1, 0] + list(range(2, len(x.shape))))
-        if state is None:
-            state = self.initial(action.shape[0])
+        state = self.initial(action.shape[0])
         # (batch, time, ch) -> (time, batch, ch)
         embed, action, is_first = swap(embed), swap(action), swap(is_first)
+        if markers is not None:
+            markers = swap(embed)
+        else:
+            markers = np.zeros(is_first.shape, dtype=np.uint8)
+        print(is_first[0])
+        print(markers[0])
+        exit(1)
         # prev_state[0] means selecting posterior of return(posterior, prior) from obs_step
         post, prior = tools.static_scan(
             lambda prev_state, prev_act, embed, is_first: self.obs_step(
                 prev_state[0], prev_act, embed, is_first
             ),
-            (action, embed, is_first),
+            (action, embed, np.logical_and(is_first, markers).astype(is_first.dtype)),
             (state, state),
         )
 
