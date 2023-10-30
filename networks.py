@@ -108,7 +108,7 @@ class RSSM(nn.Module):
         if markers is not None:
             markers = swap(markers)
         else:
-            markers = torch.zeros(is_first.shape)
+            markers = torch.zeros(is_first.shape).to(is_first.get_device())
         # prev_state[0] means selecting posterior of return(posterior, prior) from obs_step
         post, prior = tools.static_scan(
             lambda prev_state, prev_act, embed, is_first: self.obs_step(
