@@ -316,7 +316,7 @@ class SliceDataset:
                     else:
                         this_marker = torch.zeros((end_frame - start_frame,))
                         this_marker[0] = 1
-                        markers = np.append(markers, this_marker, axis=0)
+                        markers = torch.cat([markers, this_marker], dim=0)
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
