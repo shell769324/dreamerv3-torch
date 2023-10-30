@@ -286,6 +286,9 @@ class SliceDataset:
         for i in range(self.batch_size):
             size = 0
             prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
+            while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
+                curr_target += 1
+                curr_target_frame = 0
             while size < self.batch_length:
                 assert len(tuple_list[curr_target]) > 0, "{} {}: aggregate {}, desired frames {}, target {} required dist {}".format(
                     self.mode, self.name, curr_target, frame_counts, self.aggregate_sizes, dist)
