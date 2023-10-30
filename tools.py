@@ -22,7 +22,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 
-thresholds = {"navigate": [7, 9, 10, 22, 32, 15], "explore": [4, 5, 2, 7, 8, 4]}
+thresholds = {"navigate": [7, 9, 10, 22, 24, 15], "explore": [4, 5, 2, 7, 8, 4]}
 to_np = lambda x: x.detach().cpu().numpy()
 
 def symlog(x):
