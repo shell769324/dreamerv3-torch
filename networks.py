@@ -106,7 +106,7 @@ class RSSM(nn.Module):
         # (batch, time, ch) -> (time, batch, ch)
         embed, action, is_first = swap(embed), swap(action), swap(is_first)
         if markers is not None:
-            markers = swap(embed)
+            markers = swap(markers)
         else:
             markers = np.zeros(is_first.shape, dtype=np.uint8)
         print(is_first[0])

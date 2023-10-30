@@ -331,8 +331,6 @@ class SliceDataset:
             assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
         markers = markers.reshape((self.batch_size, self.batch_length))
-        print("markers", markers.shape, markers)
-        exit(1)
         return result, markers
 
     def load(self):
