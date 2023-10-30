@@ -159,10 +159,12 @@ class WorldModel(nn.Module):
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
         target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
-        navigate_data, navigate_markers = self.preprocess(self.navigate_dataset.sample(target_dist))
+        navigate_data, navigate_markers = self.navigate_dataset.sample(target_dist)
+        navigate_data = self.preprocess(navigate_data)
         target_dist = np.array(copy.copy(self.explore_dataset.aggregate_sizes))
         target_dist = target_dist / np.sum(target_dist)
-        explore_data, explore_markers = self.preprocess(self.explore_dataset.sample(target_dist))
+        explore_data, explore_markers = self.explore_dataset.sample(target_dist)
+        explore_data = self.preprocess(explore_data)
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
 
         with tools.RequiresGrad(self):
