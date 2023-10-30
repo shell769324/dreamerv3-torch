@@ -286,8 +286,8 @@ class SliceDataset:
             size = 0
             prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
             while size < self.batch_length:
-                assert len(tuple_list[curr_target]) > 0, "{} {}: aggregate {}, required dist {}".format(
-                    self.mode, self.name, self.aggregate_sizes, dist)
+                assert len(tuple_list[curr_target]) > 0, "{} {}: aggregate {}, desired frames {}, target {} required dist {}".format(
+                    self.mode, self.name, curr_target, frame_counts, self.aggregate_sizes, dist)
                 picked = self.random.choice(list(range(len(tuple_list[curr_target]))), p=p[curr_target])
                 (ep_name, slices_in_episode) = tuple_list[curr_target][picked]
                 episode = self.dataset[ep_name]
