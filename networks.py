@@ -108,7 +108,7 @@ class RSSM(nn.Module):
         if markers is not None:
             markers = swap(markers)
         else:
-            markers = np.zeros(is_first.shape, dtype=np.uint8)
+            markers = torch.zeros(is_first.shape)
         print(is_first[0])
         print(markers[0])
         exit(1)
