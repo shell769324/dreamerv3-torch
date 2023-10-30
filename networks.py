@@ -111,14 +111,14 @@ class RSSM(nn.Module):
             markers = torch.zeros(is_first.shape)
         print("is first", is_first[:, 1:3])
         print("marker", markers[:, 1:3])
-        print("and", np.logical_and(is_first[:, 1:3], markers[:, 1:3]).astype(is_first.dtype))
+        print("and", torch.logical_and(is_first[:, 1:3], markers[:, 1:3]).astype(is_first.dtype))
         exit(1)
         # prev_state[0] means selecting posterior of return(posterior, prior) from obs_step
         post, prior = tools.static_scan(
             lambda prev_state, prev_act, embed, is_first: self.obs_step(
                 prev_state[0], prev_act, embed, is_first
             ),
-            (action, embed, np.logical_and(is_first, markers).astype(is_first.dtype)),
+            (action, embed, torch.logical_and(is_first, markers).astype(is_first.dtype)),
             (state, state),
         )
 
