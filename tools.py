@@ -221,7 +221,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 
 
 class SliceDataset:
-    def __init__(self, dataset, batch_size, batch_length, path, seed=0, mode="", name=""):
+    def __init__(self, dataset, batch_size, batch_length, path, device, seed=0, mode="", name=""):
         self.dataset = dataset
         self.tuples = [dict() for _ in range(len(targets))]
         self.episode_sizes = [dict() for _ in range(len(targets))]
@@ -232,6 +232,7 @@ class SliceDataset:
         self.path = path
         self.mode = mode
         self.name = name
+        self.device = device
         self.load()
 
     def sanity_check(self):
@@ -310,10 +311,10 @@ class SliceDataset:
                         for k, v in episode.items() if k != "augmented"
                     }
                     if markers is None:
-                        markers = np.zeros((end_frame - start_frame,), dtype=np.uint8)
+                        markers = torch.zeros((end_frame - start_frame,))
                         markers[0] = 1
                     else:
-                        this_marker = np.zeros((end_frame - start_frame,), dtype=np.uint8)
+                        this_marker = torch.zeros((end_frame - start_frame,))
                         this_marker[0] = 1
                         markers = np.append(markers, this_marker, axis=0)
                     index += 1
@@ -331,7 +332,7 @@ class SliceDataset:
             assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
         markers = markers.reshape((self.batch_size, self.batch_length))
-        return result, markers
+        return result, markers.to(device)
 
     def load(self):
         if os.path.isfile(self.path):
