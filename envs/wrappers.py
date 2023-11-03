@@ -54,13 +54,14 @@ class CollectDataset:
                     aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
                     end = i + 1
                     threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["reward_mode"]]]
-                    if end - begin >= threshold[transition["prev_target"]]:
-                        if ep_name not in tuples[transition["prev_target"]]:
-                            tuples[transition["prev_target"]][ep_name] = []
-                            episode_sizes[transition["prev_target"]][ep_name] = 0
-                        tuples[transition["prev_target"]][ep_name].append([begin, end])
-                        episode_sizes[transition["prev_target"]][ep_name] += end - begin
-                        aggregate_sizes[transition["prev_target"]] += end - begin
+                    target = transition["prev_target"]
+                    if end - begin >= threshold[target]:
+                        if ep_name not in tuples[target]:
+                            tuples[target][ep_name] = []
+                            episode_sizes[target][ep_name] = 0
+                        tuples[target][ep_name].append([begin, end])
+                        episode_sizes[target][ep_name] += end - begin
+                        aggregate_sizes[target] += end - begin
                     begin = i
             dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.failure_tuples

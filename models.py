@@ -157,12 +157,18 @@ class WorldModel(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to(self._config.device)
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
-        target_dist = np.array(copy.copy(self.navigate_dataset.aggregate_sizes))
-        target_dist = target_dist / np.sum(target_dist)
+        difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
+                     (np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
+        target_dist = difficulty / np.sum(difficulty)
+        for i, t in enumerate(targets):
+            metrics["navigate/{}_sample_rate".format(t)] = target_dist[i]
         navigate_data, navigate_markers = self.navigate_dataset.sample(target_dist)
         navigate_data = self.preprocess(navigate_data)
-        target_dist = np.array(copy.copy(self.explore_dataset.aggregate_sizes))
-        target_dist = target_dist / np.sum(target_dist)
+        difficulty = np.array(self.explore_dataset.failure_aggregate_sizes) / \
+                     (np.array(self.explore_dataset.success_aggregate_sizes) + np.array(self.explore_dataset.failure_aggregate_sizes))
+        target_dist = difficulty / np.sum(difficulty)
+        for i, t in enumerate(targets):
+            metrics["explore/{}_sample_rate".format(t)] = target_dist[i]
         explore_data, explore_markers = self.explore_dataset.sample(target_dist)
         explore_data = self.preprocess(explore_data)
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
