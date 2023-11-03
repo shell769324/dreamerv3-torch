@@ -369,6 +369,7 @@ class SliceDataset:
         markers = None
         success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
         failure_size = self.batch_size - success_size
+        print(dist)
         ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
                                       self.success_aggregate_sizes)
         ret, markers = self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
