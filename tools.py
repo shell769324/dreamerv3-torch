@@ -392,6 +392,7 @@ class SliceDataset:
                 self.failure_episode_sizes = json_dict["failure_episode_sizes"]
                 self.failure_aggregate_sizes = json_dict["failure_aggregate_sizes"]
         else:
+            step_name = "target_navigate_steps" if self.name == "navigate" else "target_explore_steps"
             print("No file detected on {}. Will recompute".format(self.path))
             for ep_name, episode in self.dataset.items():
                 start = -1
@@ -407,7 +408,7 @@ class SliceDataset:
                         target = episode["target"][i - 1]
                         # Must include the next frame to learn do/lost reward
                         end = i + 1
-                        is_success = episode["target_navigate_steps"][i] >= 0 or episode["target_explore_steps"][i] >= 0
+                        is_success = episode[step_name][i] >= 0
                         tuples = self.success_tuples if is_success else self.failure_tuples
                         episode_sizes = self.success_episode_sizes if is_success else self.failure_episode_sizes
                         aggregate_sizes = self.success_aggregate_sizes if is_success else self.failure_aggregate_sizes
