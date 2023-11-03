@@ -428,6 +428,7 @@ class SliceDataset:
                     self.failure_tuples[target][ep_name].append([start, len(episode["target"])])
                     self.failure_episode_sizes[target][ep_name] += len(episode["target"]) - start
                     self.failure_aggregate_sizes[target] += len(episode["target"]) - start
+            self.save()
             self.sanity_check()
 
     def save(self):
