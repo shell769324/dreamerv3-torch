@@ -296,9 +296,7 @@ class SliceDataset:
         sufa = "success" if tuples == self.success_tuples else "failure"
         frame_counts = [0.0] * len(targets)
         dist = np.where(np.array(aggregate_sizes) == 0, 0, dist)
-        print(aggregate_sizes, dist)
         dist = dist / np.sum(dist)
-        print(dist)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * batch_size * dist[i])
         remained = self.batch_length * batch_size - sum(frame_counts)
@@ -370,7 +368,7 @@ class SliceDataset:
         failure_size = self.batch_size - success_size
         ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
                                       self.success_aggregate_sizes)
-        self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
+        ret, markers = self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
                        self.failure_aggregate_sizes)
         result = dict()
         for k, v in ret.items():
