@@ -295,7 +295,7 @@ class SliceDataset:
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
         sufa = "success" if tuples == self.success_tuples else "failure"
         frame_counts = [0.0] * len(targets)
-        dist = np.where(aggregate_sizes == 0, 0, dist)
+        dist = np.where(np.array(aggregate_sizes) == 0, 0, dist)
         print(aggregate_sizes, dist)
         dist = dist / np.sum(dist)
         print(dist)
