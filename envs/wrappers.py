@@ -47,25 +47,28 @@ class CollectDataset:
                 if (transition["reward_mode"] != self._episode[i - 1]["reward_mode"]
                         or transition["target"] != self._episode[i - 1]["target"]):
                     dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
-                    cache = dataset.tuples
+                    is_success = transition["target_navigate_steps"] >= 0 or transition["target_explore_steps"] >= 0
+                    tuples = dataset.success_tuples if is_success else dataset.failure_tuples
+                    episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
+                    aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
                     end = i + 1
                     threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["reward_mode"]]]
                     if end - begin >= threshold[transition["prev_target"]]:
-                        if ep_name not in cache[transition["prev_target"]]:
-                            cache[transition["prev_target"]][ep_name] = []
-                            dataset.episode_sizes[transition["prev_target"]][ep_name] = 0
-                        cache[transition["prev_target"]][ep_name].append([begin, end])
-                        dataset.episode_sizes[transition["prev_target"]][ep_name] += end - begin
-                        dataset.aggregate_sizes[transition["prev_target"]] += end - begin
+                        if ep_name not in tuples[transition["prev_target"]]:
+                            tuples[transition["prev_target"]][ep_name] = []
+                            episode_sizes[transition["prev_target"]][ep_name] = 0
+                        tuples[transition["prev_target"]][ep_name].append([begin, end])
+                        episode_sizes[transition["prev_target"]][ep_name] += end - begin
+                        aggregate_sizes[transition["prev_target"]] += end - begin
                     begin = i
             dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
-            cache = dataset.tuples
+            cache = dataset.failure_tuples
             if ep_name not in cache[transition["target"]]:
                 cache[transition["target"]][ep_name] = []
-                dataset.episode_sizes[transition["target"]][ep_name] = 0
+                dataset.failure_episode_sizes[transition["target"]][ep_name] = 0
             cache[transition["target"]][ep_name].append([begin, len(self._episode)])
-            dataset.episode_sizes[transition["target"]][ep_name] += len(self._episode) - begin
-            dataset.aggregate_sizes[transition["target"]] += len(self._episode) - begin
+            dataset.failure_episode_sizes[transition["target"]][ep_name] += len(self._episode) - begin
+            dataset.failure_aggregate_sizes[transition["target"]] += len(self._episode) - begin
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value

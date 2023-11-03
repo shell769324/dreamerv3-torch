@@ -20,6 +20,7 @@ defaults:
   expl_gifs: False
   resume: null
   wandb_id: null
+  success_failure_ratio: 1.0
 
   # Environment
   task: 'dmc_walker_walk'
@@ -94,8 +95,8 @@ defaults:
   # Behavior.
   find_discount: 0.85
   discount_lambda: 0.95
-  explore_imag_horizon: 8
-  navigate_imag_horizon: 11
+  explore_imag_horizon: 6
+  navigate_imag_horizon: 10
   imag_gradient: 'dynamics'
   imag_gradient_mix: '0.0'
   imag_sample: True

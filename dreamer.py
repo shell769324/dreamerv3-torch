@@ -124,9 +124,11 @@ class Dreamer(nn.Module):
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
                 for i in range(len(targets)):
-                    metrics_dict["navigate_dataset_size/" + targets[i]] = self.navigate_dataset.aggregate_sizes[i]
+                    metrics_dict["navigate_dataset_size/success_" + targets[i]] = self.navigate_dataset.success_aggregate_sizes[i]
+                    metrics_dict["navigate_dataset_size/failure_" + targets[i]] = self.navigate_dataset.failure_aggregate_sizes[i]
                 for i in range(len(targets)):
-                    metrics_dict["explore_dataset_size/" + targets[i]] = self.explore_dataset.aggregate_sizes[i]
+                    metrics_dict["explore_dataset_size/success_" + targets[i]] = self.explore_dataset.success_aggregate_sizes[i]
+                    metrics_dict["explore_dataset_size/failure_" + targets[i]] = self.explore_dataset.failure_aggregate_sizes[i]
                 openl = self._wm.video_pred(next(self._dataset))
                 # 64 (64 * 3) (64 * 6) 3
                 video = to_np(openl).transpose(0, 3, 1, 2)
@@ -300,10 +302,15 @@ class ProcessEpisodeWrap:
                 else:
                     del cache[key]
                     for dataset in [navigate_dataset, explore_dataset]:
-                        for target_tuples in dataset.tuples:
+                        for target_tuples in dataset.success_tuples:
                             target_tuples.pop(key, None)
-                        for i, target_sizes in enumerate(dataset.episode_sizes):
-                            dataset.aggregate_sizes[i] -= target_sizes.get(key, 0)
+                        for target_tuples in dataset.failure_tuples:
+                            target_tuples.pop(key, None)
+                        for i, target_sizes in enumerate(dataset.success_episode_sizes):
+                            dataset.success_aggregate_sizes[i] -= target_sizes.get(key, 0)
+                            target_sizes.pop(key, None)
+                        for i, target_sizes in enumerate(dataset.failure_episode_sizes):
+                            dataset.failure_aggregate_sizes[i] -= target_sizes.get(key, 0)
                             target_sizes.pop(key, None)
                         dataset.save()
             if wandb.run is not None:
