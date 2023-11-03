@@ -158,7 +158,7 @@ class WorldModel(nn.Module):
         threshold = torch.tensor(self._config.regularize_threshold).to(self._config.device)
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
         difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
-                     (np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
+                     (1 + np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
         print("navigate", target_dist)
         for i, t in enumerate(targets):
