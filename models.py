@@ -160,6 +160,7 @@ class WorldModel(nn.Module):
         difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
                      (np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
+        print("navigate", target_dist)
         for i, t in enumerate(targets):
             metrics["navigate/{}_sample_rate".format(t)] = target_dist[i]
         navigate_data, navigate_markers = self.navigate_dataset.sample(target_dist)
@@ -167,6 +168,7 @@ class WorldModel(nn.Module):
         difficulty = np.array(self.explore_dataset.failure_aggregate_sizes) / \
                      (np.array(self.explore_dataset.success_aggregate_sizes) + np.array(self.explore_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
+        print("explore", target_dist)
         for i, t in enumerate(targets):
             metrics["explore/{}_sample_rate".format(t)] = target_dist[i]
         explore_data, explore_markers = self.explore_dataset.sample(target_dist)

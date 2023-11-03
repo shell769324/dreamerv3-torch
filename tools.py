@@ -262,9 +262,8 @@ class SliceDataset:
                     for j, (st, ed) in enumerate(tuples[i][ep_name]):
                         total += ed - st
                         if sufa == "success":
-                            assert self.dataset[ep_name][step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}\n{}\n{}". \
-                                format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1],
-                                       self.dataset[ep_name]["target"], self.dataset[ep_name][step_name])
+                            assert self.dataset[ep_name][step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}". \
+                                format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
                         else:
                             assert self.dataset[ep_name][step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
                                 format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
