@@ -269,8 +269,9 @@ class SliceDataset:
                             assert self.dataset[ep_name][step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
                                 format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
                         for t in range(st, ed - 1):
-                            assert t == st or self.dataset[ep_name][step_name][t] == -1, "{} {} {}: {} {} step is {}". \
-                                format(self.mode, self.name, sufa, ep_name, t, self.dataset[ep_name][step_name][t])
+                            assert t == st or self.dataset[ep_name][step_name][t] == -1, "{} {} {}: {} {} step is {}\n{}\n{}". \
+                                format(self.mode, self.name, sufa, ep_name, t, self.dataset[ep_name][step_name][t],
+                                       self.dataset[ep_name]["target"], self.dataset[ep_name][step_name])
                             assert self.dataset[ep_name]["target"][t] == i, "{} {} {}: {} transition {} is {}, not {}". \
                                 format(self.mode, self.name, sufa, ep_name, t, targets[self.dataset[ep_name]["target"][t]],
                                        targets[i])
