@@ -237,6 +237,7 @@ class SliceDataset:
         self.name = name
         self.device = device
         self.ratio = ratio
+        print("{} {} ratio {}".format(self.name, self.mode, ratio))
         self.load()
 
     def sanity_check(self):
@@ -299,7 +300,6 @@ class SliceDataset:
         dist = dist / np.sum(dist)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * batch_size * dist[i])
-        print(self.name, sufa, frame_counts)
         remained = self.batch_length * batch_size - sum(frame_counts)
         start = random.randint(0, len(targets) - 1)
         for i in range(len(dist)):

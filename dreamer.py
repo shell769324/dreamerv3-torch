@@ -383,9 +383,11 @@ def main(config, defaults):
         last_counter = max(last_counter, int(k[st_idx:ed_idx]))
     get_episode_name.counter = last_counter + 1
     navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 2/3), config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device, mode="train", name="navigate")
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device,
+                                    mode="train", name="navigate", ratio=config.success_failure_ratio)
     explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/3), config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device, mode="train", name="explore")
+                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device,
+                                   mode="train", name="explore", ratio=config.success_failure_ratio)
 
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))
@@ -394,9 +396,11 @@ def main(config, defaults):
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
     navigate_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 2/3), config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device, mode="eval", name="navigate")
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device,
+                                         mode="eval", name="navigate", ratio=config.success_failure_ratio)
     explore_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 1/3), config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device, mode="eval", name="explore")
+                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device,
+                                        mode="eval", name="explore", ratio=config.success_failure_ratio)
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset if mode == "train" else navigate_dataset_eval,
                                  explore_dataset if mode == "train" else explore_dataset_eval)
     train_env, train_crafter = make("train")
