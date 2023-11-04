@@ -182,7 +182,7 @@ class Dreamer(nn.Module):
             target_array[i] = target.to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         crafter_env = self.train_crafter if training else self.eval_crafter
-        if obs["target_spot"]:
+        if obs["target_spot"] == 0:
             reward_prediction = self._wm.heads["navigate/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
             means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
             crafter_env.reward_type = "navigate"
@@ -424,7 +424,7 @@ def main(config, defaults):
             action = random_actor.sample()
             logprob = random_actor.log_prob(action)
             crafter_env = train_crafter if training else eval_crafter
-            if o["target_spot"]:
+            if o["target_spot"] == 0:
                 crafter_env.reward_type = "navigate"
             else:
                 crafter_env.reward_type = "explore"
