@@ -74,7 +74,7 @@ defaults:
   initial: 'learned'
 
   # Training
-  batch_size: 48
+  batch_size: 57
   batch_length: 64
   train_ratio: 512
   pretrain: 100
