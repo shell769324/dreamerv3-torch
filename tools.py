@@ -399,8 +399,6 @@ class SliceDataset:
             for ep_name, episode in self.dataset.items():
                 start = -1
                 target_spot = episode.get("target_spot")
-                if self.name == "navigate":
-                    print(list(zip(episode.get("target_spot"), episode.get("target"), episode.get(step_name))))
                 for i in range(len(episode.get("reward"))):
                     target_spot_name = ["navigate", "explore"][target_spot[i]]
                     if target_spot_name == self.name and start == -1:
@@ -435,8 +433,6 @@ class SliceDataset:
                     self.failure_tuples[target][ep_name].append([start, len(episode["target"])])
                     self.failure_episode_sizes[target][ep_name] += len(episode["target"]) - start
                     self.failure_aggregate_sizes[target] += len(episode["target"]) - start
-            if len(self.dataset.items()) > 0:
-                exit(1)
             self.save()
             self.sanity_check()
 
