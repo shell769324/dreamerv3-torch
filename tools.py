@@ -399,6 +399,9 @@ class SliceDataset:
             for ep_name, episode in self.dataset.items():
                 start = -1
                 target_spot = episode.get("target_spot")
+                if self.name == "navigate":
+                    print(zip(episode.get("target_spot"), episode.get("target"), episode.get("step_name")))
+                    exit(1)
                 for i in range(len(episode.get("reward"))):
                     target_spot_name = ["navigate", "explore"][target_spot[i]]
                     if target_spot_name == self.name and start == -1:
