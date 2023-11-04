@@ -44,16 +44,16 @@ class CollectDataset:
             for i, transition in enumerate(self._episode):
                 if i == 0:
                     continue
-                if (transition["reward_mode"] != self._episode[i - 1]["reward_mode"]
+                if (transition["target_spot"] != self._episode[i - 1]["target_spot"]
                         or transition["target"] != self._episode[i - 1]["target"]):
-                    dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["reward_mode"]]
+                    dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["target_spot"]]
                     step_name = ["target_navigate_steps", "target_explore_steps"][self._episode[i - 1]["reward_mode"]]
                     is_success = transition[step_name] >= 0
                     tuples = dataset.success_tuples if is_success else dataset.failure_tuples
                     episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
                     aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
                     end = i + 1
-                    threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["reward_mode"]]]
+                    threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["target_spot"]]]
                     target = transition["prev_target"]
                     if end - begin >= threshold[target]:
                         if ep_name not in tuples[target]:
@@ -63,7 +63,7 @@ class CollectDataset:
                         episode_sizes[target][ep_name] += end - begin
                         aggregate_sizes[target] += end - begin
                     begin = i
-            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
+            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["target_spot"]]
             cache = dataset.failure_tuples
             if ep_name not in cache[transition["target"]]:
                 cache[transition["target"]][ep_name] = []

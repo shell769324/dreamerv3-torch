@@ -271,9 +271,9 @@ class SliceDataset:
                             assert self.dataset[ep_name]["target"][t] == i, "{} {} {}: {} transition {} is {}, not {}". \
                                 format(self.mode, self.name, sufa, ep_name, t, targets[self.dataset[ep_name]["target"][t]],
                                        targets[i])
-                            reward_mode = 0 if self.name == "navigate" else 1
-                            assert self.dataset[ep_name]["reward_mode"][
-                                       t] == reward_mode, "{} {} {}: {} transition {} {} reward_mode wrong". \
+                            target_spot = 0 if self.name == "navigate" else 1
+                            assert self.dataset[ep_name]["target_spot"][
+                                       t] == target_spot, "{} {} {}: {} transition {} {} target_spot wrong". \
                                 format(self.mode, self.name, sufa, ep_name, t,
                                        "navigate" if self.dataset[ep_name]["reward_mode"][t] == 0 else "explore")
                         if ed != len(self.dataset[ep_name]["target"]):
@@ -295,7 +295,7 @@ class SliceDataset:
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
         sufa = "success" if tuples == self.success_tuples else "failure"
         frame_counts = [0.0] * len(targets)
-        print(dist)
+        print("inside subsample", dist)
         dist = np.where(np.array(aggregate_sizes) == 0, 0, dist)
         dist = dist / np.sum(dist)
         print(aggregate_sizes)
@@ -369,7 +369,6 @@ class SliceDataset:
         markers = None
         success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
         failure_size = self.batch_size - success_size
-        print("inside sample", dist)
         ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
                                       self.success_aggregate_sizes)
         ret, markers = self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
@@ -399,14 +398,15 @@ class SliceDataset:
             print("No file detected on {}. Will recompute".format(self.path))
             for ep_name, episode in self.dataset.items():
                 start = -1
-                reward_modes = episode.get("reward_mode")
+                target_spot = episode.get("target_spot")
                 for i in range(len(episode.get("reward"))):
-                    if ["navigate", "explore"][reward_modes[i]] == self.name and start == -1:
+                    target_spot_name = ["navigate", "explore"][target_spot[i]]
+                    if target_spot_name == self.name and start == -1:
                         start = i
                     if i == 0:
                         continue
-                    prev_transition_reward_mode = ["navigate", "explore"][reward_modes[i - 1]]
-                    if prev_transition_reward_mode == self.name and (reward_modes[i] != reward_modes[i - 1] or
+                    prev_target_spot_name = ["navigate", "explore"][target_spot[i - 1]]
+                    if prev_target_spot_name == self.name and (target_spot[i] != target_spot[i - 1] or
                                                                      episode["target"][i] != episode["target"][i - 1]):
                         target = episode["target"][i - 1]
                         # Must include the next frame to learn do/lost reward
@@ -423,9 +423,9 @@ class SliceDataset:
                             episode_sizes[target][ep_name] += end - start
                             aggregate_sizes[target] += end - start
                         start = i
-                    if ["navigate", "explore"][reward_modes[i]] != self.name:
+                    if ["navigate", "explore"][target_spot[i]] != self.name:
                         start = -1
-                if ["navigate", "explore"][reward_modes[-1]] == self.name:
+                if ["navigate", "explore"][target_spot[-1]] == self.name:
                     target = episode["target"][-1]
                     if ep_name not in self.failure_tuples[target]:
                         self.failure_tuples[target][ep_name] = []
