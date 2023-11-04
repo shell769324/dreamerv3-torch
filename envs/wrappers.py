@@ -47,7 +47,7 @@ class CollectDataset:
                 if (transition["target_spot"] != self._episode[i - 1]["target_spot"]
                         or transition["target"] != self._episode[i - 1]["target"]):
                     dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["target_spot"]]
-                    step_name = ["target_navigate_steps", "target_explore_steps"][self._episode[i - 1]["reward_mode"]]
+                    step_name = ["target_navigate_steps", "target_explore_steps"][self._episode[i - 1]["target_spot"]]
                     is_success = transition[step_name] >= 0
                     tuples = dataset.success_tuples if is_success else dataset.failure_tuples
                     episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
