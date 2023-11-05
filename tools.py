@@ -367,8 +367,13 @@ class SliceDataset:
         ret = dict()
         markers = None
         if self.ratio is None:
+            total_aggregate_sizes = np.array(self.success_aggregate_sizes) + np.array(self.failure_aggregate_sizes)
+            dist = total_aggregate_sizes / np.sum(total_aggregate_sizes)
+            success_ratio = np.array(self.success_aggregate_sizes) / \
+                         (1 + np.array(self.success_aggregate_sizes) + np.array(self.failure_aggregate_sizes))
+            success_size = int(np.sum(dist * success_ratio) * self.batch_size)
+        else:
             success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
-        success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
         failure_size = self.batch_size - success_size
         ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
                                       self.success_aggregate_sizes)

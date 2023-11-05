@@ -20,7 +20,7 @@ defaults:
   expl_gifs: False
   resume: null
   wandb_id: null
-  success_failure_ratio: 1.0
+  success_failure_ratio: null
 
   # Environment
   task: 'dmc_walker_walk'
