@@ -221,7 +221,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
 
 
 class SliceDataset:
-    def __init__(self, dataset, batch_size, batch_length, path, device, seed=0, mode="", name="", ratio=1.0):
+    def __init__(self, dataset, batch_size, batch_length, path, device, seed=0, mode="", name="", ratio=None):
         self.dataset = dataset
         self.failure_tuples = [dict() for _ in range(len(targets))]
         self.success_tuples = [dict() for _ in range(len(targets))]
@@ -262,12 +262,13 @@ class SliceDataset:
                     total = 0
                     for j, (st, ed) in enumerate(tuples[i][ep_name]):
                         total += ed - st
-                        if sufa == "success":
-                            assert self.dataset[ep_name][step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}". \
-                                format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
-                        else:
-                            assert self.dataset[ep_name][step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
-                                format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
+                        if ed != len(self.dataset[ep_name]["target"]):
+                            if sufa == "success":
+                                assert self.dataset[ep_name][step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}". \
+                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
+                            else:
+                                assert self.dataset[ep_name][step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
+                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
                         for t in range(st, ed - 1):
                             assert self.dataset[ep_name]["target"][t] == i, "{} {} {}: {} transition {} is {}, not {}". \
                                 format(self.mode, self.name, sufa, ep_name, t, targets[self.dataset[ep_name]["target"][t]],
@@ -365,6 +366,8 @@ class SliceDataset:
         self.sanity_check()
         ret = dict()
         markers = None
+        if self.ratio is None:
+            success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
         success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
         failure_size = self.batch_size - success_size
         ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
