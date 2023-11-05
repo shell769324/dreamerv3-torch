@@ -236,7 +236,10 @@ class SliceDataset:
         self.mode = mode
         self.name = name
         self.device = device
-        self.ratio = ratio
+        if ratio is not None:
+            self.ratio = int(ratio)
+        else:
+            self.ratio = ratio
         print("{} {} ratio {}".format(self.name, self.mode, ratio))
         self.load()
 
