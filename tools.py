@@ -239,7 +239,7 @@ class SliceDataset:
         if ratio is not None:
             self.ratio = int(ratio)
         else:
-            self.ratio = ratio
+            self.ratio = None
         print("{} {} ratio {}".format(self.name, self.mode, ratio))
         self.load()
 
