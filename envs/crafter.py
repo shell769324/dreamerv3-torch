@@ -108,7 +108,7 @@ class Crafter():
         if face_in_bound:
             name = self._id_to_item[sem[faced_pos]]
             if name in aware:
-                return targets.index(name)
+                return aware.index(name)
         return len(aware)
 
     def compute_where(self, player_pos, sem):
