@@ -447,7 +447,6 @@ def main(config, defaults):
     state = None
     watched = [(agent._wm.heads["explore/reward"], "explore_reward.", 6000),
                (agent._wm.heads["navigate/reward"], "navigate_reward.", 6000),
-               (agent._wm.heads["image"], "image.", 3000),
                (agent._task_behavior.a2c_navigate, "a2c_navigate.", 15000),
                (agent._task_behavior.a2c_explore, "a2c_explore.", 15000)]
     wand_id = config.wandb_id or None
