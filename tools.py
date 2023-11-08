@@ -369,7 +369,7 @@ class SliceDataset:
         self.sanity_check()
         ret = dict()
         markers = None
-        if self.ratio is None:
+        if self.ratio is None or np.any(np.array(self.success_aggregate_sizes) <= 1000):
             total_aggregate_sizes = np.array(self.success_aggregate_sizes) + np.array(self.failure_aggregate_sizes)
             dist = total_aggregate_sizes / np.sum(total_aggregate_sizes)
             success_ratio = np.array(self.success_aggregate_sizes) / \
