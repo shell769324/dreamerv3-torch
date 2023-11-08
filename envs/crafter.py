@@ -4,6 +4,7 @@ import crafter
 import itertools
 
 targets = ["water", "stone", "tree", "coal", "iron", "cow"]
+aware = ["water", "stone", "tree", "coal", "iron", "cow", "lava", "zombie", "skeleton"]
 target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collect_coal", "collect_iron", "eat_cow"]
 reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3),
                 "navigate_face": (0.5, 4), "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6),
@@ -47,8 +48,9 @@ class Crafter():
         self.was_facing = False
         self.touched = False
         self.faced = False
-        self.predicted_where = np.zeros((len(targets), 4), dtype=np.uint8)
-        self.front = len(targets)
+        self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
+        self.front = len(aware)
+        self.last_frame = None
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -67,8 +69,8 @@ class Crafter():
         spaces["is_terminal"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
         spaces["target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
-        spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(targets), 4), dtype=np.uint8)
-        spaces["front"] = gym.spaces.Box(-np.inf, np.inf, (len(targets) + 1,), dtype=np.uint8)
+        spaces["where"] = gym.spaces.Box(-np.inf, np.inf, (len(aware), 4), dtype=np.uint8)
+        spaces["front"] = gym.spaces.Box(-np.inf, np.inf, (len(aware) + 1,), dtype=np.uint8)
         spaces["distance"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.float32)
         spaces["target_navigate_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
         spaces["target_touch_steps"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.int16)
@@ -105,16 +107,16 @@ class Crafter():
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if face_in_bound:
             name = self._id_to_item[sem[faced_pos]]
-            if name in targets:
+            if name in aware:
                 return targets.index(name)
-        return len(targets)
+        return len(aware)
 
     def compute_where(self, player_pos, sem):
-        where = np.zeros((len(targets), 4), dtype=np.uint8)
+        where = np.zeros((len(aware), 4), dtype=np.uint8)
         def condition(i1, i2, t):
             return 0 <= i1 < len(sem) and 0 <= i2 < len(sem[0]) and self._id_to_item[sem[i1][i2]] == t
 
-        for index, t in enumerate(targets):
+        for index, t in enumerate(aware):
             lower_row = player_pos[0] - self._row_side
             lower_col = player_pos[1] - self._col_side
             high_row = player_pos[0] + self._row_side + 1
@@ -170,11 +172,21 @@ class Crafter():
 
     def step(self, action):
         if self.reward_type == "navigate":
-            return self.navigate_step(action)
+            res = self.navigate_step(action)
         elif self.reward_type == "explore":
-            return self.explore_step(action)
+            res = self.explore_step(action)
         else:
             raise ValueError("impossible")
+        if self._done:
+            self.last_frame = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward,
+                                                self.value, self.reward,
+                                                self.compute_where(self._crafter_env._player.pos,
+                                                                   self._env._sem_view()),
+                                                self.predicted_where, self._last_min_dist is not None,
+                                                self.compute_front(self._crafter_env._player.pos,
+                                                                   self._crafter_env._player.facing,
+                                                                   self._env._sem_view()))
+        return res
 
     def navigate_step(self, action):
         if len(action.shape) >= 1:

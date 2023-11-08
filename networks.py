@@ -5,7 +5,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from torch import distributions as torchd
-from envs.crafter import targets
+from envs.crafter import targets, aware
 
 import tools
 
@@ -525,15 +525,15 @@ class WhereHead(nn.Module):
         self.layers = nn.Sequential(*layers)
         self.layers.apply(tools.weight_init)
 
-        self.mean_layer = nn.Linear(inp_dim, len(targets) * 5 + 1)
+        self.mean_layer = nn.Linear(inp_dim, len(aware) * 5 + 1)
         self.mean_layer.apply(tools.uniform_weight_init(outscale))
 
     def forward(self, features, dtype=None):
         x = features
         out = self.layers(x)
         mean = self.mean_layer(out)
-        where = mean[..., :len(targets) * 4]
-        front = mean[..., len(targets) * 4:]
+        where = mean[..., :len(aware) * 4]
+        front = mean[..., len(aware) * 4:]
         return (tools.Bernoulli(
                 torchd.independent.Independent(
                     torchd.bernoulli.Bernoulli(logits=where), 1

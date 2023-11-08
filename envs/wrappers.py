@@ -11,9 +11,10 @@ from tools import thresholds
 
 class CollectDataset:
     def __init__(
-        self, env, train_eps, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
+        self, env, crafter_env, train_eps, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
     ):
         self._env = env
+        self.crafter_env = crafter_env
         self._callbacks = callbacks or ()
         self._precision = precision
         self._episode = None
@@ -39,6 +40,8 @@ class CollectDataset:
         self._episode[-1]["augmented"] = transition["augmented"]
         self._episode.append(transition)
         if done:
+            # Last augmented frame
+            self._episode[-1]["augmented"] = self.crafter_env.last_frame
             ep_name = str(get_episode_name(self.directory))
             begin = 0
             for i, transition in enumerate(self._episode):

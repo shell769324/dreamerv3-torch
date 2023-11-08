@@ -6,7 +6,7 @@ import functools
 import os
 import pathlib
 import sys
-from envs.crafter import targets
+from envs.crafter import targets, aware
 from tools import SliceDataset, get_episode_name
 
 os.environ["MUJOCO_GL"] = "egl"
@@ -191,7 +191,7 @@ class Dreamer(nn.Module):
             means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
             crafter_env.reward_type = "explore"
         where_prediction, front_prediction = self._wm.embed_where(embed)
-        crafter_env.predicted_where = where_prediction.mode().reshape((len(targets), 4)).to(torch.long).cpu().detach().numpy().astype(np.uint8)
+        crafter_env.predicted_where = where_prediction.mode().reshape((len(aware), 4)).to(torch.long).cpu().detach().numpy().astype(np.uint8)
         crafter_env.predicted_front = front_prediction.mode().argmax().cpu().detach().numpy().astype(np.int8)
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
@@ -271,7 +271,7 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
         ]
         dir = dict(train=config.traindir, eval=config.evaldir)[mode]
         eps = dict(train=train_eps, eval=eval_eps)[mode]
-        env = wrappers.CollectDataset(env, eps, navigate_dataset, explore_dataset, callbacks=callbacks, directory=dir)
+        env = wrappers.CollectDataset(env, crafter_env, eps, navigate_dataset, explore_dataset, callbacks=callbacks, directory=dir)
     env = wrappers.RewardObs(env)
     return env, crafter_env
 
@@ -382,10 +382,10 @@ def main(config, defaults):
         ed_idx = k.index(".npz")
         last_counter = max(last_counter, int(k[st_idx:ed_idx]))
     get_episode_name.counter = last_counter + 1
-    navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 2/3), config.batch_length,
+    navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 3/4), config.batch_length,
                                     str(Path.joinpath(directory, "navigate.json").absolute()), config.device,
                                     mode="train", name="navigate", ratio=config.success_failure_ratio)
-    explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/3), config.batch_length,
+    explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/4), config.batch_length,
                                    str(Path.joinpath(directory, "explore.json").absolute()), config.device,
                                    mode="train", name="explore", ratio=config.success_failure_ratio)
 
