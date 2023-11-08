@@ -129,12 +129,12 @@ class Dreamer(nn.Module):
                 for i in range(len(targets)):
                     metrics_dict["explore_dataset_size/success_" + targets[i]] = self.explore_dataset.success_aggregate_sizes[i]
                     metrics_dict["explore_dataset_size/failure_" + targets[i]] = self.explore_dataset.failure_aggregate_sizes[i]
-                openl = self._wm.video_pred(next(self._dataset))
+                # openl = self._wm.video_pred(next(self._dataset))
                 # 64 (64 * 3) (64 * 6) 3
-                video = to_np(openl).transpose(0, 3, 1, 2)
-                wandb.log({
-                    "train_comp": wandb.Video(video, caption="train_comp", fps=10)
-                })
+                # video = to_np(openl).transpose(0, 3, 1, 2)
+                # wandb.log({
+                #     "train_comp": wandb.Video(video, caption="train_comp", fps=10)
+                # })
                 wandb.log(metrics_dict, step=step)
                 self._metrics.clear()
         for i in range(len(obs["reward"])):
@@ -474,11 +474,11 @@ def main(config, defaults):
             torch.save(agent.state_dict(), logdir / "latest_model.pt")
             print("Start evaluation.")
             tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
-            video_pred = agent._wm.video_pred(next(eval_dataset))
+            """video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred).transpose(0, 3, 1, 2)
             wandb.log({
                 "eval_comp": wandb.Video(video, caption="eval_comp", fps=10)
-            })
+            })"""
     for env in [train_env, eval_env]:
         try:
             env.close()
