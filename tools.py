@@ -177,7 +177,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         mode = "train" if training else "eval"
         for i, d in enumerate(done):
             if d and metrics is not None:
-                action_type = "navigate" if target_spot[i] else "explore"
+                action_type = "navigate" if target_spot[i - 1] == 0 else "explore"
                 target_name = targets[obs[i]["prev_target"]]
                 failure_name = "{}_{}_failure/{}".format(mode, action_type, target_name)
                 if failure_name not in metrics.keys():
