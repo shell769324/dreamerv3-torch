@@ -142,9 +142,9 @@ class WorldModel(nn.Module):
             config.weight_decay,
             opt=config.opt,
             use_amp=self._use_amp,
-            sub={"cont": self.heads["cont"], "image": self.heads["image"], "encoder": self.encoder,
+            sub={"cont": self.heads["cont"], "encoder": self.encoder,
                  "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
-                 "where": self.embed_where
+                 "where": self.embed_where, "image": self.heads["image"]
                  }#"where": self.heads["where"]}
         )
         self._scales = dict(reward=config.reward_scale, cont=config.cont_scale, where=config.where_scale)
