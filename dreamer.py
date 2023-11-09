@@ -251,27 +251,24 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
     # [crafter, reward]
     suite, task = config.task.split("_", 1)
     crafter_env = crafter.Crafter(
-        task, outdir="./stats"
+        task, outdir={"train": config.traindir, "eval": config.evaldir}[mode]
     )
     env = wrappers.OneHotAction(crafter_env)
     env = wrappers.TimeLimit(env, config.time_limit)
     env = wrappers.SelectAction(env, key="action")
-    if (mode == "train") or (mode == "eval"):
-        callbacks = [
-            functools.partial(
-                ProcessEpisodeWrap.process_episode,
-                config,
-                logger,
-                mode,
-                train_eps,
-                eval_eps,
-                navigate_dataset,
-                explore_dataset
-            )
-        ]
-        dir = dict(train=config.traindir, eval=config.evaldir)[mode]
-        eps = dict(train=train_eps, eval=eval_eps)[mode]
-        env = wrappers.CollectDataset(env, crafter_env, eps, navigate_dataset, explore_dataset, callbacks=callbacks, directory=dir)
+    callbacks = [
+        functools.partial(
+            ProcessEpisodeWrap.process_episode,
+            config,
+            logger,
+            mode,
+            train_eps,
+            eval_eps,
+            navigate_dataset,
+            explore_dataset
+        )
+    ]
+    env = wrappers.CollectDataset(env, crafter_env, navigate_dataset, explore_dataset, callbacks=callbacks, directory=config.traindir)
     env = wrappers.RewardObs(env)
     return env, crafter_env
 

@@ -11,14 +11,13 @@ from tools import thresholds
 
 class CollectDataset:
     def __init__(
-        self, env, crafter_env, train_eps, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
+        self, env, crafter_env, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
     ):
         self._env = env
         self.crafter_env = crafter_env
         self._callbacks = callbacks or ()
         self._precision = precision
         self._episode = None
-        self._cache = train_eps
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
         self.directory = directory
