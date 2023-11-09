@@ -160,16 +160,21 @@ class WorldModel(nn.Module):
         difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
                      (1 + np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
+        navigate_data, navigate_markers, success_dist, failure_dist = self.navigate_dataset.sample(target_dist)
+
         for i, t in enumerate(targets):
-            metrics["navigate/{}_sample_rate".format(t)] = target_dist[i]
-        navigate_data, navigate_markers = self.navigate_dataset.sample(target_dist)
+            metrics["navigate/{}_success_sample_rate".format(t)] = success_dist[i]
+        for i, t in enumerate(targets):
+            metrics["navigate/{}_failure_sample_rate".format(t)] = failure_dist[i]
         navigate_data = self.preprocess(navigate_data)
         difficulty = np.array(self.explore_dataset.failure_aggregate_sizes) / \
                      (1 + np.array(self.explore_dataset.success_aggregate_sizes) + np.array(self.explore_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
+        explore_data, explore_markers, success_dist, failure_dist = self.explore_dataset.sample(target_dist)
         for i, t in enumerate(targets):
-            metrics["explore/{}_sample_rate".format(t)] = target_dist[i]
-        explore_data, explore_markers = self.explore_dataset.sample(target_dist)
+            metrics["explore/{}_success_sample_rate".format(t)] = success_dist[i]
+        for i, t in enumerate(targets):
+            metrics["explore/{}_failure_sample_rate".format(t)] = failure_dist[i]
         explore_data = self.preprocess(explore_data)
         data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
 

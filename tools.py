@@ -376,13 +376,11 @@ class SliceDataset:
             success_dist = dist * success_ratio
             failure_dist = dist * np.array(self.failure_aggregate_sizes) / (1 + total_aggregate_sizes)
             success_size = int(np.sum(success_dist) * self.batch_size)
-            success_dist = success_dist / np.sum(success_dist)
-            failure_dist = failure_dist / np.sum(failure_dist)
             failure_size = self.batch_size - success_size
-            ret, markers = self.subsample(ret, markers, success_dist, success_size, self.success_tuples,
+            ret, markers = self.subsample(ret, markers, success_dist / np.sum(success_dist), success_size, self.success_tuples,
                                           self.success_episode_sizes,
                                           self.success_aggregate_sizes)
-            ret, markers = self.subsample(ret, markers, failure_dist, failure_size, self.failure_tuples,
+            ret, markers = self.subsample(ret, markers, failure_dist / np.sum(failure_dist), failure_size, self.failure_tuples,
                                           self.failure_episode_sizes,
                                           self.failure_aggregate_sizes)
         else:
@@ -392,6 +390,8 @@ class SliceDataset:
                                           self.success_aggregate_sizes)
             ret, markers = self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
                            self.failure_aggregate_sizes)
+            success_dist = dist * self.ratio / (self.ratio + 1)
+            failure_dist = dist / (self.ratio + 1)
         result = dict()
         for k, v in ret.items():
             shape = v.shape
@@ -399,7 +399,7 @@ class SliceDataset:
             assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
         markers = markers.reshape((self.batch_size, self.batch_length))
-        return result, markers.to(self.device)
+        return result, markers.to(self.device), success_dist, failure_dist
 
     def load(self):
         if os.path.isfile(self.path):
