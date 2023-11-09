@@ -285,34 +285,34 @@ class ProcessEpisodeWrap:
 
     @classmethod
     def process_episode(cls, config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, episode):
-        directory = dict(train=config.traindir, eval=config.evaldir)[mode]
-        cache = dict(train=train_eps, eval=eval_eps)[mode]
-        # this saved episodes is given as train_eps or eval_eps from next call
-        filename = tools.save_episodes(directory, [episode])[0]
+        # this saved episodes is given as train_eps from next call
+        filename = tools.save_episodes(config.traindir, [episode])[0]
         length = len(episode["reward"]) - 1
         score = float(episode["reward"].astype(np.float64).sum())
         video = episode["augmented"]
-        cache[str(filename)] = episode
+        train_eps[str(filename)] = episode
+        if mode == "eval":
+            eval_eps[str(filename)] = episode
         video = video[None].squeeze(0).transpose(0, 3, 1, 2)
+        total = 0
+        for key, ep in reversed(sorted(train_eps.items(), key=lambda x: x[0])):
+            if not config.dataset_size or total <= config.dataset_size - length:
+                total += len(ep["reward"]) - 1
+            else:
+                del train_eps[key]
+                for dataset in [navigate_dataset, explore_dataset]:
+                    for target_tuples in dataset.success_tuples:
+                        target_tuples.pop(key, None)
+                    for target_tuples in dataset.failure_tuples:
+                        target_tuples.pop(key, None)
+                    for i, target_sizes in enumerate(dataset.success_episode_sizes):
+                        dataset.success_aggregate_sizes[i] -= target_sizes.get(key, 0)
+                        target_sizes.pop(key, None)
+                    for i, target_sizes in enumerate(dataset.failure_episode_sizes):
+                        dataset.failure_aggregate_sizes[i] -= target_sizes.get(key, 0)
+                        target_sizes.pop(key, None)
+                    dataset.save()
         if mode == "train":
-            total = 0
-            for key, ep in reversed(sorted(cache.items(), key=lambda x: x[0])):
-                if not config.dataset_size or total <= config.dataset_size - length:
-                    total += len(ep["reward"]) - 1
-                else:
-                    del cache[key]
-                    for dataset in [navigate_dataset, explore_dataset]:
-                        for target_tuples in dataset.success_tuples:
-                            target_tuples.pop(key, None)
-                        for target_tuples in dataset.failure_tuples:
-                            target_tuples.pop(key, None)
-                        for i, target_sizes in enumerate(dataset.success_episode_sizes):
-                            dataset.success_aggregate_sizes[i] -= target_sizes.get(key, 0)
-                            target_sizes.pop(key, None)
-                        for i, target_sizes in enumerate(dataset.failure_episode_sizes):
-                            dataset.failure_aggregate_sizes[i] -= target_sizes.get(key, 0)
-                            target_sizes.pop(key, None)
-                        dataset.save()
             if wandb.run is not None:
                 wandb.log({"dataset_size": total}, step=logger.step)
                 if logger.step - cls.last_episode >= config.log_every:
@@ -320,11 +320,16 @@ class ProcessEpisodeWrap:
                     wandb.log({
                         f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
                     }, step=logger.step)
+            print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
+            if wandb.run is not None and score > -10:
+                wandb.log({f"{mode}_return": score, f"{mode}_length": length,
+                           f"{mode}_episodes": len(train_eps)},
+                          step=logger.step)
         elif mode == "eval":
-            # keep only last item for saving memory
-            while len(cache) > 1:
+            # keep only last 2 items for saving memory
+            while len(eval_eps) > 2:
                 # FIFO
-                a = cache.popitem()
+                eval_eps.popitem()
 
             # start counting scores for evaluation
             if cls.last_step_at_eval != logger.step:
@@ -335,20 +340,17 @@ class ProcessEpisodeWrap:
 
             cls.eval_scores.append(score)
             cls.eval_lengths.append(length)
+            print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
+            if wandb.run is not None and score > -10:
+                wandb.log({f"{mode}_return": score, f"{mode}_length": length},
+                          step=logger.step)
             # ignore if number of eval episodes exceeds eval_episode_num
             if len(cls.eval_scores) < config.eval_episode_num or cls.eval_done:
                 return
-            score = sum(cls.eval_scores) / len(cls.eval_scores)
-            length = sum(cls.eval_lengths) / len(cls.eval_lengths)
-            episode_num = len(cls.eval_scores)
             wandb.log({
                 f"{mode}_video": wandb.Video(video, caption=f"{mode}_video", fps=10)
             }, step=logger.step)
             cls.eval_done = True
-
-        print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
-        if wandb.run is not None and score > -10:
-            wandb.log({f"{mode}_return": score, f"{mode}_length": length, f"{mode}_episodes": len(cache) if mode == "train" else episode_num}, step=logger.step)
 
 
 def main(config, defaults):
@@ -395,14 +397,7 @@ def main(config, defaults):
         directory = config.evaldir
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
-    navigate_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 2/3), config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device,
-                                         mode="eval", name="navigate", ratio=config.success_failure_ratio)
-    explore_dataset_eval = SliceDataset(eval_eps, int(config.batch_size * 1/3), config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device,
-                                        mode="eval", name="explore", ratio=config.success_failure_ratio)
-    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset if mode == "train" else navigate_dataset_eval,
-                                 explore_dataset if mode == "train" else explore_dataset_eval)
+    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
     train_env, train_crafter = make("train")
     eval_env, eval_crafter = make("eval")
     acts = train_env.action_space

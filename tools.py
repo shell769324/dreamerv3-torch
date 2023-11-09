@@ -472,7 +472,7 @@ class SliceDataset:
 def get_episode_name(directory, incr=0):
     if "counter" not in get_episode_name.__dict__:
         get_episode_name.counter = 0
-    prefix = str(get_episode_name.counter)
+    prefix = str(get_episode_name.counter).zfill(5)
     get_episode_name.counter += incr
     return directory / f"{prefix}.npz"
 
