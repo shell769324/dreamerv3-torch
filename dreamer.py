@@ -340,7 +340,7 @@ class ProcessEpisodeWrap:
             print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
             if wandb.run is not None and score > -10:
                 wandb.log({f"{mode}_return": score, f"{mode}_length": length},
-                          step=logger.step)
+                          step=logger.step + len(cls.eval_lengths))
             # ignore if number of eval episodes exceeds eval_episode_num
             if len(cls.eval_scores) < config.eval_episode_num or cls.eval_done:
                 return
