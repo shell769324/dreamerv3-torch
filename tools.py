@@ -195,13 +195,14 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
             if metrics is not None:
                 reward_type = reward_type_reverse[obs[i]["reward_type"]]
                 if reward_type == "lava":
+                    action_type = "navigate" if target_spot[i - 1] == 0 else "explore"
                     lava_count = "{}_lava_count".format(mode)
                     if lava_count not in metrics.keys():
                         metrics[lava_count] = 1
                     else:
                         metrics[lava_count] += 1
                     reward_diff = abs(r - pred_reward)
-                    reward_diff_name = "{}_reward_diff/{}".format(mode, reward_type)
+                    reward_diff_name = "{}_reward_diff/{}_{}".format(mode, action_type, reward_type)
                     if reward_diff_name not in metrics.keys():
                         metrics[reward_diff_name] = [reward_diff]
                     else:
