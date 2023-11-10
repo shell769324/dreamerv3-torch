@@ -42,7 +42,7 @@ class Dreamer(nn.Module):
         self._should_reset = tools.Every(config.reset_every)
         self._should_expl = tools.Until(int(config.expl_until / config.action_repeat))
         self._metrics = {}
-        self._step = count_steps(config.traindir)
+        self._step = int(count_steps(config.traindir) / 2)
         self._update_count = 0
         self.train_crafter = train_crafter
         self.eval_crafter = eval_crafter
