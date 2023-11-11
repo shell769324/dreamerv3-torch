@@ -277,6 +277,8 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
 
 def load_slices(train_eps, navigate_dataset, explore_dataset):
     # Last augmented frame
+    if sum(navigate_dataset.success_aggregate_sizes) > 0 and sum(explore_dataset.success_aggregate_sizes) > 0:
+        return
     for ep_name, episode in train_eps.items():
         begin = 0
         target_spot = episode["target_spot"]
