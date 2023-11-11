@@ -388,7 +388,7 @@ class SliceDataset:
         lava_death_list = [(k, v) for k, v in self.lava_deaths.items()]
         while size < target_size:
             ep_name, (st, ed) = lava_death_list[random.randint(0, len(lava_death_list) - 1)]
-            cap = min(size - target_size, ed - st) + st
+            cap = min(target_size - size, ed - st) + st
             episode = self.dataset[ep_name]
             ret = {
                 k: np.append(
