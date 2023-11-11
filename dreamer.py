@@ -280,14 +280,13 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
     for ep_name, episode in train_eps.items():
         begin = 0
         target_spot = episode["target_spot"]
-        target = episode["target"]
-        print(target, target_spot, len(target))
-        for i in range(1, len(target)):
+        target_array = episode["target"]
+        for i in range(1, len(target_array)):
             print(i, i - 1)
             print(target_spot[i], target_spot[i - 1])
             print(episode["target"][i])
             print(episode["target"][i - 1])
-            if target_spot[i] != target_spot[i - 1] or target[i] != target[i - 1]:
+            if target_spot[i] != target_spot[i - 1] or target_array[i] != target_array[i - 1]:
                 dataset = [navigate_dataset, explore_dataset][target_spot[i - 1]]
                 step_name = ["target_navigate_steps", "target_explore_steps"][target_spot[i - 1]]
                 is_success = episode[step_name][i] >= 0
@@ -307,20 +306,20 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
                 begin = i
         dataset = [navigate_dataset, explore_dataset][episode["reward_mode"][-1]]
         cache = dataset.failure_tuples
-        if ep_name not in cache[target[-1]]:
-            cache[target[-1]][ep_name] = []
-            dataset.failure_episode_sizes[target[-1]][ep_name] = 0
+        if ep_name not in cache[target_array[-1]]:
+            cache[target_array[-1]][ep_name] = []
+            dataset.failure_episode_sizes[target_array[-1]][ep_name] = 0
         if reward_type_reverse[episode["reward_type"][-1]] == "lava":
-            start = len(target) - (lava_collect_limit - 1)
-            for i in range(len(target) - 1, max(-1, len(target) - lava_collect_limit), -1):
+            start = len(target_array) - (lava_collect_limit - 1)
+            for i in range(len(target_array) - 1, max(-1, len(target_array) - lava_collect_limit), -1):
                 if np.sum(episode["where"][-1][aware.index("lava")]) == 0:
                     start = i + 1
                     break
-            dataset.lava_deaths[ep_name] = (start, len(target))
+            dataset.lava_deaths[ep_name] = (start, len(target_array))
 
-        cache[target[-1]][ep_name].append([begin, len(target)])
-        dataset.failure_episode_sizes[target[-1]][ep_name] += len(target) - begin
-        dataset.failure_aggregate_sizes[target[-1]] += len(target) - begin
+        cache[target_array[-1]][ep_name].append([begin, len(target_array)])
+        dataset.failure_episode_sizes[target_array[-1]][ep_name] += len(target_array) - begin
+        dataset.failure_aggregate_sizes[target_array[-1]] += len(target_array) - begin
         navigate_dataset.save()
         explore_dataset.save()
         navigate_dataset.sanity_check()
