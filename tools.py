@@ -314,7 +314,7 @@ class SliceDataset:
                 assert np.sum(self.dataset[ep_name]["where"][i][aware.index("lava")]) > 0, \
                     "{} {} lava: {} {} doesn't have lava".format(self.mode, self.name, ep_name, i)
             assert 1 <= ed - st < lava_collect_limit, \
-                "{} {} lava: {} {} is too long".format(self.mode, self.name, ep_name, ed - st)
+                "{} {} lava: {} {} is too long (total len {})".format(self.mode, self.name, ep_name, ed - st, ed)
 
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
         sufa = "success" if tuples == self.success_tuples else "failure"
@@ -494,7 +494,7 @@ class SliceDataset:
                         start = i
                     if ["navigate", "explore"][target_spot[i]] != self.name:
                         start = -1
-                if ["navigate", "explore"][target_spot[-1]] == self.name:
+                if ["navigate", "explore"][episode.get("reward_mode")[-1]] == self.name:
                     target = episode["target"][-1]
                     if ep_name not in self.failure_tuples[target]:
                         self.failure_tuples[target][ep_name] = []

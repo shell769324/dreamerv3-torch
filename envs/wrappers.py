@@ -65,7 +65,7 @@ class CollectDataset:
                         episode_sizes[target][ep_name] += end - begin
                         aggregate_sizes[target] += end - begin
                     begin = i
-            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["target_spot"]]
+            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.failure_tuples
             if ep_name not in cache[transition["target"]]:
                 cache[transition["target"]][ep_name] = []

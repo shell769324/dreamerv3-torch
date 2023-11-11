@@ -310,6 +310,7 @@ class ProcessEpisodeWrap:
                     for i, target_sizes in enumerate(dataset.failure_episode_sizes):
                         dataset.failure_aggregate_sizes[i] -= target_sizes.get(key, 0)
                         target_sizes.pop(key, None)
+                    dataset.lava_deaths.pop(key, None)
                     dataset.save()
         if mode == "train":
             if wandb.run is not None:
