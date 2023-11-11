@@ -285,8 +285,8 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
         for i in range(1, len(target)):
             print(i, i - 1)
             print(target_spot[i], target_spot[i - 1])
-            print(target[i])
-            print(target[i - 1])
+            print(episode["target"][i])
+            print(episode["target"][i - 1])
             if target_spot[i] != target_spot[i - 1] or target[i] != target[i - 1]:
                 dataset = [navigate_dataset, explore_dataset][target_spot[i - 1]]
                 step_name = ["target_navigate_steps", "target_explore_steps"][target_spot[i - 1]]
