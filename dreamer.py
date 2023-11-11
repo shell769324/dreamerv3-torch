@@ -6,8 +6,8 @@ import functools
 import os
 import pathlib
 import sys
-from envs.crafter import targets, aware
-from tools import SliceDataset, get_episode_name
+from envs.crafter import targets, aware, reward_type_reverse
+from tools import SliceDataset, get_episode_name, thresholds, lava_collect_limit
 
 os.environ["MUJOCO_GL"] = "egl"
 
@@ -275,6 +275,53 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
     return env, crafter_env
 
 
+def load_slices(train_eps, navigate_dataset, explore_dataset):
+    # Last augmented frame
+    for ep_name, episode in train_eps.items():
+        begin = 0
+        target_spot = episode["target_spot"]
+        target = episode["target"]
+        for i in range(1, len(target)):
+            if (target_spot[i] != target_spot[i - 1]
+                    or target[i] != target[i - 1]):
+                dataset = [navigate_dataset, explore_dataset][target_spot[i - 1]]
+                step_name = ["target_navigate_steps", "target_explore_steps"][target_spot[i - 1]]
+                is_success = episode[step_name][i] >= 0
+                tuples = dataset.success_tuples if is_success else dataset.failure_tuples
+                episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
+                aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
+                end = i + 1
+                threshold = thresholds[["navigate", "explore"][target_spot[i - 1]]]
+                target = episode["prev_target"][i]
+                if end - begin >= threshold[target]:
+                    if ep_name not in tuples[target]:
+                        tuples[target][ep_name] = []
+                        episode_sizes[target][ep_name] = 0
+                    tuples[target][ep_name].append([begin, end])
+                    episode_sizes[target][ep_name] += end - begin
+                    aggregate_sizes[target] += end - begin
+                begin = i
+        dataset = [navigate_dataset, explore_dataset][episode["reward_mode"][-1]]
+        cache = dataset.failure_tuples
+        if ep_name not in cache[target[-1]]:
+            cache[target[-1]][ep_name] = []
+            dataset.failure_episode_sizes[target[-1]][ep_name] = 0
+        if reward_type_reverse[episode["reward_type"][-1]] == "lava":
+            start = len(target) - (lava_collect_limit - 1)
+            for i in range(len(target) - 1, max(-1, len(target) - lava_collect_limit), -1):
+                if np.sum(episode["where"][-1][aware.index("lava")]) == 0:
+                    start = i + 1
+                    break
+            dataset.lava_deaths[ep_name] = (start, len(target))
+
+        cache[target[-1]][ep_name].append([begin, len(target)])
+        dataset.failure_episode_sizes[target[-1]][ep_name] += len(target) - begin
+        dataset.failure_aggregate_sizes[target[-1]] += len(target) - begin
+        navigate_dataset.save()
+        explore_dataset.save()
+        navigate_dataset.sanity_check()
+        explore_dataset.sanity_check()
+
 class ProcessEpisodeWrap:
     eval_scores = []
     eval_lengths = []
@@ -390,6 +437,7 @@ def main(config, defaults):
     explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/4), config.batch_length,
                                    str(Path.joinpath(directory, "explore.json").absolute()), config.device,
                                    mode="train", name="explore", ratio=config.success_failure_ratio)
+    load_slices(train_eps, navigate_dataset, explore_dataset)
 
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))

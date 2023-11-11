@@ -289,9 +289,8 @@ class SliceDataset:
                                        targets[i])
                             target_spot = 0 if self.name == "navigate" else 1
                             assert self.dataset[ep_name]["target_spot"][
-                                       t] == target_spot, "{} {} {}: {} transition {} {} target_spot wrong". \
-                                format(self.mode, self.name, sufa, ep_name, t,
-                                       "navigate" if self.dataset[ep_name]["reward_mode"][t] == 0 else "explore")
+                                       t] == target_spot, "{} {} {}: {} transition {} target_spot wrong". \
+                                format(self.mode, self.name, sufa, ep_name, t)
                         if ed != len(self.dataset[ep_name]["target"]):
                             assert self.dataset[ep_name]["prev_target"][
                                        ed - 1] == i, "{} {} {}: {} transition {} is {}, not {}". \
@@ -462,54 +461,6 @@ class SliceDataset:
                 self.failure_episode_sizes = json_dict["failure_episode_sizes"]
                 self.failure_aggregate_sizes = json_dict["failure_aggregate_sizes"]
                 self.lava_deaths = json_dict["lava_deaths"]
-        else:
-            step_name = "target_navigate_steps" if self.name == "navigate" else "target_explore_steps"
-            print("No file detected on {}. Will recompute".format(self.path))
-            for ep_name, episode in self.dataset.items():
-                start = -1
-                target_spot = episode.get("target_spot")
-                for i in range(len(episode.get("reward"))):
-                    target_spot_name = ["navigate", "explore"][target_spot[i]]
-                    if target_spot_name == self.name and start == -1:
-                        start = i
-                    if i == 0:
-                        continue
-                    prev_target_spot_name = ["navigate", "explore"][target_spot[i - 1]]
-                    if prev_target_spot_name == self.name and (target_spot[i] != target_spot[i - 1] or
-                                                                     episode["target"][i] != episode["target"][i - 1]):
-                        target = episode["target"][i - 1]
-                        # Must include the next frame to learn do/lost reward
-                        end = i + 1
-                        is_success = episode[step_name][i] >= 0
-                        tuples = self.success_tuples if is_success else self.failure_tuples
-                        episode_sizes = self.success_episode_sizes if is_success else self.failure_episode_sizes
-                        aggregate_sizes = self.success_aggregate_sizes if is_success else self.failure_aggregate_sizes
-                        if end - start >= thresholds[self.name][target]:
-                            if ep_name not in tuples[target]:
-                                tuples[target][ep_name] = []
-                                episode_sizes[target][ep_name] = 0
-                            tuples[target][ep_name].append([start, end])
-                            episode_sizes[target][ep_name] += end - start
-                            aggregate_sizes[target] += end - start
-                        start = i
-                    if ["navigate", "explore"][target_spot[i]] != self.name:
-                        start = -1
-                if ["navigate", "explore"][episode.get("reward_mode")[-1]] == self.name:
-                    target = episode["target"][-1]
-                    if ep_name not in self.failure_tuples[target]:
-                        self.failure_tuples[target][ep_name] = []
-                        self.failure_episode_sizes[target][ep_name] = 0
-                    self.failure_tuples[target][ep_name].append([start, len(episode["target"])])
-                    self.failure_episode_sizes[target][ep_name] += len(episode["target"]) - start
-                    self.failure_aggregate_sizes[target] += len(episode["target"]) - start
-                    if reward_type_reverse[episode["reward_type"][-1]] == "lava":
-                        start = len(episode["reward_type"]) - (lava_collect_limit - 1)
-                        for i in range(len(episode["reward_type"]) - 1, max(-1, len(episode["reward_type"]) - lava_collect_limit), -1):
-                            if np.sum(episode["where"][i][aware.index("lava")]) == 0:
-                                start = i + 1
-                                break
-                        self.lava_deaths[ep_name] = (start, len(episode["reward_type"]))
-            self.save()
             self.sanity_check()
 
     def save(self):
