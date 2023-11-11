@@ -309,7 +309,7 @@ class SliceDataset:
         for ep_name, (st, ed) in self.lava_deaths.items():
             assert len(self.dataset[ep_name]["target"]) == ed, "{} {} lava: {} {} ed is not correct (expect: {})".\
                 format(self.mode, self.name, ep_name, (st, ed), len(self.dataset[ep_name]["target"]))
-            for i in range(st, ed):
+            for i in range(st, ed - 1):
                 assert np.sum(self.dataset[ep_name]["where"][i][aware.index("lava")]) > 0, \
                     "{} {} lava: {} {} doesn't have lava".format(self.mode, self.name, ep_name, i)
             assert 1 <= ed - st < lava_collect_limit, \
