@@ -406,7 +406,8 @@ class SliceDataset:
                 this_marker[0] = 1
                 markers = torch.cat([markers, this_marker], dim=0)
             size += cap - st
-        assert (ret["target"].shape[0] - old_target_shape) == target_size
+        new_target_shape = ret.get("target").shape[0] if "target" in ret else 0
+        assert (new_target_shape - old_target_shape) == target_size
         return ret, markers
 
     def sample(self, dist):
