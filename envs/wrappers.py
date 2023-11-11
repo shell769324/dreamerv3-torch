@@ -3,7 +3,7 @@ import numpy as np
 import uuid
 import torch
 from tools import get_episode_name
-from envs.crafter import targets
+from envs.crafter import reward_type_reverse, aware
 import json
 import os
 from tools import thresholds
@@ -70,6 +70,15 @@ class CollectDataset:
             if ep_name not in cache[transition["target"]]:
                 cache[transition["target"]][ep_name] = []
                 dataset.failure_episode_sizes[transition["target"]][ep_name] = 0
+            if reward_type_reverse[self._episode[-1]["reward_type"]] == "lava":
+                start = len(self._episode) - 5
+                for i in range(len(self._episode) - 1, max(-1, len(self._episode) - 6), -1):
+                    if np.sum(self._episode[i]["where"][aware.index("lava")]) == 0:
+                        start = i + 1
+                        break
+                dataset.lava_deaths[ep_name] = (start, len(self._episode))
+
+
             cache[transition["target"]][ep_name].append([begin, len(self._episode)])
             dataset.failure_episode_sizes[transition["target"]][ep_name] += len(self._episode) - begin
             dataset.failure_aggregate_sizes[transition["target"]] += len(self._episode) - begin

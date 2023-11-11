@@ -1,3 +1,4 @@
+import math
 import datetime
 import math
 import collections
@@ -8,7 +9,7 @@ import pickle
 import re
 import time
 import uuid
-from envs.crafter import targets, reward_type_reverse
+from envs.crafter import targets, reward_type_reverse, aware
 import random
 import os
 
@@ -234,6 +235,7 @@ class SliceDataset:
         self.success_tuples = [dict() for _ in range(len(targets))]
         self.failure_episode_sizes = [dict() for _ in range(len(targets))]
         self.success_episode_sizes = [dict() for _ in range(len(targets))]
+        self.lava_deaths = dict()
         self.failure_aggregate_sizes = [0] * len(targets)
         self.success_aggregate_sizes = [0] * len(targets)
         self.batch_size = batch_size
@@ -243,6 +245,7 @@ class SliceDataset:
         self.mode = mode
         self.name = name
         self.device = device
+        self.lava_death_ratio = 0.2
         if ratio is not None:
             self.ratio = float(ratio)
         else:
@@ -372,18 +375,46 @@ class SliceDataset:
                 self.mode, self.name, sufa, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
         return ret, markers
 
+    def sample_lava_deaths(self, ret, markers, target_size):
+        size = 0
+        lava_death_list = [(k, v) for k, v in self.lava_deaths.items()]
+        while size < target_size:
+            ep_name, (st, ed) = lava_death_list[random.randint(0, len(lava_death_list) - 1)]
+            cap = min(size + ed - st - target_size, ed)
+            episode = self.dataset[ep_name]
+            ret = {
+                k: np.append(
+                    ret[k], v[st:cap], axis=0
+                ) if k in ret else v[st:cap]
+                for k, v in episode.items() if k != "augmented"
+            }
+            if markers is None:
+                markers = torch.zeros((cap - st,))
+                markers[0] = 1
+            else:
+                this_marker = torch.zeros((cap - st,))
+                this_marker[0] = 1
+                markers = torch.cat([markers, this_marker], dim=0)
+            size += cap - st
+        return ret, markers
+
     def sample(self, dist):
         self.sanity_check()
         ret = dict()
         markers = None
+        lava_death_size = int(self.batch_size * self.lava_death_ratio)
+        total_lava_frame_count = sum([end - start for (start, end) in self.lava_deaths.values()])
+        lava_death_size = min(math.floor(total_lava_frame_count / self.batch_length), lava_death_size)
+        remaining_size = self.batch_size - lava_death_size
+        ret, markers = self.sample_lava_deaths(ret, markers, lava_death_size)
         if self.ratio is None or np.any(np.array(self.success_aggregate_sizes) <= 1000):
             total_aggregate_sizes = np.array(self.success_aggregate_sizes) + np.array(self.failure_aggregate_sizes)
             dist = total_aggregate_sizes / np.sum(total_aggregate_sizes)
             success_ratio = np.array(self.success_aggregate_sizes) / (1 + total_aggregate_sizes)
             success_dist = dist * success_ratio
             failure_dist = dist * np.array(self.failure_aggregate_sizes) / (1 + total_aggregate_sizes)
-            success_size = int(np.sum(success_dist) * self.batch_size)
-            failure_size = self.batch_size - success_size
+            success_size = int(np.sum(success_dist) * remaining_size)
+            failure_size = remaining_size - success_size
             ret, markers = self.subsample(ret, markers, success_dist / np.sum(success_dist), success_size, self.success_tuples,
                                           self.success_episode_sizes,
                                           self.success_aggregate_sizes)
@@ -391,8 +422,8 @@ class SliceDataset:
                                           self.failure_episode_sizes,
                                           self.failure_aggregate_sizes)
         else:
-            success_size = int(self.batch_size * self.ratio / (self.ratio + 1))
-            failure_size = self.batch_size - success_size
+            success_size = int(remaining_size * self.ratio / (self.ratio + 1))
+            failure_size = remaining_size - success_size
             ret, markers = self.subsample(ret, markers, dist, success_size, self.success_tuples, self.success_episode_sizes,
                                           self.success_aggregate_sizes)
             ret, markers = self.subsample(ret, markers, dist, failure_size, self.failure_tuples, self.failure_episode_sizes,
@@ -419,6 +450,7 @@ class SliceDataset:
                 self.failure_tuples = json_dict["failure_tuples"]
                 self.failure_episode_sizes = json_dict["failure_episode_sizes"]
                 self.failure_aggregate_sizes = json_dict["failure_aggregate_sizes"]
+                self.lava_deaths = json_dict["lava_deaths"]
         else:
             step_name = "target_navigate_steps" if self.name == "navigate" else "target_explore_steps"
             print("No file detected on {}. Will recompute".format(self.path))
@@ -459,6 +491,13 @@ class SliceDataset:
                     self.failure_tuples[target][ep_name].append([start, len(episode["target"])])
                     self.failure_episode_sizes[target][ep_name] += len(episode["target"]) - start
                     self.failure_aggregate_sizes[target] += len(episode["target"]) - start
+                if reward_type_reverse[episode["reward_type"][-1]] == "lava":
+                    start = len(episode["reward_type"]) - 5
+                    for i in range(len(episode["reward_type"]) - 1, max(-1, len(episode["reward_type"]) - 6), -1):
+                        if np.sum(episode["where"][i][aware.index("lava")]) == 0:
+                            start = i + 1
+                            break
+                    self.lava_deaths[ep_name] = (start, len(episode["reward_type"]))
             self.save()
             self.sanity_check()
 
@@ -473,6 +512,7 @@ class SliceDataset:
             json_dict["failure_episode_sizes"] = self.failure_episode_sizes
             json_dict["success_aggregate_sizes"] = self.success_aggregate_sizes
             json_dict["failure_aggregate_sizes"] = self.failure_aggregate_sizes
+            json_dict["lava_deaths"] = self.lava_deaths
             json.dump(json_dict, f, ensure_ascii=False, indent=4)
 
 
