@@ -383,9 +383,11 @@ class SliceDataset:
                 self.mode, self.name, sufa, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
         return ret, markers
 
-    def sample_lava_deaths(self, ret, markers, target_size):
+    def sample_lava_deaths(self, ret, markers, batch_needed):
         size = 0
         lava_death_list = [(k, v) for k, v in self.lava_deaths.items()]
+        target_size = batch_needed * self.batch_length
+        old_target_shape = ret.get("target").shape[0] if "target" in ret else 0
         while size < target_size:
             ep_name, (st, ed) = lava_death_list[random.randint(0, len(lava_death_list) - 1)]
             cap = min(target_size - size, ed - st) + st
@@ -404,6 +406,7 @@ class SliceDataset:
                 this_marker[0] = 1
                 markers = torch.cat([markers, this_marker], dim=0)
             size += cap - st
+        assert (ret["target"].shape[0] - old_target_shape) == target_size
         return ret, markers
 
     def sample(self, dist):
