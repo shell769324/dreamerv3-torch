@@ -6,7 +6,7 @@ from tools import get_episode_name
 from envs.crafter import reward_type_reverse, aware
 import json
 import os
-from tools import thresholds
+from tools import thresholds, lava_collect_limit
 
 
 class CollectDataset:
@@ -71,8 +71,8 @@ class CollectDataset:
                 cache[transition["target"]][ep_name] = []
                 dataset.failure_episode_sizes[transition["target"]][ep_name] = 0
             if reward_type_reverse[self._episode[-1]["reward_type"]] == "lava":
-                start = len(self._episode) - 5
-                for i in range(len(self._episode) - 1, max(-1, len(self._episode) - 6), -1):
+                start = len(self._episode) - (lava_collect_limit - 1)
+                for i in range(len(self._episode) - 1, max(-1, len(self._episode) - lava_collect_limit), -1):
                     if np.sum(self._episode[i]["where"][aware.index("lava")]) == 0:
                         start = i + 1
                         break

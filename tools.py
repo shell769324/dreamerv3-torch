@@ -25,6 +25,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 thresholds = {"navigate": [5, 5, 6, 7, 8, 7], "explore": [4, 5, 3, 7, 8, 4]}
 to_np = lambda x: x.detach().cpu().numpy()
+lava_collect_limit = 6
 
 def symlog(x):
     return torch.sign(x) * torch.log(torch.abs(x) + 1.0)
@@ -306,6 +307,14 @@ class SliceDataset:
                 for ep_name in tuples[i].keys():
                     assert ep_name in episode_sizes[i], "{} {} {}: tuples has episode {} but ep doesn't".format(
                         self.mode, self.name, sufa, ep_name)
+        for ep_name, (st, ed) in self.lava_deaths.items():
+            assert len(self.dataset[ep_name]["target"]) == ed, "{} {} lava: {} {} ed is not correct (expect: {})".\
+                format(self.mode, self.name, ep_name, (st, ed), len(self.dataset[ep_name]["target"]))
+            for i in range(st, ed):
+                assert np.sum(self.dataset[ep_name]["where"][i][aware.index("lava")]) > 0, \
+                    "{} {} lava: {} {} doesn't have lava".format(self.mode, self.name, ep_name, i)
+            assert 1 <= ed - st < lava_collect_limit, \
+                "{} {} lava: {} {} is too long".format(self.mode, self.name, ep_name, ed - st)
 
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
         sufa = "success" if tuples == self.success_tuples else "failure"
@@ -493,13 +502,13 @@ class SliceDataset:
                     self.failure_tuples[target][ep_name].append([start, len(episode["target"])])
                     self.failure_episode_sizes[target][ep_name] += len(episode["target"]) - start
                     self.failure_aggregate_sizes[target] += len(episode["target"]) - start
-                if reward_type_reverse[episode["reward_type"][-1]] == "lava":
-                    start = len(episode["reward_type"]) - 5
-                    for i in range(len(episode["reward_type"]) - 1, max(-1, len(episode["reward_type"]) - 6), -1):
-                        if np.sum(episode["where"][i][aware.index("lava")]) == 0:
-                            start = i + 1
-                            break
-                    self.lava_deaths[ep_name] = (start, len(episode["reward_type"]))
+                    if reward_type_reverse[episode["reward_type"][-1]] == "lava":
+                        start = len(episode["reward_type"]) - (lava_collect_limit - 1)
+                        for i in range(len(episode["reward_type"]) - 1, max(-1, len(episode["reward_type"]) - lava_collect_limit), -1):
+                            if np.sum(episode["where"][i][aware.index("lava")]) == 0:
+                                start = i + 1
+                                break
+                        self.lava_deaths[ep_name] = (start, len(episode["reward_type"]))
             self.save()
             self.sanity_check()
 
