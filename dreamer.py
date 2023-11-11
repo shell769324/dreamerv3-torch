@@ -129,6 +129,8 @@ class Dreamer(nn.Module):
                 for i in range(len(targets)):
                     metrics_dict["explore_dataset_size/success_" + targets[i]] = self.explore_dataset.success_aggregate_sizes[i]
                     metrics_dict["explore_dataset_size/failure_" + targets[i]] = self.explore_dataset.failure_aggregate_sizes[i]
+                metrics_dict["navigate_dataset_size/lava"] = sum([end - start for (start, end) in self.navigate_dataset.lava_deaths.values()])
+                metrics_dict["explore_dataset_size/lava"] = sum([end - start for (start, end) in self.explore_dataset.lava_deaths.values()])
                 openl = self._wm.video_pred(next(self._dataset))
                 # 64 (64 * 3) (64 * 6) 3
                 video = to_np(openl).transpose(0, 3, 1, 2)

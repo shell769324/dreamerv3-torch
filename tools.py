@@ -437,7 +437,9 @@ class SliceDataset:
             assert np.prod(np.array(v.shape)) == np.prod(np.array(desired)), "{} {} {}: expected {} actual {}".format(self.mode, self.name, k, desired, v.shape)
             result[k] = v.reshape(desired)
         markers = markers.reshape((self.batch_size, self.batch_length))
-        return result, markers.to(self.device), success_dist, failure_dist
+        return result, markers.to(self.device), (1 - remaining_size / self.batch_size), \
+            success_dist * remaining_size / self.batch_size, \
+            failure_dist * remaining_size / self.batch_size
 
     def load(self):
         if os.path.isfile(self.path):

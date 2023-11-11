@@ -160,8 +160,8 @@ class WorldModel(nn.Module):
         difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
                      (1 + np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
-        navigate_data, navigate_markers, success_dist, failure_dist = self.navigate_dataset.sample(target_dist)
-
+        navigate_data, navigate_markers, lava_rate, success_dist, failure_dist = self.navigate_dataset.sample(target_dist)
+        metrics["navigate/lava_sample_rate"] = lava_rate
         for i, t in enumerate(targets):
             metrics["navigate/{}_success_sample_rate".format(t)] = success_dist[i]
         for i, t in enumerate(targets):
@@ -170,7 +170,8 @@ class WorldModel(nn.Module):
         difficulty = np.array(self.explore_dataset.failure_aggregate_sizes) / \
                      (1 + np.array(self.explore_dataset.success_aggregate_sizes) + np.array(self.explore_dataset.failure_aggregate_sizes))
         target_dist = difficulty / np.sum(difficulty)
-        explore_data, explore_markers, success_dist, failure_dist = self.explore_dataset.sample(target_dist)
+        explore_data, explore_markers, lava_rate, success_dist, failure_dist = self.explore_dataset.sample(target_dist)
+        metrics["explore/lava_sample_rate"] = lava_rate
         for i, t in enumerate(targets):
             metrics["explore/{}_success_sample_rate".format(t)] = success_dist[i]
         for i, t in enumerate(targets):
