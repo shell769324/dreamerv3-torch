@@ -43,8 +43,8 @@ class CollectDataset:
         if done:
             # Last augmented frame
             if self.policy is not None and self.agent_state is not None:
-                results = [(obs, reward, done, info)]
-                obs, reward, done, info = zip(*[p[:] for p in results])
+                results = [(obs, reward)]
+                obs, _ = zip(*[p[:] for p in results])
                 obs = list(obs)
                 obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
                 self.policy._policy(obs, self.agent_state, True)
