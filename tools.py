@@ -202,7 +202,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
                         metrics[lava_count] = 1
                     else:
                         metrics[lava_count] += 1
-                    reward_diff = abs(r - crafter.pred_reward)
+                    reward_diff = abs(r - crafter.reward)
                     reward_diff_name = "{}_reward_diff/{}_{}".format(mode, action_type, reward_type)
                     if reward_diff_name not in metrics.keys():
                         metrics[reward_diff_name] = [reward_diff]
@@ -217,7 +217,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
                         metrics[failure_name] = 1
                     else:
                         metrics[failure_name] += 1
-                reward_diff = abs(r - crafter.pred_reward)
+                reward_diff = abs(r - crafter.reward)
                 reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
                 if reward_diff_name not in metrics.keys():
                     metrics[reward_diff_name] = [reward_diff]
