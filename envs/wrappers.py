@@ -43,7 +43,7 @@ class CollectDataset:
         if done:
             # Last augmented frame
             if self.policy is not None and self.agent_state is not None:
-                self.policy._policy(obs, self.agent_state, True, display_purpose=True)
+                self.policy._policy(obs, self.agent_state, True)
                 augmented = self.crafter_env.create_augment()
                 self._episode[-1]["augmented"] = augmented
             else:
