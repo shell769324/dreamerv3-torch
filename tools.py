@@ -145,6 +145,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         reward = [0]
     else:
         step, episode, done, length, obs, agent_state, reward = state
+    mode = "train" if training else "eval"
     while (steps and step < steps) or (episodes and episode < episodes):
         # Reset envs if necessary.
         if done.any():
@@ -158,6 +159,23 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
         target_spot = obs["target_spot"]
         action, agent_state = agent(obs, done, agent_state, reward, training=training)
+        for i, r in enumerate(reward):
+            if metrics is not None:
+                reward_type = reward_type_reverse[obs[i]["reward_type"]]
+                target_name = targets[obs[i]["prev_target"]]
+                # Lost track of target when navigating is a failure
+                if reward_type == "navigate_lost":
+                    failure_name = "{}_navigate_failure/{}".format(mode, target_name)
+                    if failure_name not in metrics.keys():
+                        metrics[failure_name] = 1
+                    else:
+                        metrics[failure_name] += 1
+                reward_diff = abs(r - crafter.reward)
+                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
+                if reward_diff_name not in metrics.keys():
+                    metrics[reward_diff_name] = [reward_diff]
+                else:
+                    metrics[reward_diff_name].append(reward_diff)
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][0].detach().cpu()) for k in action}
@@ -175,50 +193,29 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         length += 1
         step += (done * length).sum()
         length *= 1 - done
-        mode = "train" if training else "eval"
-        for i, d in enumerate(done):
-            if d and metrics is not None:
-                action_type = "navigate" if target_spot[i - 1] == 0 else "explore"
-                target_name = targets[obs[i]["prev_target"]]
-                failure_name = "{}_{}_failure/{}".format(mode, action_type, target_name)
-                if failure_name not in metrics.keys():
-                    metrics[failure_name] = 1
-                else:
-                    metrics[failure_name] += 1
         death_count = "{}_death_count".format(mode)
         if metrics is not None and done.any():
+            action_type = "navigate" if target_spot[0] == 0 else "explore"
+            target_name = targets[obs[0]["prev_target"]]
+            failure_name = "{}_{}_failure/{}".format(mode, action_type, target_name)
+            if failure_name not in metrics.keys():
+                metrics[failure_name] = 1
+            else:
+                metrics[failure_name] += 1
             if death_count not in metrics.keys():
                 metrics[death_count] = 1
             else:
                 metrics[death_count] += 1
-
-        for i, r in enumerate(reward):
-            if metrics is not None:
-                reward_type = reward_type_reverse[obs[i]["reward_type"]]
-                if reward_type == "lava":
-                    action_type = "navigate" if target_spot[i - 1] == 0 else "explore"
-                    lava_count = "{}_lava_count".format(mode)
-                    if lava_count not in metrics.keys():
-                        metrics[lava_count] = 1
-                    else:
-                        metrics[lava_count] += 1
-                    reward_diff = abs(r - crafter.reward)
-                    reward_diff_name = "{}_reward_diff/{}_{}".format(mode, action_type, reward_type)
-                    if reward_diff_name not in metrics.keys():
-                        metrics[reward_diff_name] = [reward_diff]
-                    else:
-                        metrics[reward_diff_name].append(reward_diff)
-                    continue
-                target_name = targets[obs[i]["prev_target"]]
-                # Lost track of target when navigating is a failure
-                if reward_type == "navigate_lost":
-                    failure_name = "{}_navigate_failure/{}".format(mode, target_name)
-                    if failure_name not in metrics.keys():
-                        metrics[failure_name] = 1
-                    else:
-                        metrics[failure_name] += 1
-                reward_diff = abs(r - crafter.reward)
-                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
+            reward_type = reward_type_reverse[obs[0]["reward_type"]]
+            if reward_type == "lava":
+                action_type = "navigate" if target_spot[0] == 0 else "explore"
+                lava_count = "{}_lava_count".format(mode)
+                if lava_count not in metrics.keys():
+                    metrics[lava_count] = 1
+                else:
+                    metrics[lava_count] += 1
+                reward_diff = abs(reward[0] - crafter.reward)
+                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, action_type, reward_type)
                 if reward_diff_name not in metrics.keys():
                     metrics[reward_diff_name] = [reward_diff]
                 else:
