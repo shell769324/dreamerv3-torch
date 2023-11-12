@@ -521,7 +521,7 @@ def main(config, defaults):
             state = tools.simulate(agent, train_collector, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
             torch.save(agent.state_dict(), logdir / "latest_model.pt")
             print("Start evaluation.")
-            tools.simulate(agent, train_collector, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
+            tools.simulate(agent, eval_collector, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred).transpose(0, 3, 1, 2)
             wandb.log({
