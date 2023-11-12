@@ -160,6 +160,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         target_spot = obs["target_spot"]
         action, agent_state = agent(obs, done, agent_state, reward, training=training)
         if metrics is not None:
+            print("reward", obs["reward_type"], obs["prev_target"])
             reward_type = reward_type_reverse[obs["reward_type"]]
             target_name = targets[obs["prev_target"]]
             # Lost track of target when navigating is a failure
@@ -193,6 +194,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         step += (done * length).sum()
         length *= 1 - done
         death_count = "{}_death_count".format(mode)
+        print("keys", obs[0].keys())
         if metrics is not None and done.any():
             action_type = "navigate" if target_spot[0] == 0 else "explore"
             target_name = targets[obs[0]["prev_target"]]
