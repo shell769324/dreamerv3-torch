@@ -159,23 +159,22 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
         target_spot = obs["target_spot"]
         action, agent_state = agent(obs, done, agent_state, reward, training=training)
-        for i, r in enumerate(reward):
-            if metrics is not None:
-                reward_type = reward_type_reverse[obs[i]["reward_type"]]
-                target_name = targets[obs[i]["prev_target"]]
-                # Lost track of target when navigating is a failure
-                if reward_type == "navigate_lost":
-                    failure_name = "{}_navigate_failure/{}".format(mode, target_name)
-                    if failure_name not in metrics.keys():
-                        metrics[failure_name] = 1
-                    else:
-                        metrics[failure_name] += 1
-                reward_diff = abs(r - crafter.reward)
-                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
-                if reward_diff_name not in metrics.keys():
-                    metrics[reward_diff_name] = [reward_diff]
+        if metrics is not None:
+            reward_type = reward_type_reverse[obs["reward_type"]]
+            target_name = targets[obs["prev_target"]]
+            # Lost track of target when navigating is a failure
+            if reward_type == "navigate_lost":
+                failure_name = "{}_navigate_failure/{}".format(mode, target_name)
+                if failure_name not in metrics.keys():
+                    metrics[failure_name] = 1
                 else:
-                    metrics[reward_diff_name].append(reward_diff)
+                    metrics[failure_name] += 1
+            reward_diff = abs(r - crafter.reward)
+            reward_diff_name = "{}_reward_diff/{}_{}".format(mode, reward_type, target_name)
+            if reward_diff_name not in metrics.keys():
+                metrics[reward_diff_name] = [reward_diff]
+            else:
+                metrics[reward_diff_name].append(reward_diff)
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][0].detach().cpu()) for k in action}
