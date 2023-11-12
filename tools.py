@@ -159,7 +159,7 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
         target_spot = obs["target_spot"]
         action, agent_state = agent(obs, done, agent_state, reward, training=training)
-        if metrics is not None:
+        if metrics is not None and reward_type_reverse[obs["reward_type"][0]] != "default":
             reward_type = reward_type_reverse[obs["reward_type"][0]]
             target_name = targets[obs["prev_target"][0]]
             # Lost track of target when navigating is a failure
