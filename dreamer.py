@@ -312,7 +312,7 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
         if reward_type_reverse[episode["reward_type"][-1]] == "lava":
             start = len(target_array) - (lava_collect_limit - 1)
             for i in range(len(target_array) - 2, max(-1, len(target_array) - lava_collect_limit), -1):
-                if np.sum(episode["where"][-1][aware.index("lava")]) == 0:
+                if np.sum(episode["where"][i][aware.index("lava")]) == 0:
                     start = i + 1
                     break
             dataset.lava_deaths[ep_name] = (start, len(target_array))
