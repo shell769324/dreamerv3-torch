@@ -44,10 +44,10 @@ class CollectDataset:
             # Last augmented frame
             if self.policy is not None and self.agent_state is not None:
                 results = [(obs, reward)]
-                obs, _ = zip(*[p[:] for p in results])
-                obs = list(obs)
-                obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-                self.policy._policy(obs, self.agent_state, True)
+                usable_obs, _ = zip(*[p[:] for p in results])
+                usable_obs = list(usable_obs)
+                usable_obs = {k: np.stack([o[k] for o in usable_obs]) for k in usable_obs[0]}
+                self.policy._policy(usable_obs, self.agent_state, True)
                 augmented = self.crafter_env.create_augment()
                 self._episode[-1]["augmented"] = augmented
             else:
