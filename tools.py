@@ -193,7 +193,6 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         step += (done * length).sum()
         length *= 1 - done
         death_count = "{}_death_count".format(mode)
-        print("keys", obs[0].keys())
         if metrics is not None and done.any():
             action_type = "navigate" if target_spot[0] == 0 else "explore"
             target_name = targets[obs[0]["prev_target"]]
