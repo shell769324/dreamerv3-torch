@@ -21,6 +21,8 @@ class CollectDataset:
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
         self.directory = directory
+        self.policy = None
+        self.agent_state = None
 
 
     def __getattr__(self, name):
@@ -40,7 +42,13 @@ class CollectDataset:
         self._episode.append(transition)
         if done:
             # Last augmented frame
-            self._episode[-1]["augmented"] = self.crafter_env.last_frame
+            if self.policy is not None and self.agent_state is not None:
+                self.policy._policy(obs, self.agent_state, True, display_purpose=True)
+                augmented = self.crafter_env.create_augment()
+                self._episode[-1]["augmented"] = augmented
+            else:
+                # this is needed since the dimensions must all match across transition
+                self._episode[-1]["augmented"] = self._episode[-2]["augmented"]
             ep_name = str(get_episode_name(self.directory))
             begin = 0
             for i, transition in enumerate(self._episode):

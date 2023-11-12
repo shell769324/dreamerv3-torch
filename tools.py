@@ -134,7 +134,7 @@ class Logger:
         self._writer.add_video(name, value, step, 16)
 
 
-def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True, metrics=None):
+def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, training=True, metrics=None):
     # Initialize or unpack simulation state.
     if state is None:
         step, episode = 0, 0
@@ -157,9 +157,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
         target_spot = obs["target_spot"]
-        action, agent_state, value, pred_reward = agent(obs, done, agent_state, reward, training=training)
-        crafter.value = value
-        crafter.reward = pred_reward
+        action, agent_state = agent(obs, done, agent_state, reward, training=training)
         if isinstance(action, dict):
             action = [
                 {k: np.array(action[k][0].detach().cpu()) for k in action}
@@ -167,6 +165,7 @@ def simulate(agent, env, crafter, steps=0, episodes=0, state=None, training=True
         else:
             action = np.array(action)
         # Step envs.
+        collector.agent_state = agent_state
         results = [env.step(action[0])]
         obs, reward, done, info = zip(*[p[:] for p in results])
         obs = list(obs)

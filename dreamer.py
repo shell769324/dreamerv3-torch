@@ -153,12 +153,12 @@ class Dreamer(nn.Module):
                         self._metrics[step_name].append(obs["target_{}_steps".format(t)][i])
                         self._metrics[success_name] += 1
 
-        policy_output, state, value, reward = self._policy(obs, state, training)
+        policy_output, state = self._policy(obs, state, training)
 
         if training:
             self._step += len(reset)
             self._logger.step = self._config.action_repeat * self._step
-        return policy_output, state, value, reward
+        return policy_output, state
 
     def _policy(self, obs, state, training):
         if state is None:
@@ -195,6 +195,8 @@ class Dreamer(nn.Module):
         where_prediction, front_prediction = self._wm.embed_where(embed)
         crafter_env.predicted_where = where_prediction.mode().reshape((len(aware), 4)).to(torch.long).cpu().detach().numpy().astype(np.uint8)
         crafter_env.predicted_front = front_prediction.mode().argmax().cpu().detach().numpy().astype(np.int8)
+        crafter_env.value = tools.TwoHotDistSymlog(logits=means, device=self._config.device).mode().reshape(-1).item()
+        crafter_env.reward = reward_prediction.mode().reshape(-1).item()
         actor = tools.OneHotDist(policy_params, unimix_ratio=self._config.action_unimix_ratio)
         if not training:
             action = actor.mode()
@@ -206,7 +208,7 @@ class Dreamer(nn.Module):
         action = self._exploration(action, training)
         policy_output = {"action": action, "logprob": logprob}
         state = (latent, action)
-        return policy_output, state, tools.TwoHotDistSymlog(logits=means, device=self._config.device).mode().reshape(-1).item(), reward_prediction.mode().reshape(-1).item()
+        return policy_output, state
 
     def _exploration(self, action, training):
         amount = self._config.expl_amount if training else self._config.eval_noise
@@ -270,9 +272,9 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
             explore_dataset
         )
     ]
-    env = wrappers.CollectDataset(env, crafter_env, navigate_dataset, explore_dataset, callbacks=callbacks, directory=config.traindir)
-    env = wrappers.RewardObs(env)
-    return env, crafter_env
+    collector = wrappers.CollectDataset(env, crafter_env, navigate_dataset, explore_dataset, callbacks=callbacks, directory=config.traindir)
+    env = wrappers.RewardObs(collector)
+    return env, crafter_env, collector
 
 
 def load_slices(train_eps, navigate_dataset, explore_dataset):
@@ -447,8 +449,8 @@ def main(config, defaults):
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
     make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
-    train_env, train_crafter = make("train")
-    eval_env, eval_crafter = make("eval")
+    train_env, train_crafter, train_collector = make("train")
+    eval_env, eval_crafter, eval_collector = make("eval")
     acts = train_env.action_space
     config.num_actions = acts.n if hasattr(acts, "n") else acts.shape[0]
 
@@ -476,13 +478,15 @@ def main(config, defaults):
                 crafter_env.reward_type = "navigate"
             else:
                 crafter_env.reward_type = "explore"
-            return {"action": action, "logprob": logprob}, None, 0, 0
+            return {"action": action, "logprob": logprob}, None
 
         tools.simulate(random_agent, train_env, train_crafter, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
     agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset, train_crafter, eval_crafter).to(config.device)
+    train_collector.policy = agent
+    eval_collector.policy = agent
     agent.requires_grad_(requires_grad=False)
     if (logdir / "latest_model.pt").exists():
         agent.load_state_dict(torch.load(logdir / "latest_model.pt"))
@@ -514,10 +518,10 @@ def main(config, defaults):
 
         while agent._step < config.steps:
             print("Start training.")
-            state = tools.simulate(agent, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
+            state = tools.simulate(agent, train_collector, train_env, train_crafter, config.eval_every, state=state, metrics=agent._metrics)
             torch.save(agent.state_dict(), logdir / "latest_model.pt")
             print("Start evaluation.")
-            tools.simulate(agent, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
+            tools.simulate(agent, train_collector, eval_env, eval_crafter, episodes=config.eval_episode_num, training=False, metrics=agent._metrics)
             video_pred = agent._wm.video_pred(next(eval_dataset))
             video = to_np(video_pred).transpose(0, 3, 1, 2)
             wandb.log({

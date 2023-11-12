@@ -50,7 +50,6 @@ class Crafter():
         self.faced = False
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware)
-        self.last_frame = None
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -177,15 +176,6 @@ class Crafter():
             res = self.explore_step(action)
         else:
             raise ValueError("impossible")
-        if self._done:
-            self.last_frame = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward,
-                                                self.value, self.reward,
-                                                self.compute_where(self._crafter_env._player.pos,
-                                                                   self._env._sem_view()),
-                                                self.predicted_where, self._last_min_dist is not None,
-                                                self.compute_front(self._crafter_env._player.pos,
-                                                                   self._crafter_env._player.facing,
-                                                                   self._env._sem_view()))
         return res
 
     def navigate_step(self, action):
@@ -208,13 +198,7 @@ class Crafter():
             # if face_in_bound and self._id_to_item[self.prev_info['semantic'][faced_pos]] in ["grass", "path", "sand"]:
             #    useless_do = True
 
-        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward, self.value, self.reward,
-                                            self.compute_where(self._crafter_env._player.pos,
-                                                               self._env._sem_view()),
-                                            self.predicted_where, self._last_min_dist is not None,
-                                            self.compute_front(self._crafter_env._player.pos,
-                                                               self._crafter_env._player.facing,
-                                                               self._env._sem_view()))
+        augmented = self.create_augment()
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
@@ -336,20 +320,23 @@ class Crafter():
             **log_achievements,
         )
 
+    def create_augment(self):
+        return self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward,
+                                self.value, self.reward,
+                                self.compute_where(self._crafter_env._player.pos,
+                                                   self._env._sem_view()),
+                                self.predicted_where, self._last_min_dist is not None,
+                                self.compute_front(self._crafter_env._player.pos,
+                                                   self._crafter_env._player.facing,
+                                                   self._env._sem_view()))
+
     def explore_step(self, action):
         if len(action.shape) >= 1:
             action = np.argmax(action)
         # don't do noop
         action += 1
 
-        augmented = self._env.render_target(targets[self._target], self._last_min_dist, self.prev_actual_reward,
-                                            self.value, self.reward,
-                                            self.compute_where(self._crafter_env._player.pos,
-                                                               self._env._sem_view()),
-                                            self.predicted_where, self._last_min_dist is not None,
-                                            self.compute_front(self._crafter_env._player.pos,
-                                                               self._crafter_env._player.facing,
-                                                               self._env._sem_view()))
+        augmented = self.create_augment()
         useless_do = False
         if action == 5:
             player_pos = self.prev_info['player_pos']
