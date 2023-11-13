@@ -348,6 +348,7 @@ class ProcessEpisodeWrap:
             if not config.dataset_size or total <= config.dataset_size - length:
                 total += len(ep["reward"]) - 1
             else:
+                print("removing {} from dataset".format(key))
                 del train_eps[key]
                 for dataset in [navigate_dataset, explore_dataset]:
                     for target_tuples in dataset.success_tuples:

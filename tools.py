@@ -562,8 +562,11 @@ def load_episodes(directory, limit=None, reverse=True):
                 print(f"Could not load episode: {e}")
                 continue
             episodes[str(filename)] = episode
+            if total == 0:
+                print("first loaded: {}".format(str(filename)))
             total += len(episode["reward"]) - 1
             if limit and total >= limit:
+                print("last loaded: {}".format(str(filename)))
                 break
     else:
         for filename in sorted(directory.glob("*.npz")):
