@@ -320,10 +320,10 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
         cache[target_array[-1]][ep_name].append([begin, len(target_array)])
         dataset.failure_episode_sizes[target_array[-1]][ep_name] += len(target_array) - begin
         dataset.failure_aggregate_sizes[target_array[-1]] += len(target_array) - begin
-        navigate_dataset.save()
-        explore_dataset.save()
-        navigate_dataset.sanity_check()
-        explore_dataset.sanity_check()
+    navigate_dataset.save()
+    explore_dataset.save()
+    navigate_dataset.sanity_check()
+    explore_dataset.sanity_check()
 
 class ProcessEpisodeWrap:
     eval_scores = []
