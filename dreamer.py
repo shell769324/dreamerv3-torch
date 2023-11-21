@@ -505,11 +505,13 @@ def main(config, defaults):
         agent._should_pretrain._once = False
 
     state = None
-    watched = [(agent._wm.heads["explore/reward"], "explore_reward.", 6000),
-               (agent._wm.heads["navigate/reward"], "navigate_reward.", 6000),
-               (agent._wm.heads["image"], "image.", 3000),
-               (agent._task_behavior.a2c_navigate, "a2c_navigate.", 15000),
-               (agent._task_behavior.a2c_explore, "a2c_explore.", 15000)]
+    watched = [(agent._wm.heads["explore/reward"], "explore_reward.", 12000),
+               (agent._wm.heads["navigate/reward"], "navigate_reward.", 12000),
+               (agent._wm.heads["combat/reward"], "combat_reward.", 12000),
+               (agent._wm.heads["image"], "image.", 6000),
+               (agent._task_behavior.a2c_navigate, "a2c_navigate.", 30000),
+               (agent._task_behavior.a2c_explore, "a2c_explore.", 30000),
+               (agent._task_behavior.a2c_combat, "a2c_combat.", 30000)]
     wand_id = config.wandb_id or None
     resume = config.resume or None
     with wandb.init(project='mastering crafter with world models', config=defaults, id=wand_id, resume=resume):
