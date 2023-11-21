@@ -486,9 +486,9 @@ def main(config, defaults):
             logprob = random_actor.log_prob(action)
             crafter_env = train_crafter if training else eval_crafter
             crafter_env.reward_type = actor_mode_list[o["actor_mode"][0]]
-            print("random agent in action")
             return {"action": action, "logprob": logprob}, None
 
+        print("before simulate random")
         tools.simulate(random_agent, train_env, train_crafter, prefill)
         logger.step = config.action_repeat * count_steps(config.traindir)
 
