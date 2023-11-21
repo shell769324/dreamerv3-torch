@@ -485,10 +485,7 @@ def main(config, defaults):
             action = random_actor.sample()
             logprob = random_actor.log_prob(action)
             crafter_env = train_crafter if training else eval_crafter
-            if o["target_spot"] == 0:
-                crafter_env.reward_type = "navigate"
-            else:
-                crafter_env.reward_type = "explore"
+            crafter_env.reward_type = actor_mode_list[o["actor_mode"][0]]
             return {"action": action, "logprob": logprob}, None
 
         tools.simulate(random_agent, train_env, train_crafter, prefill)
