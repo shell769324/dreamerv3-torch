@@ -9,7 +9,7 @@ import pickle
 import re
 import time
 import uuid
-from envs.crafter import targets, reward_type_reverse, aware
+from envs.crafter import targets, reward_type_reverse, aware, actor_mode_map, actor_mode_list
 import random
 import os
 
@@ -23,7 +23,7 @@ from torch.utils.data import Dataset
 from torch.utils.tensorboard import SummaryWriter
 
 
-thresholds = {"navigate": [5, 5, 6, 7, 8, 7], "explore": [4, 5, 3, 7, 8, 4]}
+thresholds = {"navigate": [5, 5, 6, 7, 8, 7], "explore": [4, 5, 3, 7, 8, 4], "combat": [5, 6]}
 to_np = lambda x: x.detach().cpu().numpy()
 lava_collect_limit = 6
 
@@ -157,14 +157,14 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
             reward = [reward[0] * (1 - done[0])]
         # Step agents.
         obs = {k: np.stack([o[k] for o in obs]) for k in obs[0]}
-        target_spot = obs["target_spot"]
+        actor_mode = obs["actor_mode"]
         action, agent_state = agent(obs, done, agent_state, reward, training=training)
         if metrics is not None and reward_type_reverse[obs["reward_type"][0]] != "default":
             reward_type = reward_type_reverse[obs["reward_type"][0]]
             target_name = targets[obs["prev_target"][0]]
             # Lost track of target when navigating is a failure
-            if reward_type == "navigate_lost":
-                failure_name = "{}_navigate_failure/{}".format(mode, target_name)
+            if "lost" in reward_type:
+                failure_name = "{}_do_failure/{}".format(mode, target_name)
                 if failure_name not in metrics.keys():
                     metrics[failure_name] = 1
                 else:
@@ -194,9 +194,9 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
         length *= 1 - done
         death_count = "{}_death_count".format(mode)
         if metrics is not None and done.any():
-            action_type = "navigate" if target_spot[0] == 0 else "explore"
+            merged_type = "explore" if actor_mode_list[actor_mode[0]] == "explore" else "do"
             target_name = targets[obs[0]["prev_target"]]
-            failure_name = "{}_{}_failure/{}".format(mode, action_type, target_name)
+            failure_name = "{}_{}_failure/{}".format(mode, merged_type, target_name)
             if failure_name not in metrics.keys():
                 metrics[failure_name] = 1
             else:
@@ -206,15 +206,13 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
             else:
                 metrics[death_count] += 1
             reward_type = reward_type_reverse[obs[0]["reward_type"]]
+            lava_count = "{}_lava_count".format(mode)
+            if lava_count not in metrics.keys():
+                metrics[lava_count] = 0
             if reward_type == "lava":
-                action_type = "navigate" if target_spot[0] == 0 else "explore"
-                lava_count = "{}_lava_count".format(mode)
-                if lava_count not in metrics.keys():
-                    metrics[lava_count] = 1
-                else:
-                    metrics[lava_count] += 1
+                metrics[lava_count] += 1
                 reward_diff = abs(reward[0] - crafter.reward)
-                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, action_type, reward_type)
+                reward_diff_name = "{}_reward_diff/{}_{}".format(mode, actor_mode_list[actor_mode[0]], reward_type)
                 if reward_diff_name not in metrics.keys():
                     metrics[reward_diff_name] = [reward_diff]
                 else:
@@ -225,15 +223,15 @@ def simulate(agent, collector, env, crafter, steps=0, episodes=0, state=None, tr
 
 
 class SliceDataset:
-    def __init__(self, dataset, batch_size, batch_length, path, device, seed=0, mode="", name="", ratio=None):
+    def __init__(self, dataset, batch_size, batch_length, path, device, target_types, seed=0, mode="", name="", ratio=None):
         self.dataset = dataset
-        self.failure_tuples = [dict() for _ in range(len(targets))]
-        self.success_tuples = [dict() for _ in range(len(targets))]
-        self.failure_episode_sizes = [dict() for _ in range(len(targets))]
-        self.success_episode_sizes = [dict() for _ in range(len(targets))]
+        self.failure_tuples = [dict() for _ in range(len(target_types))]
+        self.success_tuples = [dict() for _ in range(len(target_types))]
+        self.failure_episode_sizes = [dict() for _ in range(len(target_types))]
+        self.success_episode_sizes = [dict() for _ in range(len(target_types))]
         self.lava_deaths = dict()
-        self.failure_aggregate_sizes = [0] * len(targets)
-        self.success_aggregate_sizes = [0] * len(targets)
+        self.failure_aggregate_sizes = [0] * len(target_types)
+        self.success_aggregate_sizes = [0] * len(target_types)
         self.batch_size = batch_size
         self.batch_length = batch_length
         self.random = np.random.RandomState(seed)
@@ -241,7 +239,13 @@ class SliceDataset:
         self.mode = mode
         self.name = name
         self.device = device
-        self.lava_death_ratio = 0.2
+        self.lava_death_ratio = 0
+        self.step_name = "target_explore_steps" if self.name == "explore" else "target_do_steps"
+        self.target_name = "combat_target" if self.name == "combat" else "navigate_target"
+        self.prev_target_name = "prev_combat_target" if self.name == "combat" else "prev_navigate_target"
+        self.target_types = target_types
+
+        self.actor_mode = actor_mode_map[self.name]
         if ratio is not None:
             self.ratio = float(ratio)
         else:
@@ -250,21 +254,20 @@ class SliceDataset:
         self.load()
 
     def sanity_check(self):
-        step_name = "target_navigate_steps" if self.name == "navigate" else "target_explore_steps"
         for (tuples, episode_sizes, aggregate_sizes) in \
                 [(self.success_tuples, self.success_episode_sizes, self.success_aggregate_sizes),
                  (self.failure_tuples, self.failure_episode_sizes, self.failure_aggregate_sizes)]:
             sufa = "success" if tuples == self.success_tuples else "failure"
-            expected_aggregate_size = [0] * len(targets)
-            for i in range(len(targets)):
+            expected_aggregate_size = [0] * len(self.target_types)
+            for i in range(len(self.target_types)):
                 for ep_name, count in episode_sizes[i].items():
                     expected_aggregate_size[i] += count
                 assert expected_aggregate_size[i] == aggregate_sizes[
                     i], "{} {} {}: expected aggregate for {} is {}. Actual is {}".format(self.mode, self.name, sufa,
-                                                                                         targets[i],
+                                                                                         self.target_types[i],
                                                                                       expected_aggregate_size[i],
                                                                                       aggregate_sizes[i])
-            for i in range(len(targets)):
+            for i in range(len(self.target_types)):
                 for ep_name, count in episode_sizes[i].items():
                     assert ep_name in tuples[i], "{} {}: episode_sizes has episode {} but tuples doesn't".format(
                         self.mode, self.name, ep_name)
@@ -273,36 +276,37 @@ class SliceDataset:
                         total += ed - st
                         if ed != len(self.dataset[ep_name]["target"]):
                             if sufa == "success":
-                                assert self.dataset[ep_name][step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}". \
-                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
+                                assert self.dataset[ep_name][self.step_name][ed - 1] >= 0, "{} {} {}: {} ed {} step is {}". \
+                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][self.step_name][ed - 1])
                             else:
-                                assert self.dataset[ep_name][step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
-                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][step_name][ed - 1])
+                                assert self.dataset[ep_name][self.step_name][ed - 1] == -1, "{} {} {}: {} ed {} step is {}". \
+                                    format(self.mode, self.name, sufa, ep_name, ed - 1, self.dataset[ep_name][self.step_name][ed - 1])
                         for t in range(st, ed - 1):
-                            assert self.dataset[ep_name]["target"][t] == i, "{} {} {}: {} transition {} is {}, not {}". \
-                                format(self.mode, self.name, sufa, ep_name, t, targets[self.dataset[ep_name]["target"][t]],
-                                       targets[i])
-                            target_spot = 0 if self.name == "navigate" else 1
-                            assert self.dataset[ep_name]["target_spot"][
-                                       t] == target_spot, "{} {} {}: {} transition {} target_spot wrong". \
-                                format(self.mode, self.name, sufa, ep_name, t)
+                            assert self.dataset[ep_name][self.target_name][t] == i, "{} {} {}: {} transition {} is {}, not {}". \
+                                format(self.mode, self.name, sufa, ep_name, t,
+                                       self.target_types[self.dataset[ep_name][self.target_name][t]], self.target_types[i])
+                            assert self.dataset[ep_name]["actor_mode"][
+                                       t] == self.actor_mode, "{} {} {}: {} transition {} actor_mode is {}, not {}". \
+                                format(self.mode, self.name, sufa, ep_name, t, self.dataset[ep_name]["actor_mode"][t],
+                                       self.actor_mode)
                         if ed != len(self.dataset[ep_name]["target"]):
-                            assert self.dataset[ep_name]["prev_target"][
+                            assert self.dataset[ep_name][self.prev_target_name][
                                        ed - 1] == i, "{} {} {}: {} transition {} is {}, not {}". \
                                 format(self.mode, self.name, sufa, ep_name, ed - 1,
-                                       targets[self.dataset[ep_name]["prev_target"][ed - 1]],
-                                       targets[i])
+                                       self.target_types[self.dataset[ep_name][self.prev_target_name][ed - 1]],
+                                       self.target_types[i])
                     assert total == count, "{} {} {}: expected total for {} {} is {}, actual is {}".format(self.mode,
-                                                                                                        self.name, sufa,
-                                                                                                        ep_name,
-                                                                                                        targets[i],
-                                                                                                        count, total)
-            for i in range(len(targets)):
+                                                                                                           self.name,
+                                                                                                           sufa,
+                                                                                                           ep_name,
+                                                                                                           self.target_types[i],
+                                                                                                           count, total)
+            for i in range(len(self.target_types)):
                 for ep_name in tuples[i].keys():
                     assert ep_name in episode_sizes[i], "{} {} {}: tuples has episode {} but ep doesn't".format(
                         self.mode, self.name, sufa, ep_name)
         for ep_name, (st, ed) in self.lava_deaths.items():
-            assert len(self.dataset[ep_name]["target"]) == ed, "{} {} lava: {} {} ed is not correct (expect: {})".\
+            assert len(self.dataset[ep_name][self.target_name]) == ed, "{} {} lava: {} {} ed is not correct (expect: {})".\
                 format(self.mode, self.name, ep_name, (st, ed), len(self.dataset[ep_name]["target"]))
             for i in range(st, ed - 1):
                 assert np.sum(self.dataset[ep_name]["where"][i][aware.index("lava")]) > 0, \
@@ -312,20 +316,20 @@ class SliceDataset:
 
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
         sufa = "success" if tuples == self.success_tuples else "failure"
-        frame_counts = [0.0] * len(targets)
+        frame_counts = [0.0] * len(self.target_types)
         dist = np.where(np.array(aggregate_sizes) == 0, 0, dist)
         dist = dist / np.sum(dist)
         for i in range(len(dist)):
             frame_counts[i] = math.floor(self.batch_length * batch_size * dist[i])
         remained = self.batch_length * batch_size - sum(frame_counts)
-        start = random.randint(0, len(targets) - 1)
+        start = random.randint(0, len(self.target_types) - 1)
         for i in range(len(dist)):
-            index = (i + start) % len(targets)
+            index = (i + start) % len(self.target_types)
             if aggregate_sizes[index] != 0:
                 frame_counts[index] += remained
                 break
-        tuple_list = [list(tuples[i].items()) for i in range(len(targets))]
-        p = [np.array([episode_sizes[i][name] for name, _ in tuple_list[i]]) for i in range(len(targets))]
+        tuple_list = [list(tuples[i].items()) for i in range(len(self.target_types))]
+        p = [np.array([episode_sizes[i][name] for name, _ in tuple_list[i]]) for i in range(len(self.target_types))]
         # sample episode by their length
         for i, sl in enumerate(p):
             p[i] = sl / np.sum(sl)
@@ -334,7 +338,7 @@ class SliceDataset:
         for i in range(batch_size):
             size = 0
             prev_total = 0 if len(ret) == 0 else ret["image"].shape[0]
-            while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
+            while curr_target < len(self.target_types) and curr_target_frame >= frame_counts[curr_target]:
                 curr_target += 1
                 curr_target_frame = 0
             while size < self.batch_length:
@@ -371,11 +375,11 @@ class SliceDataset:
                     index += 1
                     if index < len(slices_in_episode):
                         start_frame = slices_in_episode[index][0]
-                while curr_target < len(targets) and curr_target_frame >= frame_counts[curr_target]:
+                while curr_target < len(self.target_types) and curr_target_frame >= frame_counts[curr_target]:
                     curr_target += 1
                     curr_target_frame = 0
             assert (ret["image"].shape[0] - prev_total) == self.batch_length, "{} {} {} {}: expected {} actual {}".format(
-                self.mode, self.name, sufa, targets[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
+                self.mode, self.name, sufa, self.target_types[curr_target], prev_total + self.batch_length, ret["image"].shape[0])
         return ret, markers
 
     def sample_lava_deaths(self, ret, markers, batch_needed):
@@ -414,7 +418,7 @@ class SliceDataset:
         lava_death_size = min(math.floor(total_lava_frame_count / self.batch_length), lava_death_size)
         remaining_size = self.batch_size - lava_death_size
         ret, markers = self.sample_lava_deaths(ret, markers, lava_death_size)
-        if self.ratio is None or np.any(np.array(self.success_aggregate_sizes) <= 1000):
+        if self.ratio is None or np.any(np.array(self.success_aggregate_sizes) <= 700):
             total_aggregate_sizes = np.array(self.success_aggregate_sizes) + np.array(self.failure_aggregate_sizes)
             dist = total_aggregate_sizes / np.sum(total_aggregate_sizes)
             success_ratio = np.array(self.success_aggregate_sizes) / (1 + total_aggregate_sizes)

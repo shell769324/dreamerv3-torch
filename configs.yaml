@@ -47,7 +47,7 @@ defaults:
   dyn_std_act: 'sigmoid2'
   dyn_min_std: 0.1
   dyn_temp_post: True
-  grad_heads: ['image', 'explore/reward', 'navigate/reward', 'cont']
+  grad_heads: ['image', 'explore/reward', 'navigate/reward', 'combat/reward' 'cont']
   units: 512
   reward_layers: 2
   cont_layers: 2
@@ -93,9 +93,10 @@ defaults:
   opt: 'adamw'
 
   # Behavior.
-  find_discount: 0.85
+  find_discount: 0.79
   discount_lambda: 0.95
   explore_imag_horizon: 5
+  combat_imag_horizon: 7
   navigate_imag_horizon: 8
   imag_gradient: 'dynamics'
   imag_gradient_mix: '0.0'
@@ -142,9 +143,11 @@ crafter:
   actor_dist: 'onehot'
   units: 1024
   explore_reward_layers: 3
+  combat_reward_layers: 4
   navigate_reward_layers: 5
   cont_layers: 4
   explore_a2c_layers: 3
+  combat_a2c_layers: 4
   navigate_a2c_layers: 5
   where_layers: 4
   imag_gradient: 'reinforce'

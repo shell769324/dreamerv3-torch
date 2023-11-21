@@ -4,7 +4,7 @@ import torch
 from torch import nn
 import networks
 import tools
-from envs.crafter import targets, aware
+from envs.crafter import targets, navigate_targets, combat_targets, aware
 import numpy as np
 
 
@@ -31,13 +31,14 @@ class RewardEMA(object):
 
 
 class WorldModel(nn.Module):
-    def __init__(self, step, config, navigate_dataset, explore_dataset):
+    def __init__(self, step, config, navigate_dataset, explore_dataset, combat_dataset):
         super(WorldModel, self).__init__()
         self._step = step
         self._use_amp = True if config.precision == 16 else False
         self._config = config
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
+        self.combat_dataset = combat_dataset
 
         self.encoder = networks.ConvEncoder(
             config.grayscale,
@@ -113,6 +114,17 @@ class WorldModel(nn.Module):
             outscale=0.0,
             device=config.device,
         )
+        self.heads["navigate/combat"] = networks.EmbeddedDenseHead(
+            self._config.dyn_stoch * self._config.dyn_discrete,
+            config.dyn_deter,
+            config.combat_reward_layers,
+            config.units,
+            config.act,
+            config.norm,
+            dist=config.reward_head,
+            outscale=0.0,
+            device=config.device,
+        )
         self.heads["cont"] = networks.DenseHead(
             feat_size,  # pytorch version
             [],
@@ -144,6 +156,7 @@ class WorldModel(nn.Module):
             use_amp=self._use_amp,
             sub={"cont": self.heads["cont"], "encoder": self.encoder,
                  "rssm": self.dynamics, "explore/reward": self.heads["explore/reward"], "navigate/reward": self.heads["navigate/reward"],
+                 "combat/reward": self.heads["combat/reward"],
                  "where": self.embed_where, "image": self.heads["image"]
                  }#"where": self.heads["where"]}
         )
@@ -157,48 +170,44 @@ class WorldModel(nn.Module):
         metrics = {}
         threshold = torch.tensor(self._config.regularize_threshold).to(self._config.device)
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
-        difficulty = np.array(self.navigate_dataset.failure_aggregate_sizes) / \
-                     (1 + np.array(self.navigate_dataset.success_aggregate_sizes) + np.array(self.navigate_dataset.failure_aggregate_sizes))
-        target_dist = difficulty / np.sum(difficulty)
-        navigate_data, navigate_markers, lava_rate, success_dist, failure_dist = self.navigate_dataset.sample(target_dist)
-        metrics["navigate/lava_sample_rate"] = lava_rate
-        for i, t in enumerate(targets):
-            metrics["navigate/{}_success_sample_rate".format(t)] = success_dist[i]
-        for i, t in enumerate(targets):
-            metrics["navigate/{}_failure_sample_rate".format(t)] = failure_dist[i]
-        navigate_data = self.preprocess(navigate_data)
-        difficulty = np.array(self.explore_dataset.failure_aggregate_sizes) / \
-                     (1 + np.array(self.explore_dataset.success_aggregate_sizes) + np.array(self.explore_dataset.failure_aggregate_sizes))
-        target_dist = difficulty / np.sum(difficulty)
-        explore_data, explore_markers, lava_rate, success_dist, failure_dist = self.explore_dataset.sample(target_dist)
-        metrics["explore/lava_sample_rate"] = lava_rate
-        for i, t in enumerate(targets):
-            metrics["explore/{}_success_sample_rate".format(t)] = success_dist[i]
-        for i, t in enumerate(targets):
-            metrics["explore/{}_failure_sample_rate".format(t)] = failure_dist[i]
-        explore_data = self.preprocess(explore_data)
-        data = {k: torch.cat([v, explore_data[k]], dim=0) for k, v in navigate_data.items() if k in explore_data}
+        sample_data = {}
+        sample_markers = {}
+        for name, dataset in [("navigate", self.navigate_dataset), ("explore", self.explore_dataset),
+                        ("combat", self.combat_dataset)]:
+            difficulty = np.array(self.dataset.failure_aggregate_sizes) / \
+                         (1 + np.array(self.dataset.success_aggregate_sizes) + np.array(self.dataset.failure_aggregate_sizes))
+            target_dist = difficulty / np.sum(difficulty)
+            data, markers, lava_rate, success_dist, failure_dist = self.dataset.sample(target_dist)
+            metrics["{}/lava_sample_rate".format(name)] = lava_rate
+            for i, t in enumerate(navigate_targets):
+                metrics["{}}/{}_success_sample_rate".format(name, t)] = success_dist[i]
+            for i, t in enumerate(navigate_targets):
+                metrics["{}}/{}_failure_sample_rate".format(name, t)] = failure_dist[i]
+            data = self.preprocess(data)
+            sample_data[name] = data
+            sample_markers[name] = markers
+        data = {k: torch.cat([v[k] for v in sample_data.values()], dim=0) for k in sample_data["navigate"].keys()}
 
         with tools.RequiresGrad(self):
             with torch.cuda.amp.autocast(self._use_amp):
                 losses = {}
-                navigate_embed = self.encoder(navigate_data)
-                explore_embed = self.encoder(explore_data)
-                combined_embed = torch.cat([navigate_embed, explore_embed], 0)
+                embeds = {k: self.encoder(v) for k, v in sample_data.items()}
+                combined_embed = torch.cat(list(embeds.values()), 0)
                 where_pred, front_pred = self.embed_where(combined_embed)
                 where_like = where_pred.log_prob(data["where"].reshape(data["where"].shape[:-2] + (np.prod(data["where"].shape[-2:]),)))
                 front_like = front_pred.log_prob(torch.nn.functional.one_hot(data["front"], num_classes=len(aware) + 1).to(self._config.device))
                 losses["where"] = -torch.mean(where_like) * self._scales.get("where", 1.0)
                 losses["front"] = -torch.mean(front_like) * self._scales.get("front", 1.0)
-
-                navigate_post, navigate_prior = self.dynamics.observe(
-                    navigate_embed, navigate_data["action"], navigate_data["is_first"], markers=navigate_markers
-                )
-                explore_post, explore_prior = self.dynamics.observe(
-                    explore_embed, explore_data["action"], explore_data["is_first"], markers=explore_markers
-                )
-                prior = {k: torch.cat([v, explore_prior[k]], dim=0) for k, v in navigate_prior.items() if k in explore_prior}
-                post = {k: torch.cat([v, explore_post[k]], dim=0) for k, v in navigate_post.items() if k in explore_post}
+                posts = {}
+                priors = {}
+                for k, v in sample_data.items():
+                    post, prior = self.dynamics.observe(
+                        embeds[k], v["action"], v["is_first"], markers=sample_markers[k]
+                    )
+                    posts[k] = post
+                    priors[k] = prior
+                prior = {k: torch.cat([v[k] for v in priors.values()], dim=0) for k in priors["navigate"].keys()}
+                post = {k: torch.cat([v[k] for v in posts.values()], dim=0) for k in posts["navigate"].keys()}
                 kl_free = tools.schedule(self._config.kl_free, self._step)
                 dyn_scale = tools.schedule(self._config.dyn_scale, self._step)
                 rep_scale = tools.schedule(self._config.rep_scale, self._step)
@@ -214,12 +223,16 @@ class WorldModel(nn.Module):
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
 
                     if "reward" in name:
-                        right_data = navigate_data if "navigate" in name else explore_data
+                        actor_mode = name.split('/')[0]
+                        right_data = sample_data[actor_mode]
                         # Detach explore post since it doesn't add anything to world model
-                        right_post = navigate_post if "navigate" in name else explore_post
+                        right_post = posts[actor_mode]
+                        target_name = "prev_{}_target".format(actor_mode if actor_mode == "combat" else "navigate")
                         (stoch, deter) = self.dynamics.get_sep(right_post)
-                        pred = head(stoch, deter, right_data["prev_target"])
+                        pred = head(stoch, deter, right_data[target_name])
                         like = pred.log_prob(right_data["reward"])
+                        # Ignore the first slice of each segment
+                        like = like[sample_markers[actor_mode] == 0]
                         losses[name] = -torch.mean(like) * self._scales.get(name, 1.0)
                         reward_logits = pred.logits.abs()
                         reward_suppressor = (reward_logits[reward_logits > threshold] - threshold).mean() * coeff
@@ -244,9 +257,8 @@ class WorldModel(nn.Module):
             metrics["post_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(post).entropy())
             )
-        navigate_post = {k: v.detach() for k, v in navigate_post.items()}
-        explore_post = {k: v.detach() for k, v in explore_post.items()}
-        return navigate_post, explore_post, navigate_data, explore_data, metrics
+        detached_post = {k1: {k2: v2.detach() for k2, v2 in v1.items()} for k1, v1 in posts}
+        return detached_post, sample_data, metrics
 
     def preprocess(self, obs):
         obs = obs.copy()
@@ -318,10 +330,22 @@ class ImagBehavior(nn.Module):
             embed_dim=config.embed_dim,
             unimix_ratio=config.action_unimix_ratio,
         )
-        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"navigate/a2c": self.a2c_navigate, "explore/a2c": self.a2c_explore})
+        self.a2c_combat = networks.A2CHead(
+            self._config.dyn_stoch * self._config.dyn_discrete,
+            config.dyn_deter,  # pytorch version
+            config.num_actions,
+            config.combat_a2c_layers,
+            config.units,
+            embed_dim=config.embed_dim,
+            unimix_ratio=config.action_unimix_ratio,
+        )
+        kw = dict(opt=config.opt, use_amp=self._use_amp, wd=0, sub={"navigate/a2c": self.a2c_navigate,
+                                                                    "explore/a2c": self.a2c_explore,
+                                                                    "combat/a2c": self.a2c_combat})
         self._a2c_opt = tools.Optimizer(
             "a2c",
-            [{'params': list(self.a2c_navigate.parameters()) + list(self.a2c_explore.parameters()), 'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
+            [{'params': list(self.a2c_navigate.parameters()) + list(self.a2c_explore.parameters()) + list(self.a2c_combat.parameters()),
+              'lr': config.ac_lr, 'weight_decay': config.A2C_weight_decay}],
             config.ac_lr,
             config.ac_opt_eps,
             config.actor_grad_clip,
@@ -332,22 +356,24 @@ class ImagBehavior(nn.Module):
 
     def _train(
         self,
-        navigate_post,
-        explore_post,
-        navigate_data,
-        explore_data
+        posts,
+        data_collection
     ):
         metrics = {}
         threshold = torch.tensor(self._config.a2c_regularize_threshold).to(self._config.device)
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
-        iter = [("navigate", "navigate/reward", navigate_post, navigate_data, self.a2c_navigate, self._config.navigate_imag_horizon),
-                ("explore", "explore/reward", explore_post, explore_data, self.a2c_explore, self._config.explore_imag_horizon)]
+        iter = [("navigate", "navigate_target", self.a2c_navigate, self._config.navigate_imag_horizon),
+                ("explore", "navigate_target", self.a2c_explore, self._config.explore_imag_horizon),
+                ("combat", "combat_target", self.a2c_combat, self._config.combat_imag_horizon)]
         total_loss = None
-        for prefix, head_name, post, data, a2c_head, imag_horizon in iter:
+        for prefix, target_name, a2c_head, imag_horizon in iter:
+            head_name = "{}/reward".format(prefix)
+            post = posts[prefix]
+            data = data_collection[prefix]
+            flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
             with tools.RequiresGrad(a2c_head):
                 with torch.cuda.amp.autocast(self._use_amp):
-                    flatten = lambda x: x.reshape([-1] + list(x.shape[2:]))
-                    target_array = flatten(data["target"]).to(self._device)
+                    target_array = flatten(data[target_name].to(self._device))
                     imag_stoch, imag_deter, imag_state, imag_action, means, policy_params = self._imagine(
                         post, imag_horizon, target_array, a2c_head
                     )
@@ -413,7 +439,7 @@ class ImagBehavior(nn.Module):
             metrics[prefix + "/actor_loss"] = actor_loss.detach().cpu().numpy()
             metrics[prefix + "/value_suppressor"] = value_suppressor.detach().cpu().numpy()
             metrics[prefix + "/actor_suppressor"] = actor_suppressor.detach().cpu().numpy()
-        with tools.RequiresGrad([self.a2c_navigate, self.a2c_explore]):
+        with tools.RequiresGrad([self.a2c_navigate, self.a2c_explore, self.a2c_combat]):
             metrics.update(self._a2c_opt(total_loss))
         return imag_stoch, imag_deter, imag_state, imag_action, weights, metrics
 

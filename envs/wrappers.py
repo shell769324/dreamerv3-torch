@@ -3,7 +3,7 @@ import numpy as np
 import uuid
 import torch
 from tools import get_episode_name
-from envs.crafter import reward_type_reverse, aware
+from envs.crafter import reward_type_reverse, aware, actor_mode_list, target_step_list, target_mode_list
 import json
 import os
 from tools import thresholds, lava_collect_limit
@@ -11,7 +11,7 @@ from tools import thresholds, lava_collect_limit
 
 class CollectDataset:
     def __init__(
-        self, env, crafter_env, navigate_dataset, explore_dataset, callbacks=None, precision=32, directory=None,
+        self, env, crafter_env, navigate_dataset, explore_dataset, combat_dataset, callbacks=None, precision=32, directory=None,
     ):
         self._env = env
         self.crafter_env = crafter_env
@@ -20,6 +20,7 @@ class CollectDataset:
         self._episode = None
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
+        self.combat_dataset = combat_dataset
         self.directory = directory
         self.policy = None
         self.agent_state = None
@@ -58,17 +59,18 @@ class CollectDataset:
             for i, transition in enumerate(self._episode):
                 if i == 0:
                     continue
-                if (transition["target_spot"] != self._episode[i - 1]["target_spot"]
+                if (transition["actor_mode"] != self._episode[i - 1]["actor_mode"]
                         or transition["target"] != self._episode[i - 1]["target"]):
-                    dataset = [self.navigate_dataset, self.explore_dataset][self._episode[i - 1]["target_spot"]]
-                    step_name = ["target_navigate_steps", "target_explore_steps"][self._episode[i - 1]["target_spot"]]
+                    actor_mode = self._episode[i - 1]["actor_mode"]
+                    dataset = [self.navigate_dataset, self.explore_dataset, self.combat_dataset][actor_mode]
+                    step_name = target_step_list[actor_mode]
                     is_success = transition[step_name] >= 0
                     tuples = dataset.success_tuples if is_success else dataset.failure_tuples
                     episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
                     aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
                     end = i + 1
-                    threshold = thresholds[["navigate", "explore"][self._episode[i - 1]["target_spot"]]]
-                    target = transition["prev_target"]
+                    threshold = thresholds[actor_mode_list[actor_mode]]
+                    target = self._episode[i - 1][target_mode_list[actor_mode]]
                     if end - begin >= threshold[target]:
                         if ep_name not in tuples[target]:
                             tuples[target][ep_name] = []
@@ -77,23 +79,23 @@ class CollectDataset:
                         episode_sizes[target][ep_name] += end - begin
                         aggregate_sizes[target] += end - begin
                     begin = i
-            dataset = [self.navigate_dataset, self.explore_dataset][self._episode[-1]["reward_mode"]]
+            dataset = [self.navigate_dataset, self.explore_dataset, self.combat_dataset][self._episode[-1]["reward_mode"]]
             cache = dataset.failure_tuples
-            if ep_name not in cache[transition["target"]]:
-                cache[transition["target"]][ep_name] = []
-                dataset.failure_episode_sizes[transition["target"]][ep_name] = 0
+            target = self._episode[-2][target_mode_list[self._episode[-2]["actor_mode"]]]
+            if ep_name not in cache[target]:
+                cache[target][ep_name] = []
+                dataset.failure_episode_sizes[target][ep_name] = 0
+            cache[target][ep_name].append([begin, len(self._episode)])
+            dataset.failure_episode_sizes[target][ep_name] += len(self._episode) - begin
+            dataset.failure_aggregate_sizes[target] += len(self._episode) - begin
             if reward_type_reverse[self._episode[-1]["reward_type"]] == "lava":
-                start = len(self._episode) - (lava_collect_limit - 1)
-                for i in range(len(self._episode) - 2, max(-1, len(self._episode) - lava_collect_limit), -1):
+                start = len(self._episode) - lava_collect_limit
+                for i in range(len(self._episode) - 2, max(-1, len(self._episode) - lava_collect_limit - 1), -1):
                     if np.sum(self._episode[i]["where"][aware.index("lava")]) == 0:
                         start = i + 1
                         break
                 dataset.lava_deaths[ep_name] = (start, len(self._episode))
 
-
-            cache[transition["target"]][ep_name].append([begin, len(self._episode)])
-            dataset.failure_episode_sizes[transition["target"]][ep_name] += len(self._episode) - begin
-            dataset.failure_aggregate_sizes[transition["target"]] += len(self._episode) - begin
             for key, value in self._episode[1].items():
                 if key not in self._episode[0]:
                     self._episode[0][key] = 0 * value

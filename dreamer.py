@@ -6,7 +6,7 @@ import functools
 import os
 import pathlib
 import sys
-from envs.crafter import targets, aware, reward_type_reverse
+from envs.crafter import targets, aware, reward_type_reverse, navigate_targets, combat_targets, target_step_list, actor_mode_list, target_mode_list
 from tools import SliceDataset, get_episode_name, thresholds, lava_collect_limit
 
 os.environ["MUJOCO_GL"] = "egl"
@@ -30,7 +30,7 @@ to_np = lambda x: x.detach().cpu().numpy()
 
 
 class Dreamer(nn.Module):
-    def __init__(self, config, logger, dataset, navigate_dataset, explore_dataset, train_crafter, eval_crafter):
+    def __init__(self, config, logger, dataset, navigate_dataset, explore_dataset, combat_dataset, train_crafter, eval_crafter):
         super(Dreamer, self).__init__()
         self._config = config
         self._logger = logger
@@ -59,7 +59,8 @@ class Dreamer(nn.Module):
         self._dataset = dataset
         self.navigate_dataset = navigate_dataset
         self.explore_dataset = explore_dataset
-        self._wm = models.WorldModel(self._step, config, self.navigate_dataset, self.explore_dataset)
+        self.combat_dataset = combat_dataset
+        self._wm = models.WorldModel(self._step, config, self.navigate_dataset, self.explore_dataset, self.combat_dataset)
         self._task_behavior = models.ImagBehavior(
             config, self._wm, config.behavior_stop_grad
         )
@@ -92,22 +93,22 @@ class Dreamer(nn.Module):
 
             if self._should_log(step):
                 metrics_dict = {}
-                types = ["explore", "navigate"]
                 for prefix in ["train", "eval"]:
-                    for t in types:
+                    for t in actor_mode_list:
                         total_successes = 0
                         total_failures = 0
                         for target_name in targets:
-                            success_name = "{}_{}_success/{}".format(prefix, t, target_name)
+                            merged_type = t if t == "explore" else "do"
+                            success_name = "{}_{}_success/{}".format(prefix, merged_type, target_name)
                             successes = self._metrics.get(success_name, 0)
                             total_successes += successes
-                            failure_name = "{}_{}_failure/{}".format(prefix, t, target_name)
+                            failure_name = "{}_{}_failure/{}".format(prefix, merged_type, target_name)
                             failures = self._metrics.get(failure_name, 0)
                             total_failures += failures
                             if successes != 0 or failures != 0:
-                                name = "{}_{}_success_rate/{}".format(prefix, t, target_name)
+                                name = "{}_{}_success_rate/{}".format(prefix, merged_type, target_name)
                                 metrics_dict[name] = float(successes) / (failures + successes)
-                                if t == "navigate":
+                                if t in ["navigate", "combat"]:
                                     for subtype in ["face", "touch"]:
                                         subtype_success_name = "{}_{}_success/{}".format(prefix, subtype, target_name)
                                         subtype_name = "{}_{}_success_rate/{}".format(prefix, subtype, target_name)
@@ -118,19 +119,19 @@ class Dreamer(nn.Module):
                         if total_successes != 0 or total_failures != 0:
                             metrics_dict["{}_{}_success_rate/total".format(prefix, t)] = \
                                 float(total_successes) / (total_failures + total_successes)
+                            metrics_dict["{}_{}_success/total".format(prefix, t)] = float(total_successes)
                     if self._metrics.get("{}_death_count".format(prefix), 0) != 0:
                         metrics_dict["{}_lava_death_rate".format(prefix)] = \
                             float(self._metrics.get("{}_lava_count".format(prefix), 0)) / self._metrics.get("{}_death_count".format(prefix))
                 for name, values in self._metrics.items():
                     metrics_dict[name] = float(np.nanmean(values))
-                for i in range(len(targets)):
-                    metrics_dict["navigate_dataset_size/success_" + targets[i]] = self.navigate_dataset.success_aggregate_sizes[i]
-                    metrics_dict["navigate_dataset_size/failure_" + targets[i]] = self.navigate_dataset.failure_aggregate_sizes[i]
-                for i in range(len(targets)):
-                    metrics_dict["explore_dataset_size/success_" + targets[i]] = self.explore_dataset.success_aggregate_sizes[i]
-                    metrics_dict["explore_dataset_size/failure_" + targets[i]] = self.explore_dataset.failure_aggregate_sizes[i]
-                metrics_dict["navigate_dataset_size/lava"] = sum([end - start for (start, end) in self.navigate_dataset.lava_deaths.values()])
-                metrics_dict["explore_dataset_size/lava"] = sum([end - start for (start, end) in self.explore_dataset.lava_deaths.values()])
+                for name, dataset, target_types in [("navigate", self.navigate_dataset, navigate_targets),
+                                                    ("explore", self.explore_dataset, navigate_targets),
+                                                    ("combat", self.combat_dataset, combat_targets)]:
+                    for i in range(len(target_types)):
+                        metrics_dict[name + "_dataset_size/success_" + targets[i]] = self.dataset.success_aggregate_sizes[i]
+                        metrics_dict[name + "_dataset_size/failure_" + targets[i]] = self.dataset.failure_aggregate_sizes[i]
+                    metrics_dict["{}_dataset_size/lava".format(name)] = sum([end - start for (start, end) in self.dataset.lava_deaths.values()])
                 openl = self._wm.video_pred(next(self._dataset))
                 # 64 (64 * 3) (64 * 6) 3
                 video = to_np(openl).transpose(0, 3, 1, 2)
@@ -140,7 +141,7 @@ class Dreamer(nn.Module):
                 wandb.log(metrics_dict, step=step)
                 self._metrics.clear()
         for i in range(len(obs["reward"])):
-            types = ["explore", "navigate", "face", "touch"]
+            types = ["explore", "do", "face", "touch"]
             for t in types:
                 if obs["target_{}_steps".format(t)][i] >= 0:
                     target_name = targets[obs["prev_target"][i]]
@@ -176,22 +177,26 @@ class Dreamer(nn.Module):
         )
         if self._config.eval_state_mean:
             latent["stoch"] = latent["mean"]
-        prev_target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
-        for i, target in enumerate(obs["prev_target"]):
-            prev_target_array[i] = target.to(self._config.device)
-        target_array = torch.zeros((len(obs["image"])), dtype=torch.int32).to(self._config.device)
-        for i, target in enumerate(obs["target"]):
-            target_array[i] = target.to(self._config.device)
+        prev_target_array = torch.zeros((1,), dtype=torch.int32).to(self._config.device)
+        # obs[_] has length 1
+        if actor_mode_list[obs["reward_mode"][0]] == "combat":
+            prev_target_array[0] = obs["prev_combat_target"][0].to(self._config.device)
+        else:
+            prev_target_array[0] = obs["prev_navigate_target"][0].to(self._config.device)
+        target_array = torch.zeros((1,), dtype=torch.int32).to(self._config.device)
+        if actor_mode_list[obs["actor_mode"][0]] == "combat":
+            target_array[0] = obs["combat_target"][0].to(self._config.device)
+        else:
+            target_array[0] = obs["navigate_target"][0].to(self._config.device)
         stoch, deter = self._wm.dynamics.get_sep(latent)
         crafter_env = self.train_crafter if training else self.eval_crafter
-        if obs["target_spot"] == 0:
-            reward_prediction = self._wm.heads["navigate/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
-            means, policy_params = self._task_behavior.a2c_navigate(stoch, deter, target_array)
-            crafter_env.reward_type = "navigate"
-        else:
-            reward_prediction = self._wm.heads["explore/reward"](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
-            means, policy_params = self._task_behavior.a2c_explore(stoch, deter, target_array)
-            crafter_env.reward_type = "explore"
+        reward_prediction = self._wm.heads["{}/reward".format(actor_mode_list[obs["reward_mode"][0]])](stoch.unsqueeze(0), deter.unsqueeze(0), prev_target_array)
+        means, policy_params = {
+            "navigate": self._task_behavior.a2c_navigate,
+            "explore": self._task_behavior.a2c_explore,
+            "combat": self._task_behavior.a2c_combat
+        }[actor_mode_list[obs["actor_mode"][0]]](stoch, deter, target_array)
+        crafter_env.reward_type = actor_mode_list[obs["actor_mode"][0]]
         where_prediction, front_prediction = self._wm.embed_where(embed)
         crafter_env.predicted_where = where_prediction.mode().reshape((len(aware), 4)).to(torch.long).cpu().detach().numpy().astype(np.uint8)
         crafter_env.predicted_front = front_prediction.mode().argmax().cpu().detach().numpy().astype(np.int8)
@@ -219,10 +224,10 @@ class Dreamer(nn.Module):
 
     def _train(self):
         metrics = {}
-        navigate_post, explore_post, navigate_data, explore_data, mets = self._wm._train()
+        posts, data, mets = self._wm._train()
         metrics.update(mets)
         # start['deter'] (16, 64, 512)
-        metrics.update(self._task_behavior._train(navigate_post, explore_post, navigate_data, explore_data)[-1])
+        metrics.update(self._task_behavior._train(posts, data)[-1])
         for name, value in metrics.items():
             if not name in self._metrics.keys():
                 self._metrics[name] = [value]
@@ -250,7 +255,7 @@ def make_dataset(episodes, config):
     return dataset
 
 
-def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset):
+def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, combat_dataset):
     # crafter_reward
     # [crafter, reward]
     suite, task = config.task.split("_", 1)
@@ -269,33 +274,34 @@ def make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explor
             train_eps,
             eval_eps,
             navigate_dataset,
-            explore_dataset
+            explore_dataset,
+            combat_dataset
         )
     ]
-    collector = wrappers.CollectDataset(env, crafter_env, navigate_dataset, explore_dataset, callbacks=callbacks, directory=config.traindir)
+    collector = wrappers.CollectDataset(env, crafter_env, navigate_dataset, explore_dataset, combat_dataset, callbacks=callbacks, directory=config.traindir)
     env = wrappers.RewardObs(collector)
     return env, crafter_env, collector
 
 
-def load_slices(train_eps, navigate_dataset, explore_dataset):
+def load_slices(train_eps, navigate_dataset, explore_dataset, combat_dataset):
     # Last augmented frame
     if sum(navigate_dataset.failure_aggregate_sizes) > 0 or sum(explore_dataset.failure_aggregate_sizes) > 0:
         return
     for ep_name, episode in train_eps.items():
         begin = 0
-        target_spot = episode["target_spot"]
+        actor_mode = episode["actor_mode"]
         target_array = episode["target"]
         for i in range(1, len(target_array)):
-            if target_spot[i] != target_spot[i - 1] or target_array[i] != target_array[i - 1]:
-                dataset = [navigate_dataset, explore_dataset][target_spot[i - 1]]
-                step_name = ["target_navigate_steps", "target_explore_steps"][target_spot[i - 1]]
+            if actor_mode[i] != actor_mode[i - 1] or target_array[i] != target_array[i - 1]:
+                dataset = [navigate_dataset, explore_dataset, combat_dataset][actor_mode[i - 1]]
+                step_name = target_step_list[actor_mode[i - 1]]
                 is_success = episode[step_name][i] >= 0
                 tuples = dataset.success_tuples if is_success else dataset.failure_tuples
                 episode_sizes = dataset.success_episode_sizes if is_success else dataset.failure_episode_sizes
                 aggregate_sizes = dataset.success_aggregate_sizes if is_success else dataset.failure_aggregate_sizes
                 end = i + 1
-                threshold = thresholds[["navigate", "explore"][target_spot[i - 1]]]
-                target = episode["prev_target"][i]
+                threshold = thresholds[actor_mode_list[actor_mode[i - 1]]]
+                target = episode[target_mode_list[actor_mode[i - 1]]][i - 1]
                 if end - begin >= threshold[target]:
                     if ep_name not in tuples[target]:
                         tuples[target][ep_name] = []
@@ -304,11 +310,16 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
                     episode_sizes[target][ep_name] += end - begin
                     aggregate_sizes[target] += end - begin
                 begin = i
-        dataset = [navigate_dataset, explore_dataset][episode["reward_mode"][-1]]
+        dataset = [navigate_dataset, explore_dataset, combat_dataset][episode["reward_mode"][-1]]
         cache = dataset.failure_tuples
-        if ep_name not in cache[target_array[-1]]:
-            cache[target_array[-1]][ep_name] = []
-            dataset.failure_episode_sizes[target_array[-1]][ep_name] = 0
+        target = episode[target_mode_list[actor_mode[-2]]][-2]
+        if ep_name not in cache[target]:
+            cache[target][ep_name] = []
+            dataset.failure_episode_sizes[target][ep_name] = 0
+
+        cache[target][ep_name].append([begin, len(target_array)])
+        dataset.failure_episode_sizes[target][ep_name] += len(target_array) - begin
+        dataset.failure_aggregate_sizes[target] += len(target_array) - begin
         if reward_type_reverse[episode["reward_type"][-1]] == "lava":
             start = len(target_array) - (lava_collect_limit - 1)
             for i in range(len(target_array) - 2, max(-1, len(target_array) - lava_collect_limit), -1):
@@ -316,10 +327,6 @@ def load_slices(train_eps, navigate_dataset, explore_dataset):
                     start = i + 1
                     break
             dataset.lava_deaths[ep_name] = (start, len(target_array))
-
-        cache[target_array[-1]][ep_name].append([begin, len(target_array)])
-        dataset.failure_episode_sizes[target_array[-1]][ep_name] += len(target_array) - begin
-        dataset.failure_aggregate_sizes[target_array[-1]] += len(target_array) - begin
     navigate_dataset.save()
     explore_dataset.save()
     navigate_dataset.sanity_check()
@@ -333,7 +340,7 @@ class ProcessEpisodeWrap:
     last_episode = 0
 
     @classmethod
-    def process_episode(cls, config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, episode):
+    def process_episode(cls, config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, combat_dataset, episode):
         # this saved episodes is given as train_eps from next call
         filename = tools.save_episodes(config.traindir, [episode])[0]
         length = len(episode["reward"]) - 1
@@ -348,9 +355,8 @@ class ProcessEpisodeWrap:
             if not config.dataset_size or total <= config.dataset_size - length:
                 total += len(ep["reward"]) - 1
             else:
-                print("removing {} from dataset".format(key))
                 del train_eps[key]
-                for dataset in [navigate_dataset, explore_dataset]:
+                for dataset in [navigate_dataset, explore_dataset, combat_dataset]:
                     for target_tuples in dataset.success_tuples:
                         target_tuples.pop(key, None)
                     for target_tuples in dataset.failure_tuples:
@@ -394,7 +400,7 @@ class ProcessEpisodeWrap:
             print(f"[{logger.step}] {mode.title()} episode has {length} steps and return {score:.1f}.")
             if wandb.run is not None and score > -10:
                 wandb.log({f"{mode}_return": score, f"{mode}_length": length},
-                          step=logger.step + len(cls.eval_lengths) * 80)
+                          step=logger.step + len(cls.eval_lengths) * 100)
             # ignore if number of eval episodes exceeds eval_episode_num
             if len(cls.eval_scores) < config.eval_episode_num or cls.eval_done:
                 return
