@@ -174,10 +174,10 @@ class WorldModel(nn.Module):
         sample_markers = {}
         for name, dataset in [("navigate", self.navigate_dataset), ("explore", self.explore_dataset),
                         ("combat", self.combat_dataset)]:
-            difficulty = np.array(self.dataset.failure_aggregate_sizes) / \
-                         (1 + np.array(self.dataset.success_aggregate_sizes) + np.array(self.dataset.failure_aggregate_sizes))
+            difficulty = np.array(dataset.failure_aggregate_sizes) / \
+                         (1 + np.array(dataset.success_aggregate_sizes) + np.array(dataset.failure_aggregate_sizes))
             target_dist = difficulty / np.sum(difficulty)
-            data, markers, lava_rate, success_dist, failure_dist = self.dataset.sample(target_dist)
+            data, markers, lava_rate, success_dist, failure_dist = dataset.sample(target_dist)
             metrics["{}/lava_sample_rate".format(name)] = lava_rate
             for i, t in enumerate(navigate_targets):
                 metrics["{}}/{}_success_sample_rate".format(name, t)] = success_dist[i]
