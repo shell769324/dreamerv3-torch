@@ -186,7 +186,7 @@ class Crafter():
         self.target_explore_steps = 0
         self.target_do_steps = 0
         self.faced = False
-        self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info, 0)
+        self._last_min_dist = self._get_dist(self._crafter_env._player.pos, info)
         where_array = self.compute_where(self._crafter_env._player.pos, info['semantic'])
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, info['semantic'])
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
