@@ -114,7 +114,7 @@ class WorldModel(nn.Module):
             outscale=0.0,
             device=config.device,
         )
-        self.heads["navigate/combat"] = networks.EmbeddedDenseHead(
+        self.heads["combat/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
             config.dyn_deter,
             config.combat_reward_layers,
