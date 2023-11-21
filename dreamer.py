@@ -441,13 +441,17 @@ def main(config, defaults):
         ed_idx = k.index(".npz")
         last_counter = max(last_counter, int(k[st_idx:ed_idx]))
     get_episode_name.counter = last_counter + 1
-    navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 3/4), config.batch_length,
-                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device,
+    navigate_dataset = SliceDataset(train_eps, int(config.batch_size * 1/2), config.batch_length,
+                                    str(Path.joinpath(directory, "navigate.json").absolute()), config.device, navigate_targets,
                                     mode="train", name="navigate", ratio=config.success_failure_ratio)
-    explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/4), config.batch_length,
-                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device,
+    explore_dataset = SliceDataset(train_eps, int(config.batch_size * 1/6), config.batch_length,
+                                   str(Path.joinpath(directory, "explore.json").absolute()), config.device, navigate_targets,
                                    mode="train", name="explore", ratio=config.success_failure_ratio)
-    load_slices(train_eps, navigate_dataset, explore_dataset)
+    combat_dataset = SliceDataset(train_eps, int(config.batch_size * 1/3), config.batch_length,
+                                   str(Path.joinpath(directory, "combat.json").absolute()), config.device,
+                                   combat_targets,
+                                   mode="train", name="combat", ratio=config.success_failure_ratio)
+    load_slices(train_eps, navigate_dataset, explore_dataset, combat_dataset)
 
     if config.offline_evaldir:
         directory = config.offline_evaldir.format(**vars(config))
@@ -455,7 +459,7 @@ def main(config, defaults):
         directory = config.evaldir
     eval_eps = tools.load_episodes(directory, limit=1)
     eval_dataset = make_dataset(eval_eps, config)
-    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset)
+    make = lambda mode: make_env(config, logger, mode, train_eps, eval_eps, navigate_dataset, explore_dataset, combat_dataset)
     train_env, train_crafter, train_collector = make("train")
     eval_env, eval_crafter, eval_collector = make("eval")
     acts = train_env.action_space
@@ -491,7 +495,8 @@ def main(config, defaults):
         logger.step = config.action_repeat * count_steps(config.traindir)
 
     print("Simulate agent.")
-    agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset, train_crafter, eval_crafter).to(config.device)
+    agent = Dreamer(config, logger, train_dataset, navigate_dataset, explore_dataset, combat_dataset,
+                    train_crafter, eval_crafter).to(config.device)
     train_collector.policy = agent
     eval_collector.policy = agent
     agent.requires_grad_(requires_grad=False)
