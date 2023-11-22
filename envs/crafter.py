@@ -293,7 +293,7 @@ class Crafter():
                 self.touched = False
                 self.faced = False
                 self.target_do_steps = 0
-                actor_mode = 0
+                actor_mode = 1
             elif self._last_min_dist > min_dist:
                 reward_type = "navigate_closer"
             elif self._last_min_dist < min_dist:
