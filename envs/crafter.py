@@ -54,6 +54,7 @@ class Crafter():
             name = str(name)[str(name).find('objects.') + len('objects.'):-2].lower() if 'objects.' in str(
                 name) else str(name)
             self._id_to_item[ind] = name
+        self.actor_mode = 1
         self._row_side = self._env._local_view._grid[0] // 2
         self._col_side = self._env._local_view._grid[1] // 2
         self.value = 0
@@ -205,6 +206,7 @@ class Crafter():
         self.prev_target = self.target
         self.prev_navigate_target = self.navigate_target
         self.prev_combat_target = self.combat_target
+        self.actor_mode = None
         if self.reward_type == "navigate":
             res = self.navigate_step(action)
         elif self.reward_type == "explore":
@@ -226,6 +228,28 @@ class Crafter():
             if facing_object in targets:
                 return facing_object
         return None
+
+    def check_for_combat(self, where_array, player_pos, info):
+        for i, target in enumerate(combat_targets):
+            if np.sum(where_array[aware.index(target)]) > 0:
+                self.target_do_steps = 0
+                self.target = targets.index(target)
+                self.combat_target = i
+                self._last_min_dist = self._get_dist(player_pos, info)
+                self.faced = self.get_facing_object() == targets[self.target]
+                self.touched = self._last_min_dist == 1
+                self.actor_mode = 2
+                self.was_facing = self.faced
+
+    def set_for_navigate(self, player_pos, info):
+        self.target_do_steps = 0
+        self.navigate_target = np.random.randint(0, len(navigate_targets))
+        self.target = targets.index(navigate_targets[self.navigate_target])
+        self._last_min_dist = self._get_dist(player_pos, info)
+        self.actor_mode = 0 if self._last_min_dist is not None else 1
+        self.was_facing = self.get_facing_object() == targets[self.target]
+        self.touched = self._last_min_dist == 1
+        self.faced = self.was_facing
 
     def navigate_step(self, action):
         if len(action.shape) >= 1:
@@ -251,20 +275,13 @@ class Crafter():
         achievement = achievement_mapping[navigate_targets[self.navigate_target]]
         touch_step = -1
         face_step = -1
-        actor_mode = None
         if self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
-            self.target = np.random.randint(0, len(navigate_targets))
-            self.navigate_target = self.target
-            self._last_min_dist = self._get_dist(player_pos, info)
-            self.faced = self.get_facing_object() == targets[self.target]
+            target_do_steps = self.target_do_steps
+            self.set_for_navigate(player_pos, info)
             if self.faced:
                 face_step = 0
-            self.touched = self._last_min_dist == 1
             if self.touched:
                 touch_step = 0
-            target_do_steps = self.target_do_steps
-            self.target_do_steps = 0
-            self.was_facing = self.faced
             reward_type = "navigate_do"
             reward += reward_types.get(reward_type)[0]
         elif self.get_facing_object() == navigate_targets[self.navigate_target]:
@@ -287,13 +304,13 @@ class Crafter():
                     touch_step = self.target_do_steps
                     self.touched = True
             if self._last_min_dist is None:
-                raise RuntimeError("Illegal state, none last min dist")
+                raise RuntimeError("Illegal state for navigate, none last min dist")
             elif min_dist is None:
                 reward_type = "navigate_lost"
                 self.touched = False
                 self.faced = False
                 self.target_do_steps = 0
-                actor_mode = 1
+                self.actor_mode = 1
             elif self._last_min_dist > min_dist:
                 reward_type = "navigate_closer"
             elif self._last_min_dist < min_dist:
@@ -305,20 +322,12 @@ class Crafter():
             reward += reward_types.get(reward_type)[0]
             self._last_min_dist = min_dist
             self.was_facing = False
-        for i, target in enumerate(combat_targets):
-            if np.sum(where_array[aware.index(target)]) > 0:
-                self.target = targets.index(target)
-                self.combat_target = i
-                self._last_min_dist = self._get_dist(player_pos, info)
-                self.faced = False
-                self.touched = False
-                actor_mode = 2
-                break
+        self.check_for_combat(where_array, player_pos, info)
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward += reward_types.get(reward_type)[0]
-        if actor_mode is None:
-            actor_mode = 0 if self._last_min_dist is not None else 1
+        if self.actor_mode is None:
+            self.actor_mode = 0 if self._last_min_dist is not None else 1
         self.prev_info = info
         self.prev_actual_reward = reward
         return self.navigate_obs(
@@ -326,13 +335,14 @@ class Crafter():
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_do_steps=target_do_steps,
             where=where_array, reward_type=reward_type, face_step=face_step,
-            touch_step=touch_step, front=front, actor_mode=actor_mode), reward, self._done, info
+            touch_step=touch_step, front=front), reward, self._done, info
 
     def navigate_obs(
             self, image, reward, info,
             is_first=False, is_last=False, is_terminal=False, augmented=None,
             target_do_steps=-1, where=None, reward_type="default", face_step=-1, touch_step=-1,
-            front=len(aware), actor_mode=0):
+            front=len(aware)):
+        assert self.actor_mode is not None, "actor mode in navigate obs is None"
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0 for k in self._achievements
         }
@@ -349,7 +359,7 @@ class Crafter():
             prev_target=self.prev_target,
             prev_combat_target=self.prev_combat_target,
             prev_navigate_target=self.prev_navigate_target,
-            actor_mode=actor_mode,
+            actor_mode=self.actor_mode,
             target_explore_steps=-1,
             target_do_steps=target_do_steps,
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
@@ -389,34 +399,25 @@ class Crafter():
         else:
             reward_type = "explore_stable"
             reward += reward_types.get(reward_type)[0]
-        actor_mode = None
-        for i, target in enumerate(combat_targets):
-            if np.sum(where_array[aware.index(target)]) > 0:
-                self.target = targets.index(target)
-                self.combat_target = i
-                self._last_min_dist = self._get_dist(player_pos, info)
-                self.faced = False
-                self.touched = False
-                actor_mode = 2
-                break
+        self.check_for_combat(where_array, player_pos, info)
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward = np.float32(reward_types.get(reward_type)[0])
-        if actor_mode is None:
-            actor_mode = 0 if self._last_min_dist is not None else 1
+        if self.actor_mode is None:
+            self.actor_mode = 0 if self._last_min_dist is not None else 1
         self.prev_info = info
         self.prev_actual_reward = reward
         return self.explore_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_explore_steps=target_explore_steps,
-            where=where_array, reward_type=reward_type, front=front, actor_mode=actor_mode), \
+            where=where_array, reward_type=reward_type, front=front), \
             reward, self._done, info
 
     def explore_obs(self, image, reward, info,
                     is_first=False, is_last=False, is_terminal=False, augmented=None,
-                    target_explore_steps=-1, where=None, reward_type="default", front=len(aware),
-                    actor_mode=1):
+                    target_explore_steps=-1, where=None, reward_type="default", front=len(aware)):
+        assert self.actor_mode is not None, "actor mode in explore obs is None"
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0
             for k in self._achievements}
@@ -433,7 +434,7 @@ class Crafter():
             prev_target=self.prev_target,
             prev_combat_target=self.prev_combat_target,
             prev_navigate_target=self.prev_navigate_target,
-            actor_mode=actor_mode,
+            actor_mode=self.actor_mode,
             target_explore_steps=target_explore_steps,
             target_do_steps=-1,
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
@@ -495,37 +496,27 @@ class Crafter():
                 is_near_zombie = True
 
         achievement = achievement_mapping[combat_targets[self.combat_target]]
-        actor_mode = 2
         if zombie_do or self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
             reward_type = "combat_do"
             reward += reward_types.get(reward_type)[0]
             if self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
                 target_do_steps = self.target_do_steps
                 self.target_do_steps = 0
-                if np.sum(where_array[aware.index("zombie")]) > 0:
-                    self.combat_target = combat_targets.index("zombie")
-                    self.target = targets.index("zombie")
-                    self._last_min_dist = self._get_dist(player_pos, info)
-                elif np.sum(where_array[aware.index("skeleton")]) > 0:
-                    self.combat_target = combat_targets.index("skeleton")
-                    self.target = targets.index("skeleton")
-                    self._last_min_dist = self._get_dist(player_pos, info)
-                else:
-                    self.navigate_target = np.random.randint(0, len(navigate_targets))
-                    self.target = targets.index(navigate_targets[self.navigate_target])
-                    self._last_min_dist = self._get_dist(player_pos, info)
-                    actor_mode = 0 if self._last_min_dist is not None else 1
-                self.was_facing = False
-                self.touched = self._last_min_dist == 1
+                self.check_for_combat(where_array, player_pos, info)
+                if self.actor_mode is None:
+                    self.set_for_navigate(player_pos, info)
                 if self.touched:
                     touch_step = 0
-                self.faced = False
+                if self.faced:
+                    face_step = 0
         elif not is_near_zombie and was_near_arrow and self._env._player.health - prev_health == 2:
             reward_type = "combat_arrow"
             reward += reward_types.get(reward_type)[0]
+            self.actor_mode = 2
         elif fail_to_attack_zombie or fail_to_face_zombie:
             reward_type = "combat_zombie_beaten"
             reward += reward_types.get(reward_type)[0]
+            self.actor_mode = 2
         elif self.get_facing_object() == combat_targets[self.combat_target]:
             if not self.was_facing:
                 self.was_facing = True
@@ -539,6 +530,7 @@ class Crafter():
                 self.touched = True
             else:
                 reward_type = "combat_stable"
+            self.actor_mode = 2
         else:
             min_dist = self._get_dist(player_pos, info)
             if min_dist == 1:
@@ -546,21 +538,16 @@ class Crafter():
                     touch_step = self.target_do_steps
                     self.touched = True
             if self._last_min_dist is None:
-                raise RuntimeError("Illegal state, none last min dist")
+                raise RuntimeError("Illegal state for combat, none last min dist")
             elif min_dist is None:
                 reward_type = "combat_lost"
-                self.touched = False
-                self.faced = False
-                self.target_do_steps = 0
-                self.navigate_target = np.random.randint(0, len(navigate_targets))
-                self.target = targets.index(navigate_targets[self.navigate_target])
-                self._last_min_dist = self._get_dist(player_pos, info)
-                actor_mode = 0 if self._last_min_dist is not None else 1
-                self.was_facing = False
-                self.touched = self._last_min_dist == 1
+                self.check_for_combat(where_array, player_pos, info)
+                if self.actor_mode is None:
+                    self.set_for_navigate(player_pos, info)
                 if self.touched:
                     touch_step = 0
-                self.faced = False
+                if self.faced:
+                    face_step = 0
             elif self._last_min_dist > min_dist:
                 reward_type = "combat_closer"
             elif self._last_min_dist < min_dist:
@@ -569,6 +556,8 @@ class Crafter():
                 reward_type = "combat_avert"
             else:
                 reward_type = "combat_stable"
+            if self.actor_mode is None:
+                self.actor_mode = 2
             reward += reward_types.get(reward_type)[0]
             self.was_facing = False
         self._last_min_dist = self._get_dist(player_pos, info)
@@ -582,13 +571,14 @@ class Crafter():
             is_last=self._done,
             is_terminal=info['discount'] == 0, target_do_steps=target_do_steps,
             where=where_array, reward_type=reward_type, face_step=face_step,
-            touch_step=touch_step, front=front, actor_mode=actor_mode), reward, self._done, info
+            touch_step=touch_step, front=front), reward, self._done, info
 
     def combat_obs(
             self, image, reward, info,
             is_first=False, is_last=False, is_terminal=False, augmented=None,
             target_do_steps=-1, where=None, reward_type="default", face_step=-1, touch_step=-1,
-            front=len(aware), actor_mode=2):
+            front=len(aware)):
+        assert self.actor_mode is not None, "actor mode in combat obs is None"
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0 for k in self._achievements
         }
@@ -605,7 +595,7 @@ class Crafter():
             prev_target=self.prev_target,
             prev_combat_target=self.prev_combat_target,
             prev_navigate_target=self.prev_navigate_target,
-            actor_mode=actor_mode,
+            actor_mode=self.actor_mode,
             target_explore_steps=-1,
             target_do_steps=target_do_steps,
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
