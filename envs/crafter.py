@@ -240,9 +240,7 @@ class Crafter():
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
         self.target_do_steps += 1
-        # reward = np.float32(reward)
         player_pos = info['player_pos']
-        facing = info['player_facing']
 
         reward = np.float32(0)
         # Hit lava very negative reward
@@ -541,7 +539,6 @@ class Crafter():
                 self.touched = True
             else:
                 reward_type = "combat_stable"
-            self._last_min_dist = self._get_dist(player_pos, info)
         else:
             min_dist = self._get_dist(player_pos, info)
             if min_dist == 1:
@@ -573,8 +570,8 @@ class Crafter():
             else:
                 reward_type = "combat_stable"
             reward += reward_types.get(reward_type)[0]
-            self._last_min_dist = min_dist
             self.was_facing = False
+        self._last_min_dist = self._get_dist(player_pos, info)
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward = np.float32(reward_types.get(reward_type)[0])
