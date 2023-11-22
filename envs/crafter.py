@@ -509,6 +509,8 @@ class Crafter():
                     touch_step = 0
                 if self.faced:
                     face_step = 0
+            else:
+                self.actor_mode = 2
         elif not is_near_zombie and was_near_arrow and self._env._player.health - prev_health == 2:
             reward_type = "combat_arrow"
             reward += reward_types.get(reward_type)[0]
