@@ -181,6 +181,7 @@ class Crafter():
             'player_pos': self._crafter_env._player.pos,
             'player_facing': self._crafter_env._player.facing,
         }
+        self.actor_mode = 1
         self.target = np.random.randint(0, len(navigate_targets))
         self.navigate_target = self.target
         self.combat_target = -1
