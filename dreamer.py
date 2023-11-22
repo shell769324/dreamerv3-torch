@@ -486,7 +486,7 @@ def main(config, defaults):
             logprob = random_actor.log_prob(action)
             crafter_env = train_crafter if training else eval_crafter
             crafter_env.reward_type = actor_mode_list[o["actor_mode"][0]]
-            print(targets[crafter_env.target] + " " + crafter_env.reward_type + )
+            print(targets[crafter_env.target] + " " + crafter_env.reward_type)
             return {"action": action, "logprob": logprob}, None
 
         train_collector.policy = random_agent
