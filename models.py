@@ -172,16 +172,15 @@ class WorldModel(nn.Module):
         coeff = torch.tensor(self._config.regularization).to(self._config.device)
         sample_data = {}
         sample_markers = {}
-        for name, dataset in [("navigate", self.navigate_dataset), ("explore", self.explore_dataset),
-                        ("combat", self.combat_dataset)]:
+        for name, dataset, specific_targets in [("navigate", self.navigate_dataset, navigate_targets), ("explore", self.explore_dataset, navigate_targets),
+                        ("combat", self.combat_dataset, combat_targets)]:
             difficulty = np.array(dataset.failure_aggregate_sizes) / \
                          (1 + np.array(dataset.success_aggregate_sizes) + np.array(dataset.failure_aggregate_sizes))
             target_dist = difficulty / np.sum(difficulty)
             data, markers, lava_rate, success_dist, failure_dist = dataset.sample(target_dist)
             metrics["{}/lava_sample_rate".format(name)] = lava_rate
-            for i, t in enumerate(dataset):
+            for i, t in enumerate(specific_targets):
                 metrics["{}/{}_success_sample_rate".format(name, t)] = success_dist[i]
-            for i, t in enumerate(dataset):
                 metrics["{}/{}_failure_sample_rate".format(name, t)] = failure_dist[i]
             data = self.preprocess(data)
             sample_data[name] = data
