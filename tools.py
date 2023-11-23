@@ -311,7 +311,7 @@ class SliceDataset:
             for i in range(st, ed - 1):
                 assert np.sum(self.dataset[ep_name]["where"][i][aware.index("lava")]) > 0, \
                     "{} {} lava: {} {} doesn't have lava (st {}, ed {})".format(self.mode, self.name, ep_name, i, st, ed)
-            assert 1 <= ed - st < lava_collect_limit, \
+            assert 1 <= ed - st <= lava_collect_limit, \
                 "{} {} lava: {} {} is too long (total len {})".format(self.mode, self.name, ep_name, ed - st, ed)
 
     def subsample(self, ret, markers, dist, batch_size, tuples, episode_sizes, aggregate_sizes):
