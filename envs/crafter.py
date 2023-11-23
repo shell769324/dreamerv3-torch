@@ -495,6 +495,17 @@ class Crafter():
             facing_object = self.get_facing_object(facing=facing)
             if facing_object is not None and "zombie" == facing_object:
                 is_near_zombie = True
+        target_despawn = np.sum(where_array[aware.index(targets[self.target])]) == 0
+
+        def lose_case():
+            nonlocal touch_step, face_step
+            self.check_for_combat(where_array, player_pos, info)
+            if self.actor_mode is None:
+                self.set_for_navigate(player_pos, info)
+            if self.touched:
+                touch_step = 0
+            if self.faced:
+                face_step = 0
 
         achievement = achievement_mapping[combat_targets[self.combat_target]]
         if zombie_do or self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
@@ -503,19 +514,21 @@ class Crafter():
             if self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
                 target_do_steps = self.target_do_steps
                 self.target_do_steps = 0
-                self.check_for_combat(where_array, player_pos, info)
-                if self.actor_mode is None:
-                    self.set_for_navigate(player_pos, info)
-                if self.touched:
-                    touch_step = 0
-                if self.faced:
-                    face_step = 0
+                lose_case()
+            elif target_despawn:
+                lose_case()
             else:
                 self.actor_mode = 2
         elif not is_near_zombie and was_near_arrow and self._env._player.health - prev_health == 2:
             reward_type = "combat_arrow"
             reward += reward_types.get(reward_type)[0]
-            self.actor_mode = 2
+            if target_despawn:
+                lose_case()
+            else:
+                self.actor_mode = 2
+        elif target_despawn:
+            lose_case()
+            reward_type = "combat_lost"
         elif fail_to_attack_zombie or fail_to_face_zombie:
             reward_type = "combat_zombie_beaten"
             reward += reward_types.get(reward_type)[0]
@@ -543,14 +556,8 @@ class Crafter():
             if self._last_min_dist is None:
                 raise RuntimeError("Illegal state for combat, none last min dist")
             elif min_dist is None:
+                lose_case()
                 reward_type = "combat_lost"
-                self.check_for_combat(where_array, player_pos, info)
-                if self.actor_mode is None:
-                    self.set_for_navigate(player_pos, info)
-                if self.touched:
-                    touch_step = 0
-                if self.faced:
-                    face_step = 0
             elif self._last_min_dist > min_dist:
                 reward_type = "combat_closer"
             elif self._last_min_dist < min_dist:
