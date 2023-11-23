@@ -180,9 +180,9 @@ class WorldModel(nn.Module):
             data, markers, lava_rate, success_dist, failure_dist = dataset.sample(target_dist)
             metrics["{}/lava_sample_rate".format(name)] = lava_rate
             for i, t in enumerate(navigate_targets):
-                metrics["{}}/{}_success_sample_rate".format(name, t)] = success_dist[i]
+                metrics["{}/{}_success_sample_rate".format(name, t)] = success_dist[i]
             for i, t in enumerate(navigate_targets):
-                metrics["{}}/{}_failure_sample_rate".format(name, t)] = failure_dist[i]
+                metrics["{}/{}_failure_sample_rate".format(name, t)] = failure_dist[i]
             data = self.preprocess(data)
             sample_data[name] = data
             sample_markers[name] = markers
