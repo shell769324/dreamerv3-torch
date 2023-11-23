@@ -55,6 +55,7 @@ class Crafter():
                 name) else str(name)
             self._id_to_item[ind] = name
         self.actor_mode = 1
+        self.prev_actor_mode = 1
         self._row_side = self._env._local_view._grid[0] // 2
         self._col_side = self._env._local_view._grid[1] // 2
         self.value = 0
@@ -164,7 +165,7 @@ class Crafter():
                                 self.value, self.reward,
                                 self.compute_where(self._crafter_env._player.pos,
                                                    self._env._sem_view()),
-                                self.predicted_where, self._last_min_dist is not None,
+                                self.predicted_where, self.prev_actor_mode,
                                 self.compute_front(self._crafter_env._player.pos,
                                                    self._crafter_env._player.facing,
                                                    self._env._sem_view()))
@@ -182,6 +183,7 @@ class Crafter():
             'player_facing': self._crafter_env._player.facing,
         }
         self.actor_mode = 1
+        self.prev_actor_mode = 1
         self.target = np.random.randint(0, len(navigate_targets))
         self.navigate_target = self.target
         self.combat_target = -1
@@ -216,6 +218,7 @@ class Crafter():
             res = self.combat_step(action)
         else:
             raise ValueError("impossible")
+        self.prev_actor_mode = self.actor_mode
         return res
 
     def get_facing_object(self, facing=None):
