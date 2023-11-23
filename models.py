@@ -102,6 +102,7 @@ class WorldModel(nn.Module):
             dist=config.reward_head,
             outscale=0.0,
             device=config.device,
+            embed_count=len(navigate_targets)
         )
         self.heads["navigate/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
@@ -113,6 +114,7 @@ class WorldModel(nn.Module):
             dist=config.reward_head,
             outscale=0.0,
             device=config.device,
+            embed_count=len(navigate_targets)
         )
         self.heads["combat/reward"] = networks.EmbeddedDenseHead(
             self._config.dyn_stoch * self._config.dyn_discrete,
@@ -124,6 +126,7 @@ class WorldModel(nn.Module):
             dist=config.reward_head,
             outscale=0.0,
             device=config.device,
+            embed_count=len(combat_targets)
         )
         self.heads["cont"] = networks.DenseHead(
             feat_size,  # pytorch version

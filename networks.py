@@ -694,7 +694,8 @@ class EmbeddedDenseHead(nn.Module):
         std=1.0,
         outscale=1.0,
         device="cuda",
-        embed_dim=512
+        embed_dim=512,
+        embed_count=None # number of classes
     ):
         super(EmbeddedDenseHead, self).__init__()
         self._layers = layers
@@ -704,8 +705,10 @@ class EmbeddedDenseHead(nn.Module):
         self._dist = dist
         self._std = std
         self._device = device
+        if embed_count is None:
+            raise RuntimeError("Missing embed count")
 
-        self.embedding = nn.Embedding(len(targets), embed_dim)
+        self.embedding = nn.Embedding(embed_count, embed_dim)
         inp_dim = embed_dim + stoch_size + deter_size
         layers = []
         for index in range(self._layers):
