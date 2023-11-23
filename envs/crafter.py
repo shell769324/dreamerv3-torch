@@ -196,7 +196,7 @@ class Crafter():
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware) + 1
         augmented = self._env.render_target(targets[self.target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self.predicted_where, self._last_min_dist is not None, front)
+                                            where_array, self.predicted_where, self.prev_actor_mode, front)
         self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
