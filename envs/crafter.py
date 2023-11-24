@@ -184,6 +184,7 @@ class Crafter():
         }
         self.actor_mode = 1
         self.prev_actor_mode = 1
+        self.multi_reward_types = np.zero(len(reward_types), dtype=np.uint8)
         self.target = np.random.randint(0, len(navigate_targets))
         self.navigate_target = self.target
         self.combat_target = -1
@@ -209,6 +210,7 @@ class Crafter():
         self.prev_target = self.target
         self.prev_navigate_target = self.navigate_target
         self.prev_combat_target = self.combat_target
+        self.multi_reward_types = np.zero(len(reward_types), dtype=np.uint8)
         self.actor_mode = None
         if self.reward_type == "navigate":
             res = self.navigate_step(action)
@@ -511,6 +513,9 @@ class Crafter():
                 face_step = 0
 
         achievement = achievement_mapping[combat_targets[self.combat_target]]
+        if not is_near_zombie and was_near_arrow and prev_health - self._env._player.health == 2:
+            self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
+            reward += reward_types.get("combat_arrow")[0]
         if zombie_do or self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
             reward_type = "combat_do"
             reward += reward_types.get(reward_type)[0]
@@ -519,13 +524,6 @@ class Crafter():
                 self.target_do_steps = 0
                 lose_case()
             elif target_despawn:
-                lose_case()
-            else:
-                self.actor_mode = 2
-        elif not is_near_zombie and was_near_arrow and self._env._player.health - prev_health == 2:
-            reward_type = "combat_arrow"
-            reward += reward_types.get(reward_type)[0]
-            if target_despawn:
                 lose_case()
             else:
                 self.actor_mode = 2
