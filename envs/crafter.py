@@ -211,7 +211,7 @@ class Crafter():
         self.prev_target = self.target
         self.prev_navigate_target = self.navigate_target
         self.prev_combat_target = self.combat_target
-        self.multi_reward_types = np.zero(len(reward_types), dtype=np.uint8)
+        self.multi_reward_types = np.zeros(len(reward_types), dtype=np.uint8)
         self.actor_mode = None
         if self.reward_type == "navigate":
             res = self.navigate_step(action)
