@@ -102,6 +102,7 @@ class Crafter():
         spaces["prev_combat_target"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward_mode"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward_type"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
+        spaces["multi_reward_types"] = gym.spaces.Box(-np.inf, np.inf, (len(reward_types),), dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
@@ -352,6 +353,7 @@ class Crafter():
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0 for k in self._achievements
         }
+        self.multi_reward_types[reward_types[reward_type][1]] = 1
         return dict(
             image=image,
             augmented=augmented,
@@ -371,6 +373,7 @@ class Crafter():
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
             where=where,
             reward_mode=0,
+            multi_reward_types=self.multi_reward_types,
             reward_type=reward_types.get(reward_type)[1],
             target_face_steps=face_step,
             target_touch_steps=touch_step,
@@ -427,6 +430,7 @@ class Crafter():
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0
             for k in self._achievements}
+        self.multi_reward_types[reward_types[reward_type][1]] = 1
         return dict(
             image=image,
             augmented=augmented,
@@ -593,6 +597,7 @@ class Crafter():
         log_achievements = {
             f'log_achievement_{k}': info['achievements'][k] if info else 0 for k in self._achievements
         }
+        self.multi_reward_types[reward_types[reward_type][1]] = 1
         return dict(
             image=image,
             augmented=augmented,
