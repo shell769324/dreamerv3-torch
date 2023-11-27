@@ -455,6 +455,7 @@ class Crafter():
             target_face_steps=-1,
             target_touch_steps=-1,
             front=front,
+            multi_reward_types=self.multi_reward_types,
             **log_achievements,
         )
 
@@ -618,6 +619,7 @@ class Crafter():
             distance=-1.0 if self._last_min_dist is None else float(self._last_min_dist),
             where=where,
             reward_mode=2,
+            multi_reward_types=self.multi_reward_types,
             reward_type=reward_types.get(reward_type)[1],
             target_face_steps=face_step,
             target_touch_steps=touch_step,
