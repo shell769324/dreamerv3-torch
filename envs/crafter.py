@@ -3,7 +3,7 @@ import gym
 import crafter
 import itertools
 
-aware = ["water", "stone", "tree", "coal", "iron", "cow", "lava", "zombie", "skeleton"]
+aware = ["water", "stone", "tree", "coal", "iron", "cow", "zombie", "skeleton", "lava"]
 target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collect_coal", "collect_iron", "eat_cow",
                        "defeat_zombie", "defeat_skeleton"]
 targets = ["water", "stone", "tree", "coal", "iron", "cow", "zombie", "skeleton"]
@@ -247,6 +247,7 @@ class Crafter():
                 self.touched = self._last_min_dist == 1
                 self.actor_mode = 2
                 self.was_facing = self.faced
+                break
 
     def set_for_navigate(self, player_pos, info):
         self.target_do_steps = 0
