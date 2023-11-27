@@ -185,7 +185,7 @@ class Crafter():
         }
         self.actor_mode = 1
         self.prev_actor_mode = 1
-        self.multi_reward_types = np.zero(len(reward_types), dtype=np.uint8)
+        self.multi_reward_types = np.zeros(len(reward_types), dtype=np.uint8)
         self.target = np.random.randint(0, len(navigate_targets))
         self.navigate_target = self.target
         self.combat_target = -1
