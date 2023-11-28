@@ -221,7 +221,6 @@ class Crafter():
             res = self.combat_step(action)
         else:
             raise ValueError("impossible")
-        print(type(self.prev_navigate_target), type(self.prev_combat_target))
         assert type(self.prev_navigate_target) == type(1), "prev_navigate_target is not int type"
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
