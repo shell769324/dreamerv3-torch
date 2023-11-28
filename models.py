@@ -260,7 +260,7 @@ class WorldModel(nn.Module):
             metrics["post_ent"] = to_np(
                 torch.mean(self.dynamics.get_dist(post).entropy())
             )
-        detached_post = {k1: {k2: v2.detach() for k2, v2 in v1.items()} for k1, v1 in posts}
+        detached_post = {k1: {k2: v2.detach() for k2, v2 in v1.items()} for k1, v1 in posts.items()}
         return detached_post, sample_data, metrics
 
     def preprocess(self, obs):
