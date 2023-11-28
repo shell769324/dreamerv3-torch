@@ -45,7 +45,7 @@ class Crafter():
         self.combat_target = -1
         self.prev_target = np.random.randint(0, len(navigate_targets))
         self.prev_navigate_target = self.target
-        self.prev_combat_target = -1
+        self.prev_combat_target = 0
         self._id_to_item = [""] * 19
         self._last_min_dist = None
         self.target_do_steps = 0
@@ -221,6 +221,8 @@ class Crafter():
             res = self.combat_step(action)
         else:
             raise ValueError("impossible")
+        print(type(self.prev_navigate_target), type(self.prev_combat_target))
+        exit(1)
         self.prev_actor_mode = self.actor_mode
         return res
 
