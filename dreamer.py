@@ -329,6 +329,7 @@ def load_slices(train_eps, navigate_dataset, explore_dataset, combat_dataset):
             dataset.lava_deaths[ep_name] = (start, len(target_array))
     navigate_dataset.save()
     explore_dataset.save()
+    combat_dataset.save()
     navigate_dataset.sanity_check()
     explore_dataset.sanity_check()
 

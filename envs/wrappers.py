@@ -106,6 +106,7 @@ class CollectDataset:
                 callback(episode)
             self.navigate_dataset.save()
             self.explore_dataset.save()
+            self.combat_dataset.save()
         return obs, reward, done, info
 
     def reset(self):
