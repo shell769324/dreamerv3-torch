@@ -188,7 +188,7 @@ class Crafter():
         self.multi_reward_types = np.zeros(len(reward_types), dtype=np.uint8)
         self.target = np.random.randint(0, len(navigate_targets))
         self.navigate_target = self.target
-        self.combat_target = -1
+        self.combat_target = 0
         self.target_explore_steps = 0
         self.target_do_steps = 0
         self.faced = False
