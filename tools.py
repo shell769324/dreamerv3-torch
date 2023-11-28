@@ -424,8 +424,6 @@ class SliceDataset:
             success_ratio = np.array(self.success_aggregate_sizes) / (1 + total_aggregate_sizes)
             success_dist = dist * success_ratio
             failure_dist = dist * np.array(self.failure_aggregate_sizes) / (1 + total_aggregate_sizes)
-            print("success", remaining_size, success_dist, self.success_aggregate_sizes)
-            print("failure", remaining_size, failure_dist, self.failure_aggregate_sizes)
             success_size = int(np.sum(success_dist) * remaining_size)
             failure_size = remaining_size - success_size
             ret, markers = self.subsample(ret, markers, success_dist / np.sum(success_dist), success_size, self.success_tuples,

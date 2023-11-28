@@ -231,7 +231,6 @@ class WorldModel(nn.Module):
                         right_post = posts[actor_mode]
                         target_name = "prev_{}_target".format(actor_mode if actor_mode == "combat" else "navigate")
                         (stoch, deter) = self.dynamics.get_sep(right_post)
-                        print(target_name, name, right_data[target_name].dtype, right_data[target_name].shape)
                         pred = head(stoch, deter, right_data[target_name])
                         like = pred.log_prob(right_data["reward"])
                         # Ignore the first slice of each segment
