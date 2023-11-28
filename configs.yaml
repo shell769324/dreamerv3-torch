@@ -29,7 +29,7 @@ defaults:
   action_repeat: 2
   time_limit: 1000
   grayscale: False
-  prefill: 2500
+  prefill: 3200
   eval_noise: 0.0
   reward_EMA: True
 
