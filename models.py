@@ -269,6 +269,11 @@ class WorldModel(nn.Module):
         # (batch_size, batch_length) -> (batch_size, batch_length, 1)
         obs["reward"] = torch.Tensor(obs["reward"]).unsqueeze(-1)
         obs["target"] = torch.Tensor(obs["target"]).type(torch.IntTensor)
+        obs["navigate_target"] = torch.Tensor(obs["navigate_target"]).type(torch.IntTensor)
+        obs["combat_target"] = torch.Tensor(obs["combat_target"]).type(torch.IntTensor)
+        obs["prev_navigate_target"] = torch.Tensor(obs["prev_navigate_target"]).type(torch.IntTensor)
+        obs["prev_combat_target"] = torch.Tensor(obs["prev_combat_target"]).type(torch.IntTensor)
+        obs["actor_mode"] = torch.Tensor(obs["actor_mode"]).type(torch.IntTensor)
         obs["prev_target"] = torch.Tensor(obs["prev_target"]).type(torch.IntTensor)
         obs["front"] = torch.Tensor(obs["front"]).type(torch.int64)
         if "discount" in obs:
