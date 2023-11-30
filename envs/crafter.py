@@ -21,6 +21,7 @@ target_step_list = ["target_do_steps", "target_explore_steps", "target_do_steps"
 target_mode_list = ["navigate_target", "navigate_target", "combat_target"]
 
 directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+eight_directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
 
 reward_type_reverse = [""] * len(reward_types.keys())
 for k, (a, b) in reward_types.items():
@@ -68,6 +69,7 @@ class Crafter():
         self.faced = False # has faced once since navigate
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware)
+        self.step = 0
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -169,10 +171,11 @@ class Crafter():
                                 self.predicted_where, self.prev_actor_mode,
                                 self.compute_front(self._crafter_env._player.pos,
                                                    self._crafter_env._player.facing,
-                                                   self._env._sem_view()))
+                                                   self._env._sem_view()), self.step)
 
     def reset(self):
         self._done = False
+        self.step = 0
         image = self._env.reset()
         achievements = dict()
         for achievement in self._achievements:
@@ -198,7 +201,7 @@ class Crafter():
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware) + 1
         augmented = self._env.render_target(targets[self.target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self.predicted_where, self.prev_actor_mode, front)
+                                            where_array, self.predicted_where, self.prev_actor_mode, front, self.step)
         self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
@@ -224,6 +227,7 @@ class Crafter():
         assert type(self.prev_navigate_target) == type(1), "prev_navigate_target is not int type"
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
+        self.step += 1
         return res
 
     def get_facing_object(self, facing=None):
@@ -485,7 +489,7 @@ class Crafter():
 
         was_near_arrow = False
         prev_health = self._env._player.health
-        for facing in directions:
+        for facing in eight_directions:
             facing_object = self.get_facing_object(facing=facing)
             if "arrow" == facing_object:
                 was_near_arrow = True
@@ -521,9 +525,11 @@ class Crafter():
                 face_step = 0
 
         achievement = achievement_mapping[combat_targets[self.combat_target]]
-        if not is_near_zombie and was_near_arrow and prev_health - self._env._player.health == 2:
+        is_shot = False
+        if not is_near_zombie and was_near_arrow and prev_health - self._env._player.health >= 2:
             self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
             reward += reward_types.get("combat_arrow")[0]
+            is_shot = True
         if zombie_do or self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
             reward_type = "combat_do"
             reward += reward_types.get(reward_type)[0]
@@ -585,6 +591,8 @@ class Crafter():
             reward = np.float32(reward_types.get(reward_type)[0])
         self.prev_info = info
         self.prev_actual_reward = reward
+        if reward_type is None and is_shot:
+            reward_type = "combat_arrow"
         return self.combat_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
