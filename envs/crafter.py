@@ -491,7 +491,7 @@ class Crafter():
         prev_health = self._env._player.health
         for facing in eight_directions:
             facing_object = self.get_facing_object(facing=facing)
-            if "arrow" in facing_object:
+            if facing_object is not None and "arrow" in facing_object:
                 was_near_arrow = True
 
         augmented = self.create_augment()
