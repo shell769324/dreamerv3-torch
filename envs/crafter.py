@@ -69,7 +69,7 @@ class Crafter():
         self.faced = False # has faced once since navigate
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware)
-        self.step = 0
+        self.step_count = 0
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -171,11 +171,11 @@ class Crafter():
                                 self.predicted_where, self.prev_actor_mode,
                                 self.compute_front(self._crafter_env._player.pos,
                                                    self._crafter_env._player.facing,
-                                                   self._env._sem_view()), self.step)
+                                                   self._env._sem_view()), self.step_count)
 
     def reset(self):
         self._done = False
-        self.step = 0
+        self.step_count = 0
         image = self._env.reset()
         achievements = dict()
         for achievement in self._achievements:
@@ -201,7 +201,7 @@ class Crafter():
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware) + 1
         augmented = self._env.render_target(targets[self.target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self.predicted_where, self.prev_actor_mode, front, self.step)
+                                            where_array, self.predicted_where, self.prev_actor_mode, front, self.step_count)
         self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
@@ -227,7 +227,7 @@ class Crafter():
         assert type(self.prev_navigate_target) == type(1), "prev_navigate_target is not int type"
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
-        self.step += 1
+        self.step_count += 1
         return res
 
     def get_facing_object(self, facing=None):
