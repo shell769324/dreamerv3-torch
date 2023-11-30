@@ -238,7 +238,7 @@ class Crafter():
         face_in_bound = 0 <= faced_pos[0] < self._size[0] and 0 <= faced_pos[1] < self._size[1]
         if face_in_bound:
             facing_object = self._id_to_item[self._env._sem_view()[faced_pos]]
-            if facing_object in targets or "arrow" in facing_object or "lava" in facing_object:
+            if facing_object in targets or "arrow" in facing_object or "lava" == facing_object:
                 return facing_object
         return None
 
