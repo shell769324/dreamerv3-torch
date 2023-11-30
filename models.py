@@ -272,6 +272,7 @@ class WorldModel(nn.Module):
         obs["combat_target"] = torch.Tensor(obs["combat_target"]).type(torch.IntTensor)
         obs["prev_navigate_target"] = torch.Tensor(obs["prev_navigate_target"]).type(torch.IntTensor)
         obs["prev_combat_target"] = torch.Tensor(obs["prev_combat_target"]).type(torch.IntTensor)
+        obs["reward_mode"] = torch.Tensor(obs["reward_mode"]).type(torch.IntTensor)
         obs["actor_mode"] = torch.Tensor(obs["actor_mode"]).type(torch.IntTensor)
         obs["prev_target"] = torch.Tensor(obs["prev_target"]).type(torch.IntTensor)
         obs["front"] = torch.Tensor(obs["front"]).type(torch.int64)

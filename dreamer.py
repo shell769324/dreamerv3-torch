@@ -179,7 +179,6 @@ class Dreamer(nn.Module):
             latent["stoch"] = latent["mean"]
         prev_target_array = torch.zeros((1,), dtype=torch.int32).to(self._config.device)
         # obs[_] has length 1
-        print(obs["reward_mode"], obs["reward_mode"].dtype)
         if actor_mode_list[obs["reward_mode"][0]] == "combat":
             prev_target_array[0] = obs["prev_combat_target"][0].to(self._config.device)
         else:
@@ -333,6 +332,7 @@ def load_slices(train_eps, navigate_dataset, explore_dataset, combat_dataset):
     combat_dataset.save()
     navigate_dataset.sanity_check()
     explore_dataset.sanity_check()
+    combat_dataset.sanity_check()
 
 class ProcessEpisodeWrap:
     eval_scores = []
