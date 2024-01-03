@@ -70,6 +70,7 @@ class Crafter():
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware)
         self.step_count = 0
+        self.interrupted_target = None
         if outdir:
             self._env = crafter.Recorder(
                 self._env, outdir,
@@ -255,9 +256,12 @@ class Crafter():
                 self.was_facing = self.faced
                 break
 
-    def set_for_navigate(self, player_pos, info):
+    def set_for_navigate(self, player_pos, info, given_target=None):
         self.target_do_steps = 0
-        self.navigate_target = np.random.randint(0, len(navigate_targets))
+        if given_target is None:
+            self.navigate_target = np.random.randint(0, len(navigate_targets))
+        else:
+            self.navigate_target = given_target
         self.target = targets.index(navigate_targets[self.navigate_target])
         self._last_min_dist = self._get_dist(player_pos, info)
         self.actor_mode = 0 if self._last_min_dist is not None else 1
@@ -337,6 +341,8 @@ class Crafter():
             self._last_min_dist = min_dist
             self.was_facing = False
         self.check_for_combat(where_array, player_pos, info)
+        if self.target in combat_targets:
+            self.interrupted_target = self.prev_target
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward += reward_types.get(reward_type)[0]
@@ -416,6 +422,8 @@ class Crafter():
             reward_type = "explore_stable"
             reward += reward_types.get(reward_type)[0]
         self.check_for_combat(where_array, player_pos, info)
+        if self.target in combat_targets:
+            self.interrupted_target = self.prev_target
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward = np.float32(reward_types.get(reward_type)[0])
@@ -502,7 +510,6 @@ class Crafter():
         player_pos = info['player_pos']
 
         reward = np.float32(0)
-        # Hit lava very negative reward
 
         target_do_steps = -1
         touch_step = -1
@@ -518,7 +525,11 @@ class Crafter():
             nonlocal touch_step, face_step
             self.check_for_combat(where_array, player_pos, info)
             if self.actor_mode is None:
-                self.set_for_navigate(player_pos, info)
+                if self.interrupted_target is not None:
+                    self.set_for_navigate(player_pos, info, given_target=self.interrupted_target)
+                    self.interrupted_target = None
+                else:
+                    self.set_for_navigate(player_pos, info)
             if self.touched:
                 touch_step = 0
             if self.faced:
@@ -526,7 +537,16 @@ class Crafter():
 
         achievement = achievement_mapping[combat_targets[self.combat_target]]
         is_shot = False
-        if not is_near_zombie and was_near_arrow and prev_health - self._env._player.health >= 2:
+        if self._env._player.inventory["food"] > 0 and self._env._player.inventory["drink"] > 0 \
+            and self._env._player.inventory["energy"] > 0:
+            if prev_health == 9:
+                fluctuation = 0
+            else:
+                fluctuation = 1
+        else:
+            fluctuation = -1
+        if not is_near_zombie and was_near_arrow and (prev_health - self._env._player.health >= 2 or
+            fluctuation == 1 and prev_health - self._env._player.health == 1):
             self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
             reward += reward_types.get("combat_arrow")[0]
             is_shot = True

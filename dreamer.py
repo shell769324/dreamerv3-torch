@@ -93,11 +93,12 @@ class Dreamer(nn.Module):
 
             if self._should_log(step):
                 metrics_dict = {}
+                target_map = {"navigate": navigate_targets, "explore": navigate_targets, "combat": combat_targets}
                 for prefix in ["train", "eval"]:
                     for t in actor_mode_list:
                         total_successes = 0
                         total_failures = 0
-                        for target_name in targets:
+                        for target_name in target_map[t]:
                             merged_type = t if t == "explore" else "do"
                             success_name = "{}_{}_success/{}".format(prefix, merged_type, target_name)
                             successes = self._metrics.get(success_name, 0)
