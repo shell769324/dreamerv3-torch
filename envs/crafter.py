@@ -9,7 +9,7 @@ target_mapping_temp = ["collect_drink", "collect_stone", "collect_wood", "collec
 targets = ["water", "stone", "tree", "coal", "iron", "cow", "zombie", "skeleton"]
 navigate_targets = ["water", "stone", "tree", "coal", "iron", "cow"]
 combat_targets = ["zombie", "skeleton"]
-reward_types = {"lava":(-5, 0), "explore_stable":(0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3),
+reward_types = {"lava": (-5, 0), "explore_stable": (0, 1), "explore_spot": (1, 2), "navigate_do": (1.5, 3),
                 "navigate_face": (0.5, 4), "navigate_lost": (-1.5, 5), "navigate_closer": (0.5, 6),
                 "navigate_farther": (-0.5, 7), "navigate_avert": (-0.5, 8), "navigate_stable": (0, 9),
                 "combat_do": (1.5, 10), "combat_face": (0.5, 11), "combat_closer": (0.5, 12),
@@ -30,7 +30,6 @@ achievement_mapping = dict()
 for i in range(len(targets)):
     achievement_mapping[targets[i]] = target_mapping_temp[i]
     achievement_mapping[target_mapping_temp[i]] = targets[i]
-
 
 
 class Crafter():
@@ -64,9 +63,9 @@ class Crafter():
         self.prev_actual_reward = 0
         self.prev_info = None
         self.reward_type = None
-        self.was_facing = False # face in the last step
+        self.was_facing = False  # face in the last step
         self.touched = False
-        self.faced = False # has faced once since navigate
+        self.faced = False  # has faced once since navigate
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware)
         self.step_count = 0
@@ -137,6 +136,7 @@ class Crafter():
 
     def compute_where(self, player_pos, sem):
         where = np.zeros((len(aware), 4), dtype=np.uint8)
+
         def condition(i1, i2, t):
             return 0 <= i1 < len(sem) and 0 <= i2 < len(sem[0]) and self._id_to_item[sem[i1][i2]] == t
 
@@ -163,16 +163,15 @@ class Crafter():
                         where[index][3] = 1
         return where
 
-
     def create_augment(self):
         return self._env.render_target(targets[self.target], self._last_min_dist, self.prev_actual_reward,
-                                self.value, self.reward,
-                                self.compute_where(self._crafter_env._player.pos,
-                                                   self._env._sem_view()),
-                                self.predicted_where, self.prev_actor_mode,
-                                self.compute_front(self._crafter_env._player.pos,
-                                                   self._crafter_env._player.facing,
-                                                   self._env._sem_view()), self.step_count)
+                                       self.value, self.reward,
+                                       self.compute_where(self._crafter_env._player.pos,
+                                                          self._env._sem_view()),
+                                       self.predicted_where, self.prev_actor_mode,
+                                       self.compute_front(self._crafter_env._player.pos,
+                                                          self._crafter_env._player.facing,
+                                                          self._env._sem_view()), self.step_count)
 
     def reset(self):
         self._done = False
@@ -202,13 +201,15 @@ class Crafter():
         self.predicted_where = np.zeros((len(aware), 4), dtype=np.uint8)
         self.front = len(aware) + 1
         augmented = self._env.render_target(targets[self.target], self._last_min_dist, 0, self.value, self.reward,
-                                            where_array, self.predicted_where, self.prev_actor_mode, front, self.step_count)
+                                            where_array, self.predicted_where, self.prev_actor_mode, front,
+                                            self.step_count)
         self.prev_actual_reward = 0
         self.touched = False
         self.prev_info = info
         self.was_facing = False
         if self._last_min_dist is None:
-            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, target_explore_steps=0, front=front)
+            return self.explore_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array,
+                                    target_explore_steps=0, front=front)
         return self.navigate_obs(image, 0, info, is_first=True, augmented=augmented, where=where_array, front=front)
 
     def step(self, action):
@@ -280,7 +281,8 @@ class Crafter():
         augmented = self.create_augment()
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
-        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
+        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
+                                   self._env._sem_view())
         self.target_do_steps += 1
         player_pos = info['player_pos']
 
@@ -341,8 +343,8 @@ class Crafter():
             self._last_min_dist = min_dist
             self.was_facing = False
         self.check_for_combat(where_array, player_pos, info)
-        if self.target in combat_targets:
-            self.interrupted_target = self.prev_target
+        if targets[self.target] in combat_targets:
+            self.interrupted_target = self.navigate_target
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward += reward_types.get(reward_type)[0]
@@ -404,7 +406,7 @@ class Crafter():
         image, _, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
-                                                               self._env._sem_view())
+                                   self._env._sem_view())
         self.target_explore_steps += 1
         target_explore_steps = -1
         # reward = np.float32(reward)
@@ -422,8 +424,8 @@ class Crafter():
             reward_type = "explore_stable"
             reward += reward_types.get(reward_type)[0]
         self.check_for_combat(where_array, player_pos, info)
-        if self.target in combat_targets:
-            self.interrupted_target = self.prev_target
+        if targets[self.target] in combat_targets:
+            self.interrupted_target = self.navigate_target
         if self._env._world[player_pos][0] == 'lava':
             reward_type = "lava"
             reward = np.float32(reward_types.get(reward_type)[0])
@@ -505,7 +507,8 @@ class Crafter():
         augmented = self.create_augment()
         image, _, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
-        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing, self._env._sem_view())
+        front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
+                                   self._env._sem_view())
         self.target_do_steps += 1
         player_pos = info['player_pos']
 
@@ -538,7 +541,7 @@ class Crafter():
         achievement = achievement_mapping[combat_targets[self.combat_target]]
         is_shot = False
         if self._env._player.inventory["food"] > 0 and self._env._player.inventory["drink"] > 0 \
-            and self._env._player.inventory["energy"] > 0:
+                and self._env._player.inventory["energy"] > 0:
             if prev_health == 9:
                 fluctuation = 0
             else:
@@ -546,7 +549,7 @@ class Crafter():
         else:
             fluctuation = -1
         if not is_near_zombie and was_near_arrow and (prev_health - self._env._player.health >= 2 or
-            fluctuation == 1 and prev_health - self._env._player.health == 1):
+                                                      fluctuation == 1 and prev_health - self._env._player.health == 1):
             self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
             reward += reward_types.get("combat_arrow")[0]
             is_shot = True
