@@ -23,5 +23,4 @@ for filename in sorted(directory.glob("*.npz")):
     with filename.open("rb") as f:
         episode = np.load(f)
         episode = {k: episode[k] for k in episode.keys()}
-    print(episode.keys())
-    imageio.mimsave("/Users/nardis/Downloads/videos/" + str(len(episode["augmented"])) + "_" + filename.name[:-3] + "mp4", episode["augmented"])
+    imageio.mimsave("/Users/nardis/Downloads/videos/" + filename.name[:-4] + "_" + str(len(episode["augmented"])) + ".mp4", episode["augmented"])

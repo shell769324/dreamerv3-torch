@@ -279,6 +279,14 @@ class Crafter():
         action += 1
 
         augmented = self.create_augment()
+
+        was_near_arrow = False
+        prev_health = self._env._player.health
+        for facing in eight_directions:
+            facing_object = self.get_facing_object(facing=facing)
+            if facing_object is not None and "arrow" in facing_object:
+                was_near_arrow = True
+
         image, reward, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
@@ -295,6 +303,22 @@ class Crafter():
         achievement = achievement_mapping[navigate_targets[self.navigate_target]]
         touch_step = -1
         face_step = -1
+
+        if self._env._player.inventory["food"] > 0 and self._env._player.inventory["drink"] > 0 \
+                and self._env._player.inventory["energy"] > 0:
+            if prev_health == 9:
+                fluctuation = 0
+            else:
+                fluctuation = 1
+        else:
+            fluctuation = -1
+        is_shot = False
+        if was_near_arrow and (prev_health - self._env._player.health >= 2 or
+                                                      fluctuation == 1 and prev_health - self._env._player.health == 1):
+            self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
+            reward += reward_types.get("combat_arrow")[0]
+            is_shot = True
+
         if self.prev_info['achievements'][achievement] < info['achievements'][achievement]:
             target_do_steps = self.target_do_steps
             self.set_for_navigate(player_pos, info)
@@ -352,6 +376,9 @@ class Crafter():
             self.actor_mode = 0 if self._last_min_dist is not None else 1
         self.prev_info = info
         self.prev_actual_reward = reward
+
+        if reward_type is None and is_shot:
+            reward_type = "combat_arrow"
         return self.navigate_obs(
             image, reward, info, augmented=augmented,
             is_last=self._done,
@@ -403,6 +430,14 @@ class Crafter():
         action += 1
 
         augmented = self.create_augment()
+
+        was_near_arrow = False
+        prev_health = self._env._player.health
+        for facing in eight_directions:
+            facing_object = self.get_facing_object(facing=facing)
+            if facing_object is not None and "arrow" in facing_object:
+                was_near_arrow = True
+
         image, _, self._done, info = self._env.step(action)
         where_array = self.compute_where(self._crafter_env._player.pos, self._env._sem_view())
         front = self.compute_front(self._crafter_env._player.pos, self._crafter_env._player.facing,
@@ -431,6 +466,24 @@ class Crafter():
             reward = np.float32(reward_types.get(reward_type)[0])
         if self.actor_mode is None:
             self.actor_mode = 0 if self._last_min_dist is not None else 1
+
+        if self._env._player.inventory["food"] > 0 and self._env._player.inventory["drink"] > 0 \
+                and self._env._player.inventory["energy"] > 0:
+            if prev_health == 9:
+                fluctuation = 0
+            else:
+                fluctuation = 1
+        else:
+            fluctuation = -1
+        is_shot = False
+        if was_near_arrow and (prev_health - self._env._player.health >= 2 or
+                                                      fluctuation == 1 and prev_health - self._env._player.health == 1):
+            self.multi_reward_types[reward_types["combat_arrow"][1]] = 1
+            reward += reward_types.get("combat_arrow")[0]
+            is_shot = True
+        if reward_type is None and is_shot:
+            reward_type = "combat_arrow"
+
         self.prev_info = info
         self.prev_actual_reward = reward
         return self.explore_obs(
