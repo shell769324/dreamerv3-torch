@@ -105,6 +105,7 @@ class Crafter():
         spaces["reward_mode"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["reward_type"] = gym.spaces.Box(-np.inf, np.inf, (1,), dtype=np.uint8)
         spaces["multi_reward_types"] = gym.spaces.Box(-np.inf, np.inf, (len(reward_types),), dtype=np.uint8)
+        spaces["objects"] = gym.spaces.Box(0, 30, self._env._local_view._grid.shape(), dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
@@ -226,10 +227,15 @@ class Crafter():
             res = self.combat_step(action)
         else:
             raise ValueError("impossible")
+        info, _, _, _ = res
         assert type(self.prev_navigate_target) == type(1), "prev_navigate_target is not int type"
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
         self.step_count += 1
+        info["objects"] = np.zeros(self.observation_space["objects"].shape)
+        for i in range(self.observation_space["objects"].shape[0]):
+            for j in range(self.observation_space["objects"].shape[1]):
+                info["objects"][i][j] = self._id_to_item[self._env._sem_view()[i][j]]
         return res
 
     def get_facing_object(self, facing=None):
