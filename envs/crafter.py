@@ -105,7 +105,7 @@ class Crafter():
         spaces["reward_mode"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces["reward_type"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces["multi_reward_types"] = gym.spaces.Box(0, 255, (len(reward_types),), dtype=np.uint8)
-        spaces["objects"] = gym.spaces.Box(0, 255, self._env._local_view._grid.shape(), dtype=np.uint8)
+        spaces["objects"] = gym.spaces.Box(0, 255, self._env._local_view._grid.shape, dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
