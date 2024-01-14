@@ -115,7 +115,6 @@ class Crafter():
         spaces["stats"] = gym.spaces.Box(-120, 120, (6,), dtype=np.int8)
         spaces["inventory"] = gym.spaces.Box(0, 255, (12,), dtype=np.uint8)
         spaces["time"] = gym.spaces.Box(0, 1, (1,), dtype=np.float32)
-        spaces["action"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
@@ -258,9 +257,6 @@ class Crafter():
         for i, key in enumerate(inventory_keys):
             info["inventory"][i] = self._crafter_env._player.inventory[key]
         info["time"] = self._crafter_env._world.daylight
-        if len(action.shape) >= 1:
-            action = np.argmax(action)
-        info["action"] = action + 1
         return res
 
     def get_facing_object(self, facing=None):

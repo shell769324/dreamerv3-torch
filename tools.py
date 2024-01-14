@@ -363,7 +363,7 @@ class SliceDataset:
                         k: np.append(
                             ret[k], v[start_frame:end_frame], axis=0
                         ) if k in ret else v[start_frame:end_frame]
-                        for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "action", "time"]
+                        for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "time"]
                     }
                     if markers is None:
                         markers = torch.zeros((end_frame - start_frame,))
@@ -395,7 +395,7 @@ class SliceDataset:
                 k: np.append(
                     ret[k], v[st:cap], axis=0
                 ) if k in ret else v[st:cap]
-                for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "action", "time"]
+                for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "time"]
             }
             if markers is None:
                 markers = torch.zeros((cap - st,))
@@ -536,7 +536,7 @@ def sample_episodes(episodes, length, seed=0):
             if not ret:
                 index = int(random.randint(0, total - 1))
                 ret = {
-                    k: v[index : min(index + length, total)] for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "action", "time"]
+                    k: v[index : min(index + length, total)] for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "time"]
                 }
             else:
                 # 'is_first' comes after 'is_last'
@@ -546,7 +546,7 @@ def sample_episodes(episodes, length, seed=0):
                     k: np.append(
                         ret[k], v[index : min(index + possible, total)], axis=0
                     )
-                    for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "action", "time"]
+                    for k, v in episode.items() if k not in ["augmented", "objects", "stats", "inventory", "time"]
                 }
             size = len(next(iter(ret.values())))
         yield ret
