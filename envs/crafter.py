@@ -233,10 +233,10 @@ class Crafter():
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
         self.step_count += 1
-        info["objects"] = np.zeros(self._chunk_size)
+        info["objects"] = np.zeros(self._chunk_size, dtype=np.uint8)
         for i in range(self._chunk_size[0]):
             for j in range(self._chunk_size[1]):
-                info["objects"][i][j] = self._id_to_item[self._env._sem_view()[i][j]]
+                info["objects"][i][j] = self._env._sem_view()[i][j]
         return res
 
     def get_facing_object(self, facing=None):
