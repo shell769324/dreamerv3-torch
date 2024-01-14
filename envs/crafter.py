@@ -36,6 +36,8 @@ class Crafter():
     def __init__(self, task, size=(64, 64), outdir=None, seed=None):
         assert task in ('reward', 'noreward')
         self._env = crafter.Env(size=size, reward=(task == 'reward'), seed=seed)
+        print(self._env._local_view._grid.shape)
+        exit(1)
         self._crafter_env = self._env
         self._size = size
         self._achievements = crafter.constants.achievements.copy()
