@@ -36,10 +36,9 @@ class Crafter():
     def __init__(self, task, size=(64, 64), outdir=None, seed=None):
         assert task in ('reward', 'noreward')
         self._env = crafter.Env(size=size, reward=(task == 'reward'), seed=seed)
-        print(self._env._local_view._grid)
-        exit(1)
         self._crafter_env = self._env
         self._size = size
+        self._chunk_size = (self._env._local_view._grid[0], self._env._local_view._grid[1])
         self._achievements = crafter.constants.achievements.copy()
         self._done = True
         self.target = np.random.randint(0, len(navigate_targets))
@@ -107,7 +106,7 @@ class Crafter():
         spaces["reward_mode"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces["reward_type"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces["multi_reward_types"] = gym.spaces.Box(0, 255, (len(reward_types),), dtype=np.uint8)
-        spaces["objects"] = gym.spaces.Box(0, 255, self._env._local_view._grid.shape, dtype=np.uint8)
+        spaces["objects"] = gym.spaces.Box(0, 255, self._chunk_size, dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
@@ -234,9 +233,9 @@ class Crafter():
         assert type(self.prev_combat_target) == type(1), "prev_combat_target is not int type"
         self.prev_actor_mode = self.actor_mode
         self.step_count += 1
-        info["objects"] = np.zeros(self.observation_space["objects"].shape)
-        for i in range(self.observation_space["objects"].shape[0]):
-            for j in range(self.observation_space["objects"].shape[1]):
+        info["objects"] = np.zeros(self._chunk_size)
+        for i in range(self._chunk_size[0]):
+            for j in range(self._chunk_size[1]):
                 info["objects"][i][j] = self._id_to_item[self._env._sem_view()[i][j]]
         return res
 
