@@ -23,6 +23,11 @@ target_mode_list = ["navigate_target", "navigate_target", "combat_target"]
 directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
 eight_directions = [(-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (1, 1), (-1, 1), (1, -1)]
 
+stats_keys = ["health", "food", "drink", "energy"]
+inventory_keys = ["sapling", "wood", "stone", "coal", "iron", "diamond", "wood_pickaxe",
+                  "stone_pickaxe", "iron_pickaxe", "wood_sword", "stone_sword", "iron_sword"]
+
+
 reward_type_reverse = [""] * len(reward_types.keys())
 for k, (a, b) in reward_types.items():
     reward_type_reverse[b] = k
@@ -107,6 +112,8 @@ class Crafter():
         spaces["reward_type"] = gym.spaces.Box(0, 255, (1,), dtype=np.uint8)
         spaces["multi_reward_types"] = gym.spaces.Box(0, 255, (len(reward_types),), dtype=np.uint8)
         spaces["objects"] = gym.spaces.Box(0, 255, self._chunk_size, dtype=np.uint8)
+        spaces["stats"] = gym.spaces.Box(-120, 120, (6,), dtype=np.int8)
+        spaces["inventory"] = gym.spaces.Box(0, 255, (12,), dtype=np.uint8)
         spaces.update({
             f'log_achievement_{k}': gym.spaces.Box(-np.inf, np.inf, dtype=np.float32)
             for k in self._achievements})
@@ -234,9 +241,20 @@ class Crafter():
         self.prev_actor_mode = self.actor_mode
         self.step_count += 1
         info["objects"] = np.zeros(self._chunk_size, dtype=np.uint8)
-        for i in range(self._chunk_size[0]):
-            for j in range(self._chunk_size[1]):
-                info["objects"][i][j] = self._env._sem_view()[i][j]
+        lower_row = self._crafter_env._player.pos[0] - self._row_side
+        lower_col = self._crafter_env._player.pos[1] - self._col_side
+        high_row = self._crafter_env._player.pos[0] + self._row_side + 1
+        high_col = self._crafter_env._player.pos[1] + self._col_side + 1
+        for i in range(lower_row, high_row):
+            for j in range(lower_col, high_col):
+                info["objects"][i - lower_row][j - lower_col] = self._env._sem_view()[i][j]
+        info["stats"] = np.zeros((6,), dtype=np.int8)
+        for i, key in enumerate(stats_keys):
+            info["stats"][i] = self._crafter_env._player.inventory[key]
+        info["stats"][-2] = self._crafter_env._player.facing[0]
+        info["stats"][-1] = self._crafter_env._player.facing[1]
+        for i, key in enumerate(inventory_keys):
+            info["inventory"][i] = self._crafter_env._player.inventory[key]
         return res
 
     def get_facing_object(self, facing=None):
