@@ -248,7 +248,10 @@ class Crafter():
         high_col = self._crafter_env._player.pos[1] + self._col_side + 1
         for i in range(lower_row, high_row):
             for j in range(lower_col, high_col):
-                info["objects"][i - lower_row][j - lower_col] = self._env._sem_view()[i][j]
+                if 0 <= i < self._size[0] and 0 <= j < self._size[1]:
+                    info["objects"][i - lower_row][j - lower_col] = self._env._sem_view()[i][j]
+                else:
+                    info["objects"][i - lower_row][j - lower_col] = 100
         info["stats"] = np.zeros((6,), dtype=np.int8)
         for i, key in enumerate(stats_keys):
             info["stats"][i] = self._crafter_env._player.inventory[key]
