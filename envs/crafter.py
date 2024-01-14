@@ -254,6 +254,7 @@ class Crafter():
             info["stats"][i] = self._crafter_env._player.inventory[key]
         info["stats"][-2] = self._crafter_env._player.facing[0]
         info["stats"][-1] = self._crafter_env._player.facing[1]
+        info["inventory"] = np.zeros((len(inventory_keys),), dtype=np.uint8)
         for i, key in enumerate(inventory_keys):
             info["inventory"][i] = self._crafter_env._player.inventory[key]
         info["time"] = self._crafter_env._world.daylight
