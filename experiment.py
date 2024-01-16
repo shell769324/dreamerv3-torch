@@ -1,13 +1,12 @@
-import envs.crafter as crafter
-import itertools
+import json
+import os
+import sys
 
-crafter_env = crafter.Crafter(
-        "reward", outdir="./"
-    )
+import boto3
+import botocore
 
-for name, ind in itertools.chain(crafter_env._env._world._mat_ids.items(), crafter_env._env._sem_view._obj_ids.items()):
-    print(name)
-    name = str(name)[str(name).find('objects.') + len('objects.'):-2].lower() if 'objects.' in str(
-        name) else str(name)
-    crafter_env._id_to_item[ind] = name
-    print(ind, name)
+module_path = ".."
+sys.path.append(os.path.abspath(module_path))
+
+client = boto3.client('bedrock')
+print(client.list_foundation_models())
