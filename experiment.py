@@ -43,13 +43,19 @@ def call_agent(session_id="test"):
         should_end = False
         if input_text.lower().strip(' ') in ["quit", "q"]:
             should_end = True
-        client.invoke_agent(
+        response = client.invoke_agent(
             agentId="8SQUSFV9XU",
             agentAliasId="DWEBWA9AED",
             sessionId=session_id,
             inputText=input_text,
             endSession=should_end
         )
+        event_stream = response['completion']
+        output = ""
+        for event in event_stream:
+            if 'chunk' in event:
+                output += event["chunk"]["bytes"].decode("utf8")
+        print(output)
         if should_end:
             return
 
