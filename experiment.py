@@ -36,12 +36,22 @@ def alias_agent(client, alias):
     print(info)
 
 
-def call_agent(alias="tester1"):
+def call_agent(session_id="test"):
     client = boto3.client('bedrock-agent-runtime')
-    client.invoke_agent(
-        agentId="8SQUSFV9XU",
+    while True:
+        input_text = input("Enter next prompt:")
+        should_end = False
+        if input_text.lower().strip(' ') in ["quit", "q"]:
+            should_end = True
+        client.invoke_agent(
+            agentId="8SQUSFV9XU",
+            agentAliasId="DWEBWA9AED",
+            sessionId=session_id,
+            inputText=input_text,
+            endSession=should_end
+        )
+        if should_end:
+            return
 
-    )
 
-
-alias_agent(create_bedrock_client(), "tester1")
+call_agent()
