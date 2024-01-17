@@ -47,7 +47,6 @@ def call_agent(session_id="test"):
             except EOFError:
                 break
             input_text += line + "\n"
-        print("Input is\n" + input_text)
         should_end = False
         if input_text.lower().strip() in ["quit", "q"]:
             should_end = True
