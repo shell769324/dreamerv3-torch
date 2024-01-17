@@ -18,7 +18,7 @@ client = boto3.client('bedrock-agent',
                       aws_session_token=assume_role_result['Credentials']['SessionToken'])
 info = client.create_agent(agentName="tester",
                            agentResourceRoleArn="arn:aws:iam::605719699353:role/AmazonBedrockExecutionRoleForAgents_rookery",
-                           foundationModel="arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2:1:200k",
+                           foundationModel="anthropic.claude-v2:1",
                            instruction="You will play a survival game with the goal to get diamond.",
                            idleSessionTTLInSeconds=1800)
 print(info['agent'])
