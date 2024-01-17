@@ -10,7 +10,7 @@ sts_client = boto3.client("sts")
 assume_role_result = sts_client.assume_role(
     RoleArn="arn:aws:iam::605719699353:role/AmazonBedrockExecutionRoleForAgents_rookery",
     RoleSessionName="bedrock_test",
-    DurationSeconds="900")
+    DurationSeconds=900)
 
 client = boto3.client('bedrock-agent',
                       aws_access_key_id=assume_role_result['Credentials']['AccessKeyId'],
