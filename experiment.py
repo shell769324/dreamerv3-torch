@@ -40,8 +40,9 @@ def call_agent(session_id="test"):
     client = boto3.client('bedrock-agent-runtime')
     while True:
         input_text = input("Enter next prompt:")
+        print("Input is\n" + input_text)
         should_end = False
-        if input_text.lower().strip(' ') in ["quit", "q"]:
+        if input_text.lower().strip() in ["quit", "q"]:
             should_end = True
         response = client.invoke_agent(
             agentId="8SQUSFV9XU",
