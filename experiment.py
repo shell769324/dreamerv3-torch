@@ -39,7 +39,14 @@ def alias_agent(client, alias):
 def call_agent(session_id="test"):
     client = boto3.client('bedrock-agent-runtime')
     while True:
-        input_text = input("Enter next prompt:")
+        print("Enter next prompt:")
+        input_text = ""
+        while True:
+            try:
+                line = input()
+            except EOFError:
+                break
+            input_text += line + "\n"
         print("Input is\n" + input_text)
         should_end = False
         if input_text.lower().strip() in ["quit", "q"]:
